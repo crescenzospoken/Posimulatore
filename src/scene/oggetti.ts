@@ -278,16 +278,20 @@ function maniglie(o: Obj | null) {
 }
 /** Le piazze con piani sotto il terreno scavano il terreno (e Google 3D) dentro il loro perimetro. */
 function scavi(lista: Obj[]) {
-  const polys: C.ClippingPolygon[] = []
+  // terreno nostro: si scava solo dove i piani stanno sotto terra
+  // Google 3D: una piazza toglie sempre ciò che c'è dentro il suo perimetro (il progetto sostituisce l'esistente)
+  const terra: C.Cartesian3[][] = [], google: C.Cartesian3[][] = []
   for (const o of lista) {
-    if (o.tipo !== 'piazza' && !(o.tipo === 'volume' && o.par.scava)) continue
-    const P = calcoli.get(o.id)
-    if (o.tipo === 'piazza' && (!P || P.scavo < 1)) continue
     if (o.par.scava === false) continue
-    polys.push(new C.ClippingPolygon({ positions: o.pts.map(p => C.Cartesian3.fromDegrees(p[0], p[1])) }))
+    const posiz = o.pts.map(p => C.Cartesian3.fromDegrees(p[0], p[1]))
+    if (o.tipo === 'piazza') {
+      google.push(posiz)
+      const P = calcoli.get(o.id)
+      if (P && P.scavo >= 1) terra.push(posiz)
+    } else if (o.tipo === 'volume' && o.par.scava) { terra.push(posiz); google.push(posiz) }
   }
-  const g = viewer.scene.globe
-  g.clippingPolygons = polys.length ? new C.ClippingPolygonCollection({ polygons: polys }) : (undefined as unknown as C.ClippingPolygonCollection)
+  const coll = (l: C.Cartesian3[][]) => l.length ? new C.ClippingPolygonCollection({ polygons: l.map(positions => new C.ClippingPolygon({ positions })) }) : (undefined as unknown as C.ClippingPolygonCollection)
+  viewer.scene.globe.clippingPolygons = coll(terra)
   const t = googleTileset()
-  if (t) t.clippingPolygons = polys.length ? new C.ClippingPolygonCollection({ polygons: polys.map(p => new C.ClippingPolygon({ positions: p.positions })) }) : (undefined as unknown as C.ClippingPolygonCollection)
+  if (t) t.clippingPolygons = coll(google)
 }
