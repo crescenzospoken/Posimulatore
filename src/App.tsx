@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useS } from './store'
 import { creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
-import { caricaEdifici, disegnaEdifici } from './scene/edifici'
+import { caricaEdifici, disegnaEdifici, disegnaCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
 import { avviaOggetti, disegnaOggetti, calcoli } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
@@ -29,6 +29,7 @@ export default function App() {
         await creaViewer(el.current!)
         impostaOrto(useS.getState().livelli.orto)
         await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
+        disegnaCupole(viewer)
         stop = avviaInterazione(setCur, finisci)
         const v = useS.getState().progetto().vista ?? VAI[1]
         vai(v, 0)

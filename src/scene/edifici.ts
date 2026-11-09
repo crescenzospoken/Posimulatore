@@ -8,7 +8,7 @@ export type Edificio = { id: string; r: LL[]; b: number; g: number; h: number; s
 let dati: Edificio[] = []
 let prim: C.Primitive | undefined
 let ultima = ''
-const PALETTE = ['#f4e6cc', '#f2d9b4', '#efcfa6', '#f6efe3', '#e8bf98', '#f1e1a6', '#eadacb', '#f3e9d2', '#e9cdb6', '#f5dcc2', '#dfe3d8', '#e6b896']
+const PALETTE = ['#ffffff', '#fbf8f1', '#ffffff', '#f9f3e6', '#fde3c8', '#f9cfb1', '#f6b99c', '#fbe39f', '#f7d7a6', '#f3c3b5', '#ffffff', '#f6e7c8', '#fbd2a2', '#eeb48c', '#fff7e8']
 const hash = (s: string) => { let h = 0; for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h) }
 
 export async function caricaEdifici() {
@@ -60,5 +60,26 @@ export function disegnaEdifici(visibile: boolean, modifiche: Record<string, { h?
   const rimuovi = () => { if (vecchio) viewer.scene.primitives.remove(vecchio) }
   if (vecchio) {
     const t = setInterval(() => { if (nuovo.ready || nuovo.isDestroyed()) { clearInterval(t); rimuovi() } }, 100)
+  }
+}
+
+/** Cupole che fanno riconoscere Positano: la maiolica della Collegiata e quella bianca di Chiesa Nuova. */
+const CUPOLE = [
+  { id: 'w1268998290', lon: 14.487054, lat: 40.628339, r: 6.5, maiolica: true },
+  { id: 'w407485325', lon: 14.48177, lat: 40.629787, r: 8.5, maiolica: false },
+]
+let cupole = false
+export function disegnaCupole(v: C.Viewer) {
+  if (cupole) return
+  cupole = true
+  for (const c of CUPOLE) {
+    const e = edificio(c.id)
+    if (!e) continue
+    const z = e.g + e.h + GEOIDE
+    const mat = c.maiolica
+      ? new C.CheckerboardMaterialProperty({ evenColor: C.Color.fromCssColorString('#f2c230'), oddColor: C.Color.fromCssColorString('#2f8a5b'), repeat: new C.Cartesian2(28, 10) })
+      : C.Color.fromCssColorString('#f4f1ea')
+    v.entities.add({ id: 'cupola:' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z), ellipsoid: { radii: new C.Cartesian3(c.r, c.r, c.r * 1.05), maximumCone: Math.PI / 2, material: mat, shadows: C.ShadowMode.ENABLED } })
+    v.entities.add({ id: 'cupola:l' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z + c.r * 1.05 + 1), cylinder: { length: 2, topRadius: 0.9, bottomRadius: 1.1, material: C.Color.fromCssColorString('#f4f1ea') } })
   }
 }
