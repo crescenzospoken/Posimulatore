@@ -5,7 +5,8 @@ import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
 import { quota } from '../scene/terreno'
-import { inquadra } from '../scene/viewer'
+import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
+import { Frame, add, mul } from '../engine/geo'
 import { modelloStrumento } from './strumenti'
 import { risultato } from '../scene/interazione'
 import { fmtM, fmtM2 } from '../engine/geo'
@@ -113,6 +114,17 @@ function Oggetto() {
         )
       })}
       {o.tipo === 'piazza' && <button onClick={() => set('attacco', (Number(o.par.attacco ?? 0) + 1) % o.pts.length)}>Attacca il lato successivo alla strada</button>}
+      {o.tipo === 'piazza' && P && googleAcceso() && <button onClick={() => {
+        // quota della strada: 2 m fuori dal lato d'attacco, sulla superficie di Google
+        const f = new Frame(o.pts[0][0], o.pts[0][1])
+        const xy = o.pts.map(q => f.toXY(q))
+        const n = xy.length, i = ((Number(o.par.attacco ?? 0) % n) + n) % n
+        const m = mul(add(xy[i], xy[(i + 1) % n]), 0.5)
+        const q = f.toLL(add(m, mul(P.v, -2.5)))
+        const z = quotaGoogle(q[0], q[1])
+        if (z === undefined) s.dici('Google 3D non ancora caricato lì: avvicinati e riprova')
+        else { s.aggiorna(o.id, x => { x.z = Math.round(z * 10) / 10 }); s.dici(`Piazza alla quota della strada: ${z.toFixed(1).replace('.', ',')} m s.l.m.`) }
+      }} data-tip="Porta il piano della piazza alla quota della strada letta sul 3D di Google">Piano alla quota della strada</button>}
       <div className="bottoni">
         <button onClick={() => inquadra(o.pts, o.z ?? quota(o.pts[0][0], o.pts[0][1]))}>Inquadra</button>
         <button onClick={() => s.duplica(o.id)}>Duplica</button>
