@@ -1,0 +1,124 @@
+:root {
+  --fondo: #f7f5f0; --carta: rgba(255, 255, 255, 0.96); --testo: #1d2730; --tenue: #5d6b78; --linea: #dfe3e6;
+  --accento: #1677b8; --accento-soft: #cfeeff; --pericolo: #c0392b; --ok: #2e8b57; --attenzione: #b7791f;
+  --r: 10px; --ombra: 0 6px 24px rgba(16, 32, 48, 0.18);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--testo);
+}
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #10202c; }
+button, select, input { font: inherit; color: inherit; }
+button, .bottone {
+  border: 1px solid var(--linea); background: #fff; border-radius: 8px; padding: 7px 11px; cursor: pointer; text-decoration: none;
+  display: inline-flex; align-items: center; gap: 6px; font-size: 14px; line-height: 1.2;
+}
+button:hover:not(:disabled), .bottone:hover { border-color: #b9c3cc; background: #fafcfd; }
+button:disabled { opacity: 0.45; cursor: default; }
+button.primary { background: var(--accento); color: #fff; border-color: var(--accento); }
+button.danger { color: var(--pericolo); }
+button.quiet { border-color: transparent; background: transparent; }
+button.acceso, button.quiet.acceso { background: var(--accento-soft); border-color: #8ccbf0; color: #0b3d5c; }
+input, select { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px; background: #fff; min-width: 0; }
+.app { position: relative; height: 100%; }
+.scena { position: absolute; inset: 0; }
+.cesium-viewer-bottom { display: none; }
+.caricamento { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 18px; background: #10202c; z-index: 5; }
+.caricamento.errore { padding: 24px; text-align: center; }
+
+.barra {
+  position: absolute; top: 10px; left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; z-index: 3;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 6px 8px;
+}
+.marchio { font-weight: 750; letter-spacing: 0.02em; color: #0e4f7d; padding: 0 6px; white-space: nowrap; }
+.progetto-nome { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+.cerca { position: relative; flex: 1; max-width: 340px; }
+.cerca input { width: 100%; }
+.risultati { position: absolute; top: 100%; left: 0; right: 0; margin: 4px 0 0; padding: 4px; list-style: none; background: #fff; border-radius: 8px; box-shadow: var(--ombra); max-height: 50vh; overflow: auto; }
+.risultati button { width: 100%; justify-content: space-between; border: 0; }
+.risultati small { color: var(--tenue); }
+.azioni { margin-left: auto; display: flex; gap: 2px; align-items: center; }
+.azioni select { border-color: transparent; background: transparent; }
+
+.strumenti {
+  position: absolute; top: 70px; left: 10px; z-index: 3; display: flex; flex-direction: column; gap: 4px;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 6px;
+}
+.strumenti > button, .gruppo > button { flex-direction: column; gap: 2px; width: 84px; padding: 6px 4px; font-size: 12px; border-color: transparent; background: transparent; }
+.strumenti > button.acceso, .gruppo > button.acceso { background: var(--accento-soft); border-color: #8ccbf0; color: #0b3d5c; }
+.strumenti span { font-size: 19px; line-height: 1; }
+.gruppo { position: relative; }
+.menu {
+  position: absolute; left: calc(100% + 10px); top: 0; display: flex; flex-direction: column; gap: 2px; min-width: 240px;
+  background: #fff; border-radius: var(--r); box-shadow: var(--ombra); padding: 6px; z-index: 4;
+}
+.menu button { border-color: transparent; justify-content: flex-start; }
+
+.guida-strumento {
+  position: absolute; left: 50%; transform: translateX(-50%); top: 70px; z-index: 3; display: flex; gap: 10px; align-items: center;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 8px 10px; max-width: min(720px, calc(100% - 140px));
+}
+.guida-strumento span { color: var(--tenue); font-size: 14px; }
+
+.pannello {
+  position: absolute; top: 70px; right: 10px; bottom: 40px; width: 360px; z-index: 3; display: flex; flex-direction: column;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra);
+}
+.pannello-testa { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px 4px 14px; }
+.pannello-testa h2 { font-size: 16px; margin: 0; }
+.pannello-corpo { overflow: auto; padding: 4px 14px 14px; }
+.campi { display: flex; flex-direction: column; gap: 10px; font-size: 14px; }
+.campi label { display: flex; flex-direction: column; gap: 4px; }
+.campi label.riga { flex-direction: row; justify-content: space-between; align-items: center; gap: 10px; }
+.campi label.riga > span { display: flex; flex-direction: column; }
+.campi small, .nota { color: var(--tenue); font-size: 12px; }
+.campi h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tenue); margin: 10px 0 0; }
+.campi dl { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; margin: 0; }
+.campi dt { color: var(--tenue); }
+.campi dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.bottoni { display: flex; flex-wrap: wrap; gap: 6px; }
+.controlli { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.controlli li { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; }
+.controlli li small { grid-column: 2; }
+.controlli li span { font-weight: 700; }
+.controlli .ok span { color: var(--ok); }
+.controlli .attenzione span { color: var(--attenzione); }
+.controlli .errore span { color: var(--pericolo); }
+.controlli .errore { color: var(--pericolo); }
+.schede { display: flex; flex-wrap: wrap; gap: 6px; }
+.elenco { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3px; }
+.elenco button { width: 100%; justify-content: flex-start; border-color: transparent; }
+.griglia { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.griglia button { flex-direction: column; align-items: flex-start; text-align: left; }
+.testo ul { padding-left: 18px; margin: 4px 0; display: flex; flex-direction: column; gap: 6px; }
+.misure { padding-left: 18px; margin: 0; }
+
+.stato { position: absolute; left: 10px; bottom: 10px; z-index: 2; background: rgba(16, 32, 44, 0.72); color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.crediti { position: absolute !important; right: 10px; bottom: 8px; left: auto !important; z-index: 2; font-size: 10px !important; max-width: 50%; }
+.cesium-widget-credits { display: block !important; position: absolute; right: 10px; bottom: 8px; font-size: 10px; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px; color: #333; max-width: 55%; }
+.cesium-widget-credits a { color: #333; }
+.cesium-credit-logoContainer img { height: 14px; }
+.avviso { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); z-index: 6; background: #10202c; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+.tip { position: fixed; z-index: 10; max-width: 230px; background: #10202c; color: #fff; font-size: 12px; padding: 6px 8px; border-radius: 6px; pointer-events: none; }
+
+.pad { position: absolute; left: 110px; bottom: 50px; z-index: 3; display: flex; gap: 12px; align-items: flex-end; }
+.pad-tasti { display: grid; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); gap: 4px; }
+.pad-tasti button { justify-content: center; background: var(--carta); box-shadow: var(--ombra); font-size: 18px; touch-action: none; }
+.pad-su { grid-column: 2; grid-row: 1; } .pad-sx { grid-column: 1; grid-row: 2; } .pad-giu { grid-column: 2; grid-row: 2; } .pad-dx { grid-column: 3; grid-row: 2; }
+.pad-nota { background: var(--carta); padding: 6px 10px; border-radius: 8px; font-size: 13px; max-width: 280px; }
+
+@media (max-width: 760px) {
+  .barra { top: 6px; left: 6px; right: 6px; flex-wrap: wrap; gap: 4px; }
+  .progetto-nome { max-width: 46vw; }
+  .cerca { order: 5; flex-basis: 100%; max-width: none; }
+  .azioni { flex: 1 1 100%; margin-left: 0; justify-content: space-between; overflow-x: auto; }
+  .marchio { font-size: 15px; }
+  .strumenti { top: auto; bottom: 6px; left: 6px; right: 6px; flex-direction: row; overflow-x: auto; }
+  .strumenti > button, .gruppo > button { width: 70px; flex: none; }
+  .menu { position: fixed; left: 6px; right: 6px; top: auto; bottom: 84px; min-width: 0; max-height: 50vh; overflow: auto; }
+  .gruppo { position: static; }
+  .pannello { top: auto; left: 6px; right: 6px; bottom: 84px; width: auto; max-height: 52vh; }
+  .guida-strumento { top: 104px; max-width: calc(100% - 12px); flex-wrap: wrap; }
+  .stato { display: none; }
+  .pad { left: 10px; bottom: 96px; }
+  .pad-nota { display: none; }
+  .cesium-widget-credits { bottom: 86px; }
+}
