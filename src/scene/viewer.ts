@@ -123,6 +123,13 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
   }
 }
 export const googleTileset = () => google
+export const googleAcceso = () => !!google && google.show
+/** Quota (m s.l.m.) della superficie di Google 3D in un punto, se caricata. */
+export function quotaGoogle(lon: number, lat: number): number | undefined {
+  if (!googleAcceso()) return undefined
+  const h = viewer.scene.sampleHeight(C.Cartographic.fromDegrees(lon, lat), undefined, 0.3)
+  return h === undefined ? undefined : h - GEOIDE
+}
 
 // ---------- sole e ombre ----------
 const LUCE_FISSA = new C.DirectionalLight({ direction: new C.Cartesian3(0, 0, -1) })

@@ -17,6 +17,7 @@ export type Livelli = {
   nomi: boolean
   confine: boolean
   google: boolean
+  googleScelto?: boolean
   ombre: boolean
   ora: number // ore decimali, ora locale
   giorno: string // AAAA-MM-GG
@@ -31,6 +32,8 @@ type Stato = {
   misure: Misura[]
   livelli: Livelli
   ionToken: string
+  ionTokenSito: string
+  ultimaQuota: number | null
   info: { p: LL; z: number } | null
   pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | null
   passato: string[]
@@ -83,8 +86,10 @@ export const useS = create<Stato>((set, get) => ({
   strumento: { k: 'naviga' },
   bozza: [],
   misure: [],
-  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), google: false },
+  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
   ionToken: iniziale?.ionToken ?? '',
+  ionTokenSito: '',
+  ultimaQuota: null,
   info: null,
   pannello: null,
   passato: [],
@@ -140,7 +145,7 @@ export const useS = create<Stato>((set, get) => ({
     salva(get())
   },
   set(p) { set(p); if ('ionToken' in p) salva(get()) },
-  setLivelli(p) { set({ livelli: { ...get().livelli, ...p } }); salva(get()) },
+  setLivelli(p) { set({ livelli: { ...get().livelli, ...p, ...('google' in p ? { googleScelto: p.google } : {}) } }); salva(get()) },
   nuovoProgetto(nome) {
     const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }
     const p: Progetto = { id: uid(), nome, creato: new Date().toISOString(), modificato: new Date().toISOString(), opzioni: [o], attiva: o.id }

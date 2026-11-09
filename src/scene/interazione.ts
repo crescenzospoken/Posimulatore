@@ -1,5 +1,5 @@
 import * as C from 'cesium'
-import { viewer, pos } from './viewer'
+import { viewer, pos, googleAcceso } from './viewer'
 import { GEOIDE, quota } from './terreno'
 import { useS, type Misura } from '../store'
 import type { LL } from '../engine/geo'
@@ -19,7 +19,8 @@ export function puntoA(win: C.Cartesian2): Punto | null {
   let z = g.height - GEOIDE
   const zt = quota(p[0], p[1])
   // se il punto è a meno di 30 cm dal terreno lo appoggiamo al terreno
-  if (Math.abs(z - zt) < 0.3 || !isFinite(z)) z = zt
+  // sul terreno nostro: se il punto è a meno di 30 cm lo appoggiamo al terreno; su Google 3D vale la superficie vera
+  if (!isFinite(z) || (!googleAcceso() && Math.abs(z - zt) < 0.3)) z = zt
   const pk = s.pick(win)
   const su = pk && pk.id instanceof C.Entity ? String(pk.id.id).split(':')[0] : undefined
   return { p, z, su }
@@ -63,6 +64,7 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (t.k === 'disegna') {
       if (!pt) return
       const b = [...s.bozza, pt.p]
+      if (b.length === 1) useS.setState({ ultimaQuota: pt.z })
       // il primo punto decide la quota d'appoggio: se si clicca su una piazza o un volume, si sta lì sopra
       if (b.length === 1) zBozza = pt.su && pt.su !== 'h' && s.opzione().oggetti.some(o => o.id === pt.su && (o.tipo === 'piazza' || o.tipo === 'volume')) ? pt.z : undefined
       useS.setState({ bozza: b })

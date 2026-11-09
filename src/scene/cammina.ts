@@ -1,5 +1,5 @@
 import * as C from 'cesium'
-import { viewer } from './viewer'
+import { viewer, quotaGoogle } from './viewer'
 import { GEOIDE, quota } from './terreno'
 import { useS } from '../store'
 import { Frame, inside } from '../engine/geo'
@@ -12,7 +12,7 @@ const OCCHI = 1.65
 
 /** Quota del piano su cui si cammina: piazze e volumi disegnati, altrimenti il terreno. */
 function suolo(lon: number, lat: number) {
-  let z = quota(lon, lat)
+  let z = quotaGoogle(lon, lat) ?? quota(lon, lat)
   for (const o of useS.getState().opzione().oggetti) {
     if ((o.tipo === 'piazza' || o.tipo === 'area') && o.z !== undefined && o.pts.length > 2) {
       const f = new Frame(lon, lat)

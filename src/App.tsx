@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useS } from './store'
-import { creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
+import { googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
 import { avviaOggetti, disegnaOggetti, calcoli } from './scene/oggetti'
@@ -26,6 +26,7 @@ export default function App() {
     let stop: (() => void) | undefined
     ;(async () => {
       try {
+        try { const c = await (await fetch('/config')).json(); if (c.ionToken) useS.setState(st => ({ ionTokenSito: c.ionToken, livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
         await creaViewer(el.current!)
         impostaOrto(useS.getState().livelli.orto)
         await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
@@ -50,8 +51,8 @@ export default function App() {
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   useEffect(() => {
     if (!pronto) return
-    impostaGoogle(s.livelli.google, s.ionToken).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
-  }, [pronto, s.livelli.google, s.ionToken])
+    impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
+  }, [pronto, s.livelli.google, s.ionToken, s.ionTokenSito])
   useEffect(() => { if (pronto) { if (s.strumento.k === 'cammina') avviaCammina(); else fermaCammina() } }, [pronto, s.strumento.k])
 
   // tastiera
@@ -144,6 +145,8 @@ function finisci() {
   const b = s.bozza
   if (b.length < t.min) { s.dici(`Servono almeno ${t.min} punti`); return }
   let z = quotaBozza()
+  // su Google 3D il terreno a 10 m non coincide con la superficie: gli oggetti in piedi prendono la quota cliccata
+  if (z === undefined && googleAcceso() && ['modello', 'testo', 'volume', 'piazza'].includes(t.tipo)) z = s.ultimaQuota ?? undefined
   if (t.tipo === 'piazza' && z === undefined) z = Math.round(Math.max(quota(b[0][0], b[0][1]), quota(b[1][0], b[1][1])) * 10) / 10
   const o: Omit<Obj, 'id'> = { tipo: t.tipo, nome: t.nome, pts: b, par: { ...t.par }, ...(z !== undefined ? { z: Math.round(z * 100) / 100 } : {}) }
   s.aggiungi(o)
