@@ -1,0 +1,23 @@
+{
+ "unita": "decimetri, Uint16 little-endian, righe da nord a sud",
+ "dettaglio": {
+  "w": 14.415,
+  "e": 14.535,
+  "s": 40.57,
+  "n": 40.665,
+  "step": 0.0001,
+  "nx": 1201,
+  "ny": 951,
+  "fonte": "TINITALY 1.1, INGV, CC BY 4.0"
+ },
+ "contesto": {
+  "w": 14.2,
+  "e": 14.8,
+  "s": 40.45,
+  "n": 40.8,
+  "step": 0.0005,
+  "nx": 1201,
+  "ny": 701,
+  "fonte": "Copernicus DEM GLO-30, ESA"
+ }
+}

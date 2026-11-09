@@ -1,0 +1,32 @@
+{
+  "name": "posimulatore",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "test": "vitest run",
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler deploy"
+  },
+  "dependencies": {
+    "cesium": "1.146.0",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "zustand": "5.0.10"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "typescript": "5.9.3",
+    "vite": "8.3.6",
+    "vitest": "5.0.0",
+    "wrangler": "4.150.0",
+    "@cloudflare/workers-types": "5.20261109.1"
+  },
+  "overrides": {
+    "@cesium/engine": "26.4.0",
+    "@cesium/widgets": "16.3.0"
+  }
+}
