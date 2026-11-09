@@ -45,7 +45,7 @@ export default function App() {
 
   // scena <- stato
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel) }, [pronto, op, s.sel])
-  useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || []) }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google])
+  useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
   useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine); impostaSole(s.livelli) } }, [pronto, s.livelli])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   useEffect(() => {

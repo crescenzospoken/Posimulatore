@@ -197,6 +197,14 @@ function Livelli() {
         </select>
       </label>
       {t('edifici', 'Edifici (OpenStreetMap)', 'Volumi semplici, altezze stimate')}
+      {l.edifici && (
+        <label>Aspetto degli edifici
+          <select value={l.stile} onChange={e => s.setLivelli({ stile: e.target.value as typeof l.stile })}>
+            <option value="plastico">Plastico (volumi puliti)</option>
+            <option value="facciate">Facciate disegnate (finestre e balconi)</option>
+          </select>
+        </label>
+      )}
       {t('strade', 'Strade e scale (OpenStreetMap)')}
       {t('nomi', 'Nomi dei luoghi')}
       {t('confine', 'Confine comunale')}

@@ -12,6 +12,7 @@ export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quot
 export type Livelli = {
   orto: 'pcn2012' | 'esri' | 'osm'
   edifici: boolean
+  stile: 'plastico' | 'facciate'
   strade: boolean
   nomi: boolean
   confine: boolean
@@ -63,7 +64,7 @@ function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
 const oggi = () => new Date().toISOString().slice(0, 10)
-const LIV0: Livelli = { orto: 'esri', edifici: true, strade: false, nomi: true, confine: true, google: false, ombre: false, ora: 11, giorno: oggi() }
+const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: false, ora: 11, giorno: oggi() }
 const iniziale = leggi()
 const prog0 = iniziale?.progetti?.length ? iniziale.progetti : [esempio()]
 let timer: ReturnType<typeof setTimeout> | undefined

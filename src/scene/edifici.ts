@@ -21,8 +21,8 @@ export function edificiVicini(lon: number, lat: number, r = 0.0015) {
   return dati.filter(e => Math.abs(e.r[0][0] - lon) < r && Math.abs(e.r[0][1] - lat) < r)
 }
 
-export function disegnaEdifici(visibile: boolean, modifiche: Record<string, { h?: number; via?: boolean; col?: string }>, sel: string | null, rossi: string[] = []) {
-  const chiave = JSON.stringify(modifiche) + '|' + sel + '|' + rossi.join(',')
+export function disegnaEdifici(visibile: boolean, modifiche: Record<string, { h?: number; via?: boolean; col?: string }>, sel: string | null, rossi: string[] = [], plastico = true) {
+  const chiave = JSON.stringify(modifiche) + '|' + sel + '|' + rossi.join(',') + '|' + plastico
   const R = new Set(rossi)
   if (prim) prim.show = visibile
   if (!visibile || chiave === ultima) return
@@ -49,7 +49,7 @@ export function disegnaEdifici(visibile: boolean, modifiche: Record<string, { h?
   }
   const nuovo = new C.Primitive({
     geometryInstances: inst,
-    appearance: aspettoFacciate(14.4855, 40.6287),
+    appearance: aspettoFacciate(14.4855, 40.6287, plastico),
     shadows: C.ShadowMode.ENABLED,
     asynchronous: true,
   })
