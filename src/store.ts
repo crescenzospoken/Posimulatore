@@ -19,6 +19,7 @@ export type Livelli = {
   google: boolean
   googleScelto?: boolean
   ombre: boolean
+  nitido: boolean
   ora: number // ore decimali, ora locale
   giorno: string // AAAA-MM-GG
 }
@@ -62,13 +63,12 @@ type Stato = {
   salvaVista: (v: Vista) => void
   dici: (t: string) => void
 }
-const KEY = 'posimulatore.v3'
+const KEY = 'posimulatore.v4'
 type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
-const oggi = () => new Date().toISOString().slice(0, 10)
-const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: false, ora: 11, giorno: oggi() }
+const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: true, nitido: true, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
 const prog0 = iniziale?.progetti?.length ? iniziale.progetti : [esempio()]
 let timer: ReturnType<typeof setTimeout> | undefined

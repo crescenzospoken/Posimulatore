@@ -11,6 +11,7 @@ import { Frame, type LL, type XY, add, frameFor, mul, norm, perp, rect, sub, dis
 import type { Obj } from '../engine/model'
 import { modello, type Parte } from '../engine/catalogo'
 import { calcolaPiazza, PIAZZA_DEF, type Piazza, type PiazzaPar } from '../engine/piazza'
+import { materiale } from './materiali'
 import { filaStalli, type Disposizione, type TipoStallo } from '../engine/stalli'
 
 const ds = new C.CustomDataSource('oggetti')
@@ -178,11 +179,11 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
       const piano = posArr(f, P.poly, 0)
       const buco = P.rampa ? [new C.PolygonHierarchy(posArr(f, P.rampa, 0))] : []
       // soletta
-      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota - pp.spessore + g, extrudedHeight: pp.quota + g, material: col('#cfc9bd'), shadows: C.ShadowMode.ENABLED } }))
+      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota - pp.spessore + g, extrudedHeight: pp.quota + g, material: col('#c9c3b7'), shadows: C.ShadowMode.ENABLED } }))
       // pavimentazione in pietra chiara a lastre di 60 cm
       const xs = P.poly.map(q => q[0]), ys = P.poly.map(q => q[1])
-      const lato = 0.6, rw = (Math.max(...xs) - Math.min(...xs)) / (2 * lato), rh = (Math.max(...ys) - Math.min(...ys)) / (2 * lato)
-      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota + 0.02 + g, material: new C.CheckerboardMaterialProperty({ evenColor: col(String(par.pavimento ?? '#e3d9c6')), oddColor: col(String(par.pavimento ?? '#e3d9c6')).darken(0.035, new C.Color()), repeat: new C.Cartesian2(rw, rh) }), stRotation: Math.atan2(P.u[1], P.u[0]) } }))
+      const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys)
+      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota + 0.02 + g, material: materiale(par.pavimento === 'cotto' ? 'cotto' : 'pietra', par.pavimento === 'cotto' ? '#c98a66' : String(par.pavimento ?? '#e6dccb'), bw, bh), stRotation: Math.atan2(P.u[1], P.u[0]), shadows: C.ShadowMode.RECEIVE_ONLY } }))
       // cordolo in pietra lungo il bordo
       out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, [...P.poly, P.poly[0]], 0), width: 0.45, height: pp.quota + 0.05 + g, material: col('#f1ede4'), cornerType: C.CornerType.MITERED } }))
       // parapetto in muratura bianca con copertina, sui lati liberi
@@ -197,7 +198,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
           const nrm: XY = perp(norm(sub(seg[1], seg[0])))
           for (const d of [0, -0.3]) {
             const sg = seg.map(pt => add(pt, mul(nrm, d)))
-            out.push(new C.Entity({ id: id(), wall: { positions: posArr(f, sg, 0), minimumHeights: [q, q], maximumHeights: [q + 1.05, q + 1.05], material: col('#f6f3ec'), shadows: C.ShadowMode.ENABLED } }))
+            out.push(new C.Entity({ id: id(), wall: { positions: posArr(f, sg, 0), minimumHeights: [q, q], maximumHeights: [q + 1.05, q + 1.05], material: materiale('intonaco', '#f6f3ec', dist(seg[0], seg[1]), 2.4), shadows: C.ShadowMode.ENABLED } }))
           }
           const cop = [seg[0], seg[1], add(seg[1], mul(nrm, -0.3)), add(seg[0], mul(nrm, -0.3))]
           out.push(new C.Entity({ id: id(), polygon: { hierarchy: posArr(f, cop, 0), height: q + 1.05, extrudedHeight: q + 1.1, material: col('#d8d0c0') } }))
@@ -207,11 +208,12 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
       for (const L of P.livelli) {
         if (L.k === 0) continue
         const ultimo = L.k === pp.livelli
-        out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, !ultimo ? buco : []), height: L.pavimento - pp.spessore + g, extrudedHeight: L.pavimento + g, material: col('#bdbab4'), shadows: C.ShadowMode.ENABLED } }))
+        out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, !ultimo ? buco : []), height: L.pavimento - pp.spessore + g, extrudedHeight: L.pavimento + g, material: col('#b9b5ad'), shadows: C.ShadowMode.ENABLED } }))
+        out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, !ultimo ? buco : []), height: L.pavimento + 0.015 + g, material: materiale('asfalto', '#8d8f92', bw, bh) } }))
         for (const r of L.stalli) for (let i = 0; i < 3; i++) out.push(new C.Entity({ id: id(), polyline: { positions: posArr(f, [r[i], r[i + 1]], L.pavimento + 0.03), width: 2, material: col('#ffffff') } }))
       }
       // basamento: dal terreno al fondo dell'ultimo piano
-      if (pp.livelli > 0) { const fondo = pp.quota - pp.livelli * pp.hLiv - pp.spessore; out.push(new C.Entity({ id: id(), polygon: { hierarchy: piano, height: Math.min(P.terrenoMin, fondo) - 1.5 + g, extrudedHeight: fondo + g, material: col('#b5ad9f') } })) }
+      if (pp.livelli > 0) { const fondo = pp.quota - pp.livelli * pp.hLiv - pp.spessore; out.push(new C.Entity({ id: id(), polygon: { hierarchy: piano, height: Math.min(P.terrenoMin, fondo) - 1.5 + g, extrudedHeight: fondo + g, material: col('#aaa294') } })) }
       // rampe
       if (P.rampa) for (let k = 0; k < pp.livelli; k++) {
         const zt = pp.quota - k * pp.hLiv, zb = zt - pp.hLiv
@@ -231,7 +233,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
         if (!m.controTerra) continue
         const ll = m.pts.map(q => f.toLL(q))
         if (m.cima.every(z => z <= m.base + 0.05)) continue
-        out.push(new C.Entity({ id: id(), wall: { positions: ll.map((q, i) => pos(q[0], q[1], m.cima[i])), minimumHeights: ll.map(() => m.base + g), maximumHeights: m.cima.map(z => z + g), material: col('#b9b4aa', 0.95), shadows: C.ShadowMode.ENABLED } }))
+        out.push(new C.Entity({ id: id(), wall: { positions: ll.map((q, i) => pos(q[0], q[1], m.cima[i])), minimumHeights: ll.map(() => m.base + g), maximumHeights: m.cima.map(z => z + g), material: materiale('calcestruzzo', '#c2bcb0', dist(m.a, m.b), 4.8), shadows: C.ShadowMode.ENABLED } }))
       }
       out.push(new C.Entity({ id: id(), position: pos(cen[0], cen[1], pp.quota + 9), label: etichetta(`${o.nome}\n${Math.round(P.area)} m²${P.stalliTot ? ` · ${P.stalliTot} posti auto` : ''}`, selezionato) }))
       break
@@ -310,8 +312,12 @@ function scavi(lista: Obj[]) {
       if (P && P.scavo >= 1) terra.push(posiz)
     } else if (o.tipo === 'volume' && o.par.scava) { terra.push(posiz); google.push(posiz) }
   }
-  const coll = (l: C.Cartesian3[][]) => l.length ? new C.ClippingPolygonCollection({ polygons: l.map(positions => new C.ClippingPolygon({ positions })) }) : (undefined as unknown as C.ClippingPolygonCollection)
-  viewer.scene.globe.clippingPolygons = coll(terra)
+  const metti = (vecchia: C.ClippingPolygonCollection | undefined, l: C.Cartesian3[][], set: (c: C.ClippingPolygonCollection) => void) => {
+    if (!vecchia) { if (l.length) set(new C.ClippingPolygonCollection({ polygons: l.map(positions => new C.ClippingPolygon({ positions })) })); return }
+    vecchia.removeAll()
+    for (const positions of l) vecchia.add(new C.ClippingPolygon({ positions }))
+  }
+  metti(viewer.scene.globe.clippingPolygons, terra, c => { viewer.scene.globe.clippingPolygons = c })
   const t = googleTileset()
-  if (t) t.clippingPolygons = coll(google)
+  if (t) metti(t.clippingPolygons, google, c => { t.clippingPolygons = c })
 }

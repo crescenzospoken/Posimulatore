@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useS } from './store'
-import { quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
+import { impostaNitidezza, quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
@@ -49,7 +49,7 @@ export default function App() {
   // scena <- stato
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel) }, [pronto, op, s.sel, s.googleGiro])
   useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli) } }, [pronto, s.livelli])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido) } }, [pronto, s.livelli])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   useEffect(() => {
     if (!pronto) return
@@ -97,7 +97,7 @@ export default function App() {
             {VAI.map((v, i) => <option key={v.nome} value={i}>{v.nome}</option>)}
           </select>
           <button className="quiet" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista">⌖</button>
-          <button className="quiet" onClick={() => foto(s.progetto().nome)} data-tip="Scarica un'immagine della vista" aria-label="Foto">📷</button>
+          <button className="quiet" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto">📷</button>
           <button className={'quiet' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} data-tip="Mappe, edifici, Google 3D, sole e ombre">Livelli</button>
           <button className={'quiet' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label="Guida" data-tip="Guida e fonti dei dati">?</button>
         </div>

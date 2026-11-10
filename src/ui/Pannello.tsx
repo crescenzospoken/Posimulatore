@@ -42,10 +42,10 @@ const CAMPI: Record<Obj['tipo'], Campo[]> = {
     { k: 'rampaPos', nome: 'Posizione rampa lungo il lato (0-1)', t: 'num', passo: 0.05, min: 0, max: 1 },
     { k: 'parapetto', nome: 'Parapetto sui lati liberi', t: 'bool' },
     { k: 'scava', nome: 'Scava il terreno sotto', t: 'bool' },
-    { k: 'pavimento', nome: 'Colore pavimento', t: 'col' },
+    { k: 'pavimento', nome: 'Pavimento', t: 'sel', opz: [['#e6dccb', 'Pietra chiara'], ['#cfc8bb', 'Pietra grigia'], ['#d8c3a0', 'Travertino'], ['cotto', 'Cotto']] },
   ],
 }
-const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, spessore: 0.5, campata: 7.5, attacco: 0, corsia: 6, stalloL: 2.5, stalloP: 5, rampaPend: 0.16, rampaPos: 0, parapetto: true, scava: true, pavimento: '#d8c9ae', altezza: 6, colore: '#e9d8bd', opacita: 1, rot: 0, scala: 1, alto: 0, tratto: 3, vuoto: 3, larghezza: 0.12, lato: 1 }
+const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, spessore: 0.5, campata: 7.5, attacco: 0, corsia: 6, stalloL: 2.5, stalloP: 5, rampaPend: 0.16, rampaPos: 0, parapetto: true, scava: true, pavimento: '#e6dccb', altezza: 6, colore: '#e9d8bd', opacita: 1, rot: 0, scala: 1, alto: 0, tratto: 3, vuoto: 3, larghezza: 0.12, lato: 1 }
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
@@ -228,7 +228,8 @@ function Livelli() {
           <small>Account gratuito su ion.cesium.com, sezione Access Tokens. Resta solo in questo browser.</small>
         </label>
       )}
-      {t('ombre', 'Sole e ombre')}
+      {t('nitido', 'Immagine più nitida', 'Più dettaglio e colore sulle foto aeree')}
+      {t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese')}
       {l.ombre && (
         <>
           <label>Giorno<input type="date" value={l.giorno} onChange={e => s.setLivelli({ giorno: e.target.value })} /></label>

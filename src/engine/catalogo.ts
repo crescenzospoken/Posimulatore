@@ -59,7 +59,17 @@ export const CATALOGO: Modello[] = [
   { id: 'fioriera', nome: 'Fioriera', gruppo: 'Arredo e segnaletica verticale', dim: [1, 1, 1.1], parti: [
     { f: 'box', c: [0, 0, 0.3], d: [1, 1, 0.6], col: '#c9b79c' }, { f: 'sfera', c: [0, 0, 0.8], r: [0.5, 0.5, 0.35], col: '#3f7d3a' }] },
   { id: 'albero', nome: 'Albero', gruppo: 'Arredo e segnaletica verticale', dim: [4, 4, 6], parti: [
-    { f: 'cil', c: [0, 0, 1.5], r: 0.15, h: 3, col: '#6b4a2b' }, { f: 'sfera', c: [0, 0, 4.2], r: [2, 2, 1.8], col: '#3d7a35' }] },
+    { f: 'cil', c: [0, 0, 1.5], r: 0.14, r2: 0.2, h: 3, col: '#6b4a2b' },
+    { f: 'sfera', c: [0, 0, 4.1], r: [1.9, 1.9, 1.6], col: '#3f7a34' }, { f: 'sfera', c: [0.9, 0.4, 4.6], r: [1.3, 1.3, 1.1], col: '#4b8a3d' },
+    { f: 'sfera', c: [-0.8, -0.5, 4.5], r: [1.4, 1.2, 1.1], col: '#35692d' }, { f: 'sfera', c: [0.1, -0.9, 3.7], r: [1.2, 1.2, 0.9], col: '#447f38' }] },
+  { id: 'pino', nome: 'Pino a ombrello', gruppo: 'Arredo e segnaletica verticale', dim: [8, 8, 10], parti: [
+    { f: 'cil', c: [0, 0, 3.6], r: 0.2, r2: 0.32, h: 7.2, col: '#6e5138' },
+    { f: 'sfera', c: [0, 0, 8.2], r: [4, 4, 1.5], col: '#2f5f2b' }, { f: 'sfera', c: [1.4, 0.8, 8.7], r: [2.6, 2.4, 1.1], col: '#3a6e33' },
+    { f: 'sfera', c: [-1.5, -0.6, 8.6], r: [2.5, 2.6, 1.1], col: '#2a5526' }] },
+  { id: 'limone', nome: 'Limone in vaso', gruppo: 'Arredo e segnaletica verticale', dim: [1.6, 1.6, 2.4], parti: [
+    { f: 'cil', c: [0, 0, 0.3], r: 0.42, r2: 0.3, h: 0.6, col: '#b8683f' }, { f: 'cil', c: [0, 0, 1.0], r: 0.05, h: 0.9, col: '#6b4a2b' },
+    { f: 'sfera', c: [0, 0, 1.8], r: [0.75, 0.75, 0.65], col: '#3f7d3a' },
+    ...[[0.5, 0.2, 1.7], [-0.4, 0.4, 1.9], [0.1, -0.6, 1.6], [-0.3, -0.3, 2.2]].map(c => ({ f: 'sfera', c: c as [number, number, number], r: [0.09, 0.09, 0.11], col: '#f2d335' }) as Parte)] },
   { id: 'dissuasore', nome: 'Dissuasore (paletto)', gruppo: 'Arredo e segnaletica verticale', dim: [0.15, 0.15, 0.9], parti: [{ f: 'cil', c: [0, 0, 0.45], r: 0.075, h: 0.9, col: '#555' }] },
   { id: 'ascensore', nome: 'Torre ascensore', gruppo: 'Strutture', dim: [2.5, 2.5, 12], parti: [{ f: 'box', c: [0, 0, 6], d: [2.5, 2.5, 12], col: '#d8dde2' }], nota: 'Altezza da impostare' },
 ]

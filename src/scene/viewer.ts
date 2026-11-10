@@ -115,7 +115,9 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
   try {
     if (!google) {
       C.Ion.defaultAccessToken = token
-      google = await C.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: matchMedia('(max-width: 760px)').matches ? 10 : 5, enableCollision: true })
+      google = await C.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: matchMedia('(max-width: 760px)').matches ? 8 : 4, enableCollision: true })
+      // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
+      google.shadows = C.ShadowMode.RECEIVE_ONLY
       google.allTilesLoaded.addEventListener(() => onGoogle?.())
       viewer.scene.primitives.add(google)
     }
@@ -135,6 +137,34 @@ export function quotaGoogle(lon: number, lat: number): number | undefined {
   return h === undefined ? undefined : h - GEOIDE
 }
 
+// ---------- nitidezza e colore ----------
+let nitido: C.PostProcessStage | undefined
+/** Maschera di contrasto leggera più un filo di saturazione e contrasto: le foto aeree di Google sono morbide e slavate. */
+export function impostaNitidezza(on: boolean) {
+  if (!nitido) {
+    nitido = new C.PostProcessStage({
+      name: 'posimulatore_nitido',
+      fragmentShader: `
+        uniform sampler2D colorTexture;
+        in vec2 v_textureCoordinates;
+        void main() {
+          vec2 px = 1.0 / czm_viewport.zw;
+          vec3 c = texture(colorTexture, v_textureCoordinates).rgb;
+          vec3 b = (texture(colorTexture, v_textureCoordinates + vec2(px.x, 0.0)).rgb + texture(colorTexture, v_textureCoordinates - vec2(px.x, 0.0)).rgb
+                  + texture(colorTexture, v_textureCoordinates + vec2(0.0, px.y)).rgb + texture(colorTexture, v_textureCoordinates - vec2(0.0, px.y)).rgb) * 0.25;
+          vec3 o = c + (c - b) * 0.55;
+          float l = dot(o, vec3(0.299, 0.587, 0.114));
+          o = mix(vec3(l), o, 1.12);
+          o = (o - 0.5) * 1.05 + 0.5;
+          out_FragColor = vec4(clamp(o, 0.0, 1.0), 1.0);
+        }`,
+    })
+    viewer.scene.postProcessStages.add(nitido)
+  }
+  nitido.enabled = on
+  viewer.scene.requestRender()
+}
+
 // ---------- sole e ombre ----------
 const LUCE_FISSA = new C.DirectionalLight({ direction: new C.Cartesian3(0, 0, -1) })
 export function impostaSole(l: Livelli) {
@@ -151,7 +181,8 @@ export function impostaSole(l: Livelli) {
   const sm = viewer.scene.shadowMap
   sm.softShadows = true
   sm.size = 2048
-  sm.maximumDistance = 1200
+  sm.maximumDistance = 500
+  sm.darkness = 0.45
   // ora locale italiana -> UTC
   const [y, mo, d] = l.giorno.split('-').map(Number)
   const ore = Math.floor(l.ora), min = Math.round((l.ora - ore) * 60)
@@ -167,11 +198,28 @@ function offsetRoma(d: Date) {
   return s.includes('GMT+2') ? 120 : 60
 }
 
+/** Scarica la vista come immagine al doppio della risoluzione, con i crediti scritti dentro. */
 export function foto(nome: string) {
+  const prima = viewer.resolutionScale
+  viewer.resolutionScale = Math.min(3, Math.max(2, prima * 2))
+  viewer.resize()
   viewer.render()
-  const url = viewer.canvas.toDataURL('image/png')
+  const src = viewer.canvas
+  const out = document.createElement('canvas')
+  out.width = src.width; out.height = src.height
+  const g = out.getContext('2d')!
+  g.drawImage(src, 0, 0)
+  viewer.resolutionScale = prima
+  viewer.resize()
+  viewer.scene.requestRender()
+  const t = `${google && google.show ? 'Immagini 3D © Google · ' : ''}Posimulatore · ${nome}`
+  const fs = Math.round(out.height / 60)
+  g.font = `500 ${fs}px system-ui, sans-serif`
+  const w = g.measureText(t).width
+  g.fillStyle = 'rgba(16,32,44,0.6)'; g.fillRect(out.width - w - fs * 1.6, out.height - fs * 2, w + fs * 1.6, fs * 2)
+  g.fillStyle = '#fff'; g.fillText(t, out.width - w - fs * 0.8, out.height - fs * 0.65)
   const a = document.createElement('a')
-  a.href = url
-  a.download = `Posimulatore - ${nome} - ${new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '.')}.png`
+  a.href = out.toDataURL('image/jpeg', 0.92)
+  a.download = `Posimulatore - ${nome} - ${new Date().toISOString().slice(0, 16).replace('T', ' ').replace(':', '.')}.jpg`
   a.click()
 }
