@@ -36,6 +36,10 @@ type Stato = {
   ionTokenSito: string
   ultimaQuota: number | null
   googleGiro: number
+  /** punto scelto dell'oggetto selezionato */
+  vSel: number | null
+  /** passo delle modifiche in metri (0 = libero) */
+  passo: number
   info: { p: LL; z: number } | null
   pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | null
   passato: string[]
@@ -63,7 +67,7 @@ type Stato = {
   salvaVista: (v: Vista) => void
   dici: (t: string) => void
 }
-const KEY = 'posimulatore.v4'
+const KEY = 'posimulatore.v5'
 type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
@@ -92,6 +96,8 @@ export const useS = create<Stato>((set, get) => ({
   ionTokenSito: '',
   ultimaQuota: null,
   googleGiro: 0,
+  vSel: null,
+  passo: 0.1,
   info: null,
   pannello: null,
   passato: [],

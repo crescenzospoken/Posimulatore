@@ -88,3 +88,47 @@ describe('piazza con ingresso dal basso', () => {
     expect(senza.stalliTot).toBeGreaterThan(con.stalliTot)
   })
 })
+
+import { Frame as F2 } from '../src/engine/geo'
+import { azimutLato, inserisci, lati, locali, lunghezzaLato, muoviPunto, ruota, squadra, togliPunto, trasla } from '../src/engine/modifica'
+describe('modifica di precisione', () => {
+  const f = new F2(14.4823, 40.6295)
+  const q = ([[0, 0], [10, 0], [10, 6], [0, 6]] as [number, number][]).map(p => f.toLL(p))
+  it('coordinate locali e lati', () => {
+    const l = locali(q)
+    expect(l[2][0]).toBeCloseTo(10, 3); expect(l[2][1]).toBeCloseTo(6, 3)
+    const s = lati(q, true)
+    expect(s.map(x => Math.round(x.l * 100) / 100)).toEqual([10, 6, 10, 6])
+    expect(s[0].az).toBeCloseTo(90, 3) // verso est
+  })
+  it('lunghezza di un lato: si muove solo il secondo estremo', () => {
+    const p = lunghezzaLato(q, 0, 12.5)
+    expect(lati(p, true)[0].l).toBeCloseTo(12.5, 3)
+    expect(p[0]).toEqual(q[0]); expect(p[3]).toEqual(q[3])
+  })
+  it('azimut di un lato', () => {
+    const p = azimutLato(q, 0, 0) // ora punta a nord
+    const l = locali(p)
+    expect(l[1][0]).toBeCloseTo(0, 3); expect(l[1][1]).toBeCloseTo(10, 3)
+  })
+  it('sposta un punto, inserisci e togli', () => {
+    expect(locali(muoviPunto(q, 2, 11, 7))[2]).toEqual([expect.closeTo(11, 3), expect.closeTo(7, 3)])
+    const p = inserisci(q, 0)
+    expect(p.length).toBe(5); expect(locali(p)[1][0]).toBeCloseTo(5, 3)
+    expect(togliPunto(p, 1, 3).length).toBe(4)
+    expect(togliPunto(q.slice(0, 3), 1, 3).length).toBe(3) // non scende sotto il minimo
+  })
+  it('trasla e ruota tengono le misure', () => {
+    const t = trasla(q, 3, -2)
+    expect(new F2(q[0][0], q[0][1]).toXY(t[0])[0]).toBeCloseTo(3, 3)
+    const r = ruota(q, 90)
+    expect(lati(r, true).map(x => Math.round(x.l * 100) / 100)).toEqual([10, 6, 10, 6])
+    expect(lati(r, true)[0].az).toBeCloseTo(180, 2) // da est a sud: rotazione oraria
+  })
+  it('squadra: 90° nel punto', () => {
+    const storto = muoviPunto(q, 1, 11, 1.5)
+    const l = locali(squadra(storto, 1))
+    const a = [l[0][0] - l[1][0], l[0][1] - l[1][1]], b = [l[2][0] - l[1][0], l[2][1] - l[1][1]]
+    expect(a[0] * b[0] + a[1] * b[1]).toBeCloseTo(0, 6)
+  })
+})

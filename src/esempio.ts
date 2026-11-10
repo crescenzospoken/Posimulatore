@@ -15,8 +15,9 @@ export function esempio(): Progetto {
   const piazza = {
     id: uid(), tipo: 'piazza' as const, nome: 'Piazza a sbalzo con parcheggio', z: Z,
     // contorno misurato sulle quote di Google (10/11): muro della statale a x = 5 m, bordo est 2 m dentro il cordolo della strada bassa
-    pts: ll([[5, 1.5], [5, 19], [5, 23], [8, 21.5], [12, 17.5], [16, 13.5], [20, 9.5], [21.5, 6], [21.5, 0.5], [20.5, -2], [17, -4.5], [14, -5], [11.5, -3.5], [7.5, -0.5]]),
-    par: { ...PIAZZA_DEF, attacco: 0, livelli: 3, hLiv: 3.4, rampa: false } as Record<string, number | boolean>,
+    pts: ll([[5, 2], [5, 23], [8, 21.5], [12, 17.5], [16, 13.5], [20, 9.5], [21.5, 6], [21.5, 0.5], [20.5, -2], [17, -4], [14.5, -4], [12, -2.5], [8, 0.5]]),
+    // un solo piano di parcheggio, sopra i tetti esistenti (circa 154 m): quello che c'è sotto resta com'è
+    par: { ...PIAZZA_DEF, attacco: 0, livelli: 1, hLiv: 3.4, rampaPend: 0.18, rampaPos: 0.5, scava: false } as Record<string, number | boolean>,
   }
   return {
     id: uid(), nome: 'Piazza a Chiesa Nuova', creato: new Date().toISOString(), modificato: new Date().toISOString(),
