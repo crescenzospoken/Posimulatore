@@ -11,6 +11,7 @@ import { modelloStrumento } from './strumenti'
 import { risultato } from '../scene/interazione'
 import { fmtM, fmtM2 } from '../engine/geo'
 import { NORME } from '../engine/norme'
+import { Geometria } from './Geometria'
 
 type Campo = { k: string; nome: string; t: 'num' | 'sel' | 'col' | 'bool' | 'txt'; opz?: [string, string][]; passo?: number; min?: number; max?: number; aiuto?: string }
 const COLORI: [string, string][] = [['bianco', 'Bianco'], ['giallo', 'Giallo'], ['blu', 'Blu']]
@@ -41,11 +42,11 @@ const CAMPI: Record<Obj['tipo'], Campo[]> = {
     { k: 'rampaPend', nome: 'Pendenza rampa (0,16 = 16%)', t: 'num', passo: 0.01, max: 0.3, aiuto: `Massimo 20% (${NORME.rampaMax.fonte}, da verificare)` },
     { k: 'rampaPos', nome: 'Posizione rampa lungo il lato (0-1)', t: 'num', passo: 0.05, min: 0, max: 1 },
     { k: 'parapetto', nome: 'Parapetto sui lati liberi', t: 'bool' },
-    { k: 'scava', nome: 'Scava il terreno sotto', t: 'bool' },
+    { k: 'scava', nome: 'Togli dalla vista l\'esistente dentro il perimetro', t: 'bool', aiuto: 'Spento: edifici e strada sotto restano visibili. Acceso: mostra il progetto al posto dell\'esistente' },
     { k: 'pavimento', nome: 'Pavimento', t: 'sel', opz: [['#e6dccb', 'Pietra chiara'], ['#cfc8bb', 'Pietra grigia'], ['#d8c3a0', 'Travertino'], ['cotto', 'Cotto']] },
   ],
 }
-const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, spessore: 0.5, campata: 7.5, attacco: 0, corsia: 6, stalloL: 2.5, stalloP: 5, rampaPend: 0.16, rampaPos: 0, parapetto: true, scava: true, pavimento: '#e6dccb', altezza: 6, colore: '#e9d8bd', opacita: 1, rot: 0, scala: 1, alto: 0, tratto: 3, vuoto: 3, larghezza: 0.12, lato: 1 }
+const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, spessore: 0.5, campata: 7.5, attacco: 0, corsia: 6, stalloL: 2.5, stalloP: 5, rampaPend: 0.16, rampaPos: 0, parapetto: true, scava: false, rampa: true, pavimento: '#e6dccb', altezza: 6, colore: '#e9d8bd', opacita: 1, rot: 0, scala: 1, alto: 0, tratto: 3, vuoto: 3, larghezza: 0.12, lato: 1 }
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
@@ -108,7 +109,7 @@ function Oggetto() {
             {c.t === 'num' && <input type="number" step={c.passo ?? 0.1} min={c.min} max={c.max} value={Number(v)} onChange={e => set(c.k, Number(e.target.value))} />}
             {c.t === 'txt' && <input value={String(v ?? '')} onChange={e => set(c.k, e.target.value)} />}
             {c.t === 'col' && <input type="color" value={String(v ?? (o.tipo === 'area' ? USI[String(o.par.uso)]?.col : '#e9d8bd'))} onChange={e => set(c.k, e.target.value)} />}
-            {c.t === 'bool' && <input type="checkbox" checked={v !== false} onChange={e => set(c.k, e.target.checked)} />}
+            {c.t === 'bool' && <input type="checkbox" checked={v === true} onChange={e => set(c.k, e.target.checked)} />}
             {c.t === 'sel' && <select value={String(v)} onChange={e => set(c.k, c.k === 'lato' ? Number(e.target.value) : e.target.value)}>{c.opz!.map(([k, n]) => <option key={k} value={k}>{n}</option>)}</select>}
             {c.aiuto && <small>{c.aiuto}</small>}
           </label>
@@ -126,12 +127,13 @@ function Oggetto() {
         if (z === undefined) s.dici('Google 3D non ancora caricato lì: avvicinati e riprova')
         else { s.aggiorna(o.id, x => { x.z = Math.round(z * 10) / 10 }); s.dici(`Piazza alla quota della strada: ${z.toFixed(1).replace('.', ',')} m s.l.m.`) }
       }} data-tip="Porta il piano della piazza alla quota della strada letta sul 3D di Google">Piano alla quota della strada</button>}
+      <Geometria o={o} />
       <div className="bottoni">
         <button onClick={() => inquadra(o.pts, o.z ?? quota(o.pts[0][0], o.pts[0][1]))}>Inquadra</button>
         <button onClick={() => s.duplica(o.id)}>Duplica</button>
         <button className="danger" onClick={() => s.togli(o.id)}>Elimina</button>
       </div>
-      <p className="nota">Trascina l'oggetto o i suoi punti azzurri per spostarli.</p>
+      <p className="nota">Puoi anche trascinare l'oggetto o i suoi punti numerati.</p>
     </div>
   )
 }

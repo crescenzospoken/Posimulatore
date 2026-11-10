@@ -11,6 +11,7 @@ import { GRUPPI } from './ui/strumenti'
 import { Pannello } from './ui/Pannello'
 import { Suggerimenti } from './ui/Suggerimenti'
 import type { Obj } from './engine/model'
+import { trasla } from './engine/modifica'
 
 export default function App() {
   const el = useRef<HTMLDivElement>(null)
@@ -47,7 +48,7 @@ export default function App() {
   }, [])
 
   // scena <- stato
-  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel) }, [pronto, op, s.sel, s.googleGiro])
+  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel) }, [pronto, op, s.sel, s.vSel, s.googleGiro])
   useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
   useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido) } }, [pronto, s.livelli])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
@@ -65,6 +66,16 @@ export default function App() {
       if (e.key === 'Escape') { if (st.strumento.k !== 'naviga') st.set({ strumento: { k: 'naviga' }, bozza: [] }); else st.set({ sel: null, selEdificio: null, info: null }); setAperto(null) }
       else if (e.key === 'Enter' && st.strumento.k === 'disegna') finisci()
       else if ((e.key === 'Delete' || e.key === 'Backspace') && st.sel) st.togli(st.sel)
+      else if (e.key.startsWith('Arrow') && st.sel && st.strumento.k === 'naviga') {
+        // frecce: spostano l'oggetto scelto (o il punto scelto) di un passo; con Maiusc di dieci passi
+        e.preventDefault()
+        const k = (st.passo || 0.1) * (e.shiftKey ? 10 : 1)
+        const de = e.key === 'ArrowRight' ? k : e.key === 'ArrowLeft' ? -k : 0, dn = e.key === 'ArrowUp' ? k : e.key === 'ArrowDown' ? -k : 0
+        st.aggiorna(st.sel, o => {
+          if (st.vSel !== null && o.pts[st.vSel]) { const tutti = trasla([o.pts[st.vSel]], de, dn); o.pts[st.vSel] = tutti[0] }
+          else o.pts = trasla(o.pts, de, dn)
+        })
+      }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') { e.preventDefault(); if (e.shiftKey) st.ripeti(); else st.annulla() }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') { e.preventDefault(); st.ripeti() }
     }

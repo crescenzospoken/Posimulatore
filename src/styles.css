@@ -105,6 +105,20 @@ input, select { border: 1px solid var(--linea); border-radius: 7px; padding: 6px
 .pad-su { grid-column: 2; grid-row: 1; } .pad-sx { grid-column: 1; grid-row: 2; } .pad-giu { grid-column: 2; grid-row: 2; } .pad-dx { grid-column: 3; grid-row: 2; }
 .pad-nota { background: var(--carta); padding: 6px 10px; border-radius: 8px; font-size: 13px; max-width: 280px; }
 
+.geometria { display: flex; flex-direction: column; gap: 8px; }
+.punti { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.punti th { font-size: 11px; color: var(--tenue); font-weight: 600; text-align: left; padding: 2px 3px; }
+.punti td { padding: 2px 3px; }
+.punti tr.scelto { background: #fff6cf; }
+.punti tbody tr { cursor: pointer; }
+input.num { width: 58px; padding: 4px 5px; text-align: right; font-variant-numeric: tabular-nums; }
+input.num.largo { width: 76px; }
+.azioni-punto { white-space: nowrap; }
+.azioni-punto button { padding: 3px 5px; }
+.sposta { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; }
+.sposta label { flex-direction: column; font-size: 12px; color: var(--tenue); }
+.pannello { width: 400px; }
+
 @media (max-width: 760px) {
   .barra { top: 6px; left: 6px; right: 6px; flex-wrap: wrap; gap: 4px; }
   .progetto-nome { max-width: 46vw; }

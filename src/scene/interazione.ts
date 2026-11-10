@@ -86,9 +86,9 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (id?.startsWith('ed:')) { useS.setState({ selEdificio: id.slice(3), sel: null, pannello: 'oggetto', info: pt ? { p: pt.p, z: pt.z } : null }); return }
     if (id && !id.startsWith('st:') && !id.startsWith('lu:') && !id.startsWith('h:')) {
       const oid = id.split(':')[0]
-      if (s.opzione().oggetti.some(o => o.id === oid)) { useS.setState({ sel: oid, selEdificio: null, pannello: 'oggetto' }); return }
+      if (s.opzione().oggetti.some(o => o.id === oid)) { useS.setState({ sel: oid, vSel: s.sel === oid ? s.vSel : null, selEdificio: null, pannello: 'oggetto' }); return }
     }
-    useS.setState({ sel: null, selEdificio: null, info: pt ? { p: pt.p, z: pt.z } : null, pannello: pt ? 'oggetto' : s.pannello })
+    useS.setState({ sel: null, vSel: null, selEdificio: null, info: pt ? { p: pt.p, z: pt.z } : null, pannello: pt ? 'oggetto' : s.pannello })
   }, C.ScreenSpaceEventType.LEFT_CLICK)
 
   h.setInputAction(() => { if (S().strumento.k === 'disegna') fine() }, C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK)
@@ -107,6 +107,7 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (!pt) return
     ctrl.enableInputs = false
     s.aggiorna(o.id, () => {}, true) // un passo nella storia prima di muovere
+    useS.setState({ vSel: i })
     trascina = { id: o.id, i, da: pt.p, orig: o.pts.map(q => [...q] as LL) }
   }, C.ScreenSpaceEventType.LEFT_DOWN)
 
@@ -120,7 +121,11 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (trascina) {
       const pt = puntoGlobo(e.endPosition)
       if (!pt) return
-      const d: LL = [pt[0] - trascina.da[0], pt[1] - trascina.da[1]]
+      // lo spostamento si arrotonda al passo scelto (in metri, verso est e verso nord)
+      const fr = new Frame(trascina.da[0], trascina.da[1]), m = fr.toXY(pt), ps = S().passo
+      const mm = ps > 0 ? [Math.round(m[0] / ps) * ps, Math.round(m[1] / ps) * ps] as [number, number] : m
+      const q2 = fr.toLL(mm)
+      const d: LL = [q2[0] - trascina.da[0], q2[1] - trascina.da[1]]
       const tr = trascina
       S().aggiorna(tr.id, o => {
         o.pts = tr.orig.map((q, k) => (tr.i === null || tr.i === k ? [q[0] + d[0], q[1] + d[1]] : q) as LL)

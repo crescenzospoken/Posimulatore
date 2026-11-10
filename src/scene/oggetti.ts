@@ -213,7 +213,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
         for (const r of L.stalli) for (let i = 0; i < 3; i++) out.push(new C.Entity({ id: id(), polyline: { positions: posArr(f, [r[i], r[i + 1]], L.pavimento + 0.03), width: 2, material: col('#ffffff') } }))
       }
       // basamento: dal terreno al fondo dell'ultimo piano
-      if (pp.livelli > 0) { const fondo = pp.quota - pp.livelli * pp.hLiv - pp.spessore; out.push(new C.Entity({ id: id(), polygon: { hierarchy: piano, height: Math.min(P.terrenoMin, fondo) - 1.5 + g, extrudedHeight: fondo + g, material: col('#aaa294') } })) }
+      if (pp.livelli > 0 && par.scava === true) { const fondo = pp.quota - pp.livelli * pp.hLiv - pp.spessore; out.push(new C.Entity({ id: id(), polygon: { hierarchy: piano, height: Math.min(P.terrenoMin, fondo) - 1.5 + g, extrudedHeight: fondo + g, material: col('#aaa294') } })) }
       // rampe
       if (P.rampa) for (let k = 0; k < pp.livelli; k++) {
         const zt = pp.quota - k * pp.hLiv, zb = zt - pp.hLiv
@@ -250,7 +250,7 @@ function etichetta(t: string, sel: boolean): C.LabelGraphics.ConstructorOptions 
     text: t, font: '600 15px system-ui, sans-serif', fillColor: C.Color.WHITE, style: C.LabelStyle.FILL,
     showBackground: true, backgroundColor: C.Color.fromCssColorString(sel ? '#1677b8' : '#10202c').withAlpha(0.88),
     backgroundPadding: new C.Cartesian2(9, 6), verticalOrigin: C.VerticalOrigin.BOTTOM, pixelOffset: new C.Cartesian2(0, -8),
-    distanceDisplayCondition: new C.DistanceDisplayCondition(0, 1500), disableDepthTestDistance: Number.POSITIVE_INFINITY,
+    distanceDisplayCondition: new C.DistanceDisplayCondition(0, 700), disableDepthTestDistance: Number.POSITIVE_INFINITY,
   }
 }
 function orient(l: LL, heading: number, pitch = 0, roll = 0) {
@@ -272,7 +272,7 @@ function parte(id: string, fr: Frame, z0: number, th: number, p: Parte, sc: numb
 }
 
 /** Ridisegna solo gli oggetti cambiati. */
-export function disegnaOggetti(lista: Obj[], sel: string | null) {
+export function disegnaOggetti(lista: Obj[], sel: string | null, vSel: number | null = null) {
   if (!pronto) return
   const vivi = new Set(lista.map(o => o.id))
   ds.entities.suspendEvents()
@@ -287,16 +287,33 @@ export function disegnaOggetti(lista: Obj[], sel: string | null) {
     firme.set(o.id, firma)
   }
   ds.entities.resumeEvents()
-  maniglie(lista.find(o => o.id === sel) ?? null)
+  maniglie(lista.find(o => o.id === sel) ?? null, vSel)
   scavi(lista)
   viewer.scene.requestRender()
 }
-function maniglie(o: Obj | null) {
+function maniglie(o: Obj | null, vSel: number | null = null) {
   hs.entities.removeAll()
   if (!o) return
+  const chiuso = o.tipo === 'area' || o.tipo === 'volume' || o.tipo === 'piazza'
+  const n = o.pts.length
   o.pts.forEach((p, i) => {
-    hs.entities.add({ id: `h:${o.id}:${i}`, position: pos(p[0], p[1], zDi(o, p) + 0.3), point: { pixelSize: 13, color: C.Color.fromCssColorString('#cfeeff'), outlineColor: C.Color.fromCssColorString('#1677b8'), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY } })
+    const sel = i === vSel
+    hs.entities.add({
+      id: `h:${o.id}:${i}`, position: pos(p[0], p[1], zDi(o, p) + 0.3),
+      point: { pixelSize: sel ? 17 : 13, color: C.Color.fromCssColorString(sel ? '#ffd84a' : '#cfeeff'), outlineColor: C.Color.fromCssColorString('#1677b8'), outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      ...(n > 1 ? { label: { text: String(i + 1), font: '700 12px system-ui, sans-serif', fillColor: C.Color.fromCssColorString('#0b3d5c'), showBackground: true, backgroundColor: C.Color.WHITE.withAlpha(0.9), backgroundPadding: new C.Cartesian2(4, 2), pixelOffset: new C.Cartesian2(14, -12), disableDepthTestDistance: Number.POSITIVE_INFINITY, distanceDisplayCondition: new C.DistanceDisplayCondition(0, 400) } } : {}),
+    })
   })
+  // misura di ogni lato, a metà lato
+  if (n > 1) {
+    const f = new Frame(o.pts[0][0], o.pts[0][1])
+    for (let i = 0; i < (chiuso ? n : n - 1); i++) {
+      const a = o.pts[i], b = o.pts[(i + 1) % n]
+      const l = dist(f.toXY(a), f.toXY(b))
+      const m: LL = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]
+      hs.entities.add({ position: pos(m[0], m[1], zDi(o, m) + 0.3), label: { text: l.toFixed(2).replace('.', ',') + ' m', font: '600 12px system-ui, sans-serif', fillColor: C.Color.BLACK, showBackground: true, backgroundColor: C.Color.fromCssColorString('#ffd84a').withAlpha(0.92), backgroundPadding: new C.Cartesian2(5, 3), disableDepthTestDistance: Number.POSITIVE_INFINITY, distanceDisplayCondition: new C.DistanceDisplayCondition(0, 300) } })
+    }
+  }
 }
 /** Le piazze con piani sotto il terreno scavano il terreno (e Google 3D) dentro il loro perimetro. */
 function scavi(lista: Obj[]) {
@@ -304,7 +321,7 @@ function scavi(lista: Obj[]) {
   // Google 3D: una piazza toglie sempre ciò che c'è dentro il suo perimetro (il progetto sostituisce l'esistente)
   const terra: C.Cartesian3[][] = [], google: C.Cartesian3[][] = []
   for (const o of lista) {
-    if (o.par.scava === false) continue
+    if (o.par.scava !== true) continue
     const posiz = o.pts.map(p => C.Cartesian3.fromDegrees(p[0], p[1]))
     if (o.tipo === 'piazza') {
       google.push(posiz)

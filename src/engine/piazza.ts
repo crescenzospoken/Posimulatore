@@ -165,11 +165,11 @@ export function calcolaPiazza(polyIn: XY[], par: PiazzaPar, h: (p: XY) => number
       : { esito: 'errore', testo: `Rampa al ${Math.round(par.rampaPend * 100)}%, oltre il 20%`, fonte: NORME.rampaMax.fonte })
     if (rampa && rampaL + 0.6 > edgeLen) controlli.push({ esito: 'errore', testo: `La rampa (${rampaL.toFixed(1).replace('.', ',')} m) non entra nel lato d'attacco (${edgeLen.toFixed(1).replace('.', ',')} m)` })
     if (stalliPiano.length === 0) controlli.push({ esito: 'errore', testo: 'Nessuno stallo entra: la piazza è troppo stretta per fila + corsia' })
-    if (scavo > 1) controlli.push({ esito: 'attenzione', testo: `Scavo nel versante circa ${Math.round(scavo).toLocaleString('it-IT')} m³ (stima dal modello 3D)` })
+    if (scavo > 1) controlli.push({ esito: 'attenzione', testo: `Volume esistente dentro i piani di parcheggio circa ${Math.round(scavo).toLocaleString('it-IT')} m³ (stima dal modello 3D)` })
   }
   const alt = par.quota - tMin
   if (alt > 12) controlli.push({ esito: 'attenzione', testo: `La piazza sta fino a ${alt.toFixed(1).replace('.', ',')} m sopra il terreno: struttura alta, serve verifica strutturale` })
-  if (par.quota < tMx - 0.5) controlli.push({ esito: 'attenzione', testo: `Parte del terreno (fino a ${(tMx - par.quota).toFixed(1).replace('.', ',')} m) sta sopra il piano della piazza` })
+  if (par.quota < tMx - 0.5) controlli.push({ esito: 'attenzione', testo: `Qualcosa di esistente supera il piano della piazza fino a ${(tMx - par.quota).toFixed(1).replace('.', ',')} m (alberi o costruzioni): da verificare` })
   if (interferenze.length) controlli.push({ esito: 'attenzione', testo: `Sovrapposta a ${interferenze.length} edific${interferenze.length === 1 ? 'io' : 'i'} esistent${interferenze.length === 1 ? 'e' : 'i'} (ingombri OpenStreetMap)` })
   controlli.push({ esito: 'attenzione', testo: 'Quote lette dal modello 3D: indicative, servono rilievi sul posto' })
 
