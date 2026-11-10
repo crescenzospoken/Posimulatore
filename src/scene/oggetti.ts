@@ -182,7 +182,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
       // pavimentazione in pietra chiara a lastre di 60 cm
       const xs = P.poly.map(q => q[0]), ys = P.poly.map(q => q[1])
       const lato = 0.6, rw = (Math.max(...xs) - Math.min(...xs)) / (2 * lato), rh = (Math.max(...ys) - Math.min(...ys)) / (2 * lato)
-      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota + 0.02 + g, material: new C.CheckerboardMaterialProperty({ evenColor: col(String(par.pavimento ?? '#e3d9c6')), oddColor: col(String(par.pavimento ?? '#e3d9c6')).darken(0.07, new C.Color()), repeat: new C.Cartesian2(rw, rh) }), stRotation: Math.atan2(P.u[1], P.u[0]) } }))
+      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota + 0.02 + g, material: new C.CheckerboardMaterialProperty({ evenColor: col(String(par.pavimento ?? '#e3d9c6')), oddColor: col(String(par.pavimento ?? '#e3d9c6')).darken(0.035, new C.Color()), repeat: new C.Cartesian2(rw, rh) }), stRotation: Math.atan2(P.u[1], P.u[0]) } }))
       // cordolo in pietra lungo il bordo
       out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, [...P.poly, P.poly[0]], 0), width: 0.45, height: pp.quota + 0.05 + g, material: col('#f1ede4'), cornerType: C.CornerType.MITERED } }))
       // parapetto in muratura bianca con copertina, sui lati liberi
@@ -192,8 +192,15 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
         for (let i = 0; i < n; i++) {
           if (i === ai) continue
           const seg = [P.poly[i], P.poly[(i + 1) % n]]
-          out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, seg, 0), width: 0.3, height: pp.quota + g, extrudedHeight: pp.quota + 1.05 + g, material: col('#f6f3ec'), cornerType: C.CornerType.MITERED, shadows: C.ShadowMode.ENABLED } }))
-          out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, seg, 0), width: 0.42, height: pp.quota + 1.05 + g, extrudedHeight: pp.quota + 1.11 + g, material: col('#d8d0c0'), cornerType: C.CornerType.MITERED } }))
+          const q = pp.quota + g
+          // due facce a 30 cm l'una dall'altra, più la copertina: un muretto pieno
+          const nrm: XY = perp(norm(sub(seg[1], seg[0])))
+          for (const d of [0, -0.3]) {
+            const sg = seg.map(pt => add(pt, mul(nrm, d)))
+            out.push(new C.Entity({ id: id(), wall: { positions: posArr(f, sg, 0), minimumHeights: [q, q], maximumHeights: [q + 1.05, q + 1.05], material: col('#f6f3ec'), shadows: C.ShadowMode.ENABLED } }))
+          }
+          const cop = [seg[0], seg[1], add(seg[1], mul(nrm, -0.3)), add(seg[0], mul(nrm, -0.3))]
+          out.push(new C.Entity({ id: id(), polygon: { hierarchy: posArr(f, cop, 0), height: q + 1.05, extrudedHeight: q + 1.1, material: col('#d8d0c0') } }))
         }
       }
       // piani di parcheggio
@@ -203,6 +210,8 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
         out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, !ultimo ? buco : []), height: L.pavimento - pp.spessore + g, extrudedHeight: L.pavimento + g, material: col('#bdbab4'), shadows: C.ShadowMode.ENABLED } }))
         for (const r of L.stalli) for (let i = 0; i < 3; i++) out.push(new C.Entity({ id: id(), polyline: { positions: posArr(f, [r[i], r[i + 1]], L.pavimento + 0.03), width: 2, material: col('#ffffff') } }))
       }
+      // basamento: dal terreno al fondo dell'ultimo piano
+      if (pp.livelli > 0) { const fondo = pp.quota - pp.livelli * pp.hLiv - pp.spessore; out.push(new C.Entity({ id: id(), polygon: { hierarchy: piano, height: Math.min(P.terrenoMin, fondo) - 1.5 + g, extrudedHeight: fondo + g, material: col('#b5ad9f') } })) }
       // rampe
       if (P.rampa) for (let k = 0; k < pp.livelli; k++) {
         const zt = pp.quota - k * pp.hLiv, zb = zt - pp.hLiv

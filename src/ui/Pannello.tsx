@@ -87,7 +87,7 @@ function Oggetto() {
             {P.scavo > 1 && <><dt>Scavo stimato</dt><dd>{Math.round(P.scavo).toLocaleString('it-IT')} m³</dd></>}
           </dl>
           <h3>Controlli</h3>
-          {P.interferenze.length > 0 && <p className="nota">Gli edifici sotto la piazza sono in rosso. Toccandoli puoi correggerne l'altezza o toglierli in questa opzione.</p>}
+          {P.interferenze.length > 0 && !googleAcceso() && <p className="nota">Gli edifici sotto la piazza sono in rosso. Toccandoli puoi correggerne l'altezza o toglierli in questa opzione.</p>}
           <ul className="controlli">{P.controlli.map((c, i) => <li key={i} className={c.esito}><span>{c.esito === 'ok' ? '✓' : c.esito === 'errore' ? '✕' : '!'}</span>{c.testo}{c.fonte && <small>{c.fonte}, da verificare</small>}</li>)}</ul>
         </div>
       )}
