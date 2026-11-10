@@ -79,7 +79,9 @@ export function disegnaCupole(v: C.Viewer) {
     const mat = c.maiolica
       ? new C.CheckerboardMaterialProperty({ evenColor: C.Color.fromCssColorString('#f2c230'), oddColor: C.Color.fromCssColorString('#2f8a5b'), repeat: new C.Cartesian2(28, 10) })
       : C.Color.fromCssColorString('#f4f1ea')
-    v.entities.add({ id: 'cupola:' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z), ellipsoid: { radii: new C.Cartesian3(c.r, c.r, c.r * 1.05), maximumCone: Math.PI / 2, material: mat, shadows: C.ShadowMode.ENABLED } })
-    v.entities.add({ id: 'cupola:l' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z + c.r * 1.05 + 1), cylinder: { length: 2, topRadius: 0.9, bottomRadius: 1.1, material: C.Color.fromCssColorString('#f4f1ea') } })
+    cup.push(v.entities.add({ id: 'cupola:' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z), ellipsoid: { radii: new C.Cartesian3(c.r, c.r, c.r * 1.05), maximumCone: Math.PI / 2, material: mat, shadows: C.ShadowMode.ENABLED } }))
+    cup.push(v.entities.add({ id: 'cupola:l' + c.id, position: C.Cartesian3.fromDegrees(c.lon, c.lat, z + c.r * 1.05 + 1), cylinder: { length: 2, topRadius: 0.9, bottomRadius: 1.1, material: C.Color.fromCssColorString('#f4f1ea') } }))
   }
 }
+const cup: C.Entity[] = []
+export const mostraCupole = (on: boolean) => cup.forEach(e => (e.show = on))

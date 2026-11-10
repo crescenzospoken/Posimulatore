@@ -4,7 +4,7 @@ import type { Obj, Progetto } from '../engine/model'
 import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
-import { quota } from '../scene/terreno'
+import { quota } from '../scene/oggetti'
 import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
 import { Frame, add, mul } from '../engine/geo'
 import { modelloStrumento } from './strumenti'
@@ -173,7 +173,7 @@ function PuntoP() {
       <dl>
         <dt>Coordinate</dt><dd>{lat.toFixed(6)}, {lon.toFixed(6)}</dd>
         <dt>Quota</dt><dd>{i.z.toFixed(1).replace('.', ',')} m s.l.m.</dd>
-        <dt>Terreno (modello a 10 m)</dt><dd>{quota(lon, lat).toFixed(1).replace('.', ',')} m s.l.m.</dd>
+        <dt>Suolo in quel punto</dt><dd>{quota(lon, lat).toFixed(1).replace('.', ',')} m s.l.m.</dd>
       </dl>
       <p className="nota">Per guardare com'è oggi:</p>
       <div className="bottoni">
