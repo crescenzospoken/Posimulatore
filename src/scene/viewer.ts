@@ -8,7 +8,7 @@ import type { Vista } from '../engine/model'
 export let viewer: C.Viewer
 export const VAI: { nome: string; lon: number; lat: number; h: number; heading: number; pitch: number }[] = [
   { nome: 'Tutta Positano', lon: 14.4835, lat: 40.6085, h: 1500, heading: 0, pitch: -32 },
-  { nome: 'Bivio di Chiesa Nuova', lon: 14.48195, lat: 40.62775, h: 250, heading: 15, pitch: -32 },
+  { nome: 'Bivio di Chiesa Nuova', lon: 14.48335, lat: 40.62935, h: 222, heading: 262, pitch: -38 },
   { nome: 'Spiaggia Grande e Collegiata', lon: 14.4852, lat: 40.6248, h: 160, heading: 0, pitch: -25 },
   { nome: 'La Sponda', lon: 14.4905, lat: 40.6250, h: 200, heading: -10, pitch: -35 },
   { nome: 'Fornillo', lon: 14.4795, lat: 40.6235, h: 140, heading: 10, pitch: -28 },
