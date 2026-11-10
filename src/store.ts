@@ -34,6 +34,7 @@ type Stato = {
   ionToken: string
   ionTokenSito: string
   ultimaQuota: number | null
+  googleGiro: number
   info: { p: LL; z: number } | null
   pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | null
   passato: string[]
@@ -61,7 +62,7 @@ type Stato = {
   salvaVista: (v: Vista) => void
   dici: (t: string) => void
 }
-const KEY = 'posimulatore.v1'
+const KEY = 'posimulatore.v2'
 type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
@@ -90,6 +91,7 @@ export const useS = create<Stato>((set, get) => ({
   ionToken: iniziale?.ionToken ?? '',
   ionTokenSito: '',
   ultimaQuota: null,
+  googleGiro: 0,
   info: null,
   pannello: null,
   passato: [],

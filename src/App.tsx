@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useS } from './store'
-import { googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
-import { caricaEdifici, disegnaEdifici, disegnaCupole } from './scene/edifici'
+import { quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
+import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
-import { avviaOggetti, disegnaOggetti, calcoli } from './scene/oggetti'
+import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
-import { quota } from './scene/terreno'
+import { quota } from './scene/oggetti'
 import { GRUPPI } from './ui/strumenti'
 import { Pannello } from './ui/Pannello'
 import { Suggerimenti } from './ui/Suggerimenti'
@@ -31,6 +31,8 @@ export default function App() {
         impostaOrto(useS.getState().livelli.orto)
         await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
         disegnaCupole(viewer)
+        let tG: ReturnType<typeof setTimeout> | undefined
+        quandoGoogle(() => { clearTimeout(tG); tG = setTimeout(() => { quoteCambiate(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 })) }, 400) })
         stop = avviaInterazione(setCur, finisci)
         const v = useS.getState().progetto().vista ?? VAI[1]
         vai(v, 0)
@@ -45,9 +47,9 @@ export default function App() {
   }, [])
 
   // scena <- stato
-  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel) }, [pronto, op, s.sel])
+  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel) }, [pronto, op, s.sel, s.googleGiro])
   useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine); impostaSole(s.livelli) } }, [pronto, s.livelli])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli) } }, [pronto, s.livelli])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   useEffect(() => {
     if (!pronto) return

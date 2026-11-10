@@ -10,7 +10,7 @@ export function esempio(): Progetto {
   const ll = (p: XY[]) => p.map(q => f.toLL(q))
   const oA = uid()
   const piazza = {
-    id: uid(), tipo: 'piazza' as const, nome: 'Piazza a sbalzo con parcheggio', z: 139.5,
+    id: uid(), tipo: 'piazza' as const, nome: 'Piazza a sbalzo con parcheggio', z: 160,
     pts: ll([[-2, -4], [-32, -9], [-30, -20], [-3, -15]]),
     par: { ...PIAZZA_DEF, attacco: 0, livelli: 1, rampaPos: 0.05 } as Record<string, number | boolean>,
   }
@@ -22,10 +22,10 @@ export function esempio(): Progetto {
         id: oA, nome: 'Opzione A', edifici: {},
         oggetti: [
           piazza,
-          { id: uid(), tipo: 'area', nome: 'Area di attesa', pts: ll([[-7, -8.5], [-19, -10.5], [-18, -16.5], [-6, -14.5]]), z: 139.5, par: { uso: 'attesa' } },
-          { id: uid(), tipo: 'modello', nome: 'Gazebo 6x3', pts: ll([[-25, -14]]), z: 139.5, par: { m: 'gazebo63', rot: -80 } },
-          { id: uid(), tipo: 'modello', nome: 'Gruppo di persone', pts: ll([[-12, -12]]), z: 139.5, par: { m: 'gruppo', rot: 0 } },
-          { id: uid(), tipo: 'modello', nome: 'Albero', pts: ll([[-5, -12]]), z: 139.5, par: { m: 'albero', rot: 0 } },
+          { id: uid(), tipo: 'area', nome: 'Area di attesa', pts: ll([[-7, -8.5], [-19, -10.5], [-18, -16.5], [-6, -14.5]]), z: 160, par: { uso: 'attesa' } },
+          { id: uid(), tipo: 'modello', nome: 'Gazebo 6x3', pts: ll([[-25, -14]]), z: 160, par: { m: 'gazebo63', rot: -80 } },
+          { id: uid(), tipo: 'modello', nome: 'Gruppo di persone', pts: ll([[-12, -12]]), z: 160, par: { m: 'gruppo', rot: 0 } },
+          { id: uid(), tipo: 'modello', nome: 'Albero', pts: ll([[-5, -12]]), z: 160, par: { m: 'albero', rot: 0 } },
           { id: uid(), tipo: 'modello', nome: 'Autobus', pts: ll([[-1, 9]]), par: { m: 'bus', rot: -10 } },
         ],
       },

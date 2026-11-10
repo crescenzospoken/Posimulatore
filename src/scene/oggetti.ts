@@ -1,6 +1,11 @@
 import * as C from 'cesium'
-import { pos, viewer, googleTileset } from './viewer'
-import { quota, GEOIDE } from './terreno'
+import { pos, viewer, googleTileset, quotaGoogle } from './viewer'
+import { quota as quotaTerreno, GEOIDE } from './terreno'
+/** Quota del suolo: Google 3D se acceso e caricato lì, altrimenti il nostro terreno a 10 m. */
+export const quota = (lon: number, lat: number) => quotaGoogle(lon, lat) ?? quotaTerreno(lon, lat)
+let giro = 0
+/** Da chiamare quando le quote di Google cambiano: ridisegna gli oggetti appoggiati al suolo. */
+export const quoteCambiate = () => { giro++ }
 import { edificiVicini } from './edifici'
 import { Frame, type LL, type XY, add, frameFor, mul, norm, perp, rect, sub, dist } from '../engine/geo'
 import type { Obj } from '../engine/model'
@@ -256,7 +261,7 @@ export function disegnaOggetti(lista: Obj[], sel: string | null) {
   ds.entities.suspendEvents()
   for (const [id, es] of entita) if (!vivi.has(id)) { es.forEach(e => ds.entities.remove(e)); entita.delete(id); firme.delete(id); calcoli.delete(id) }
   for (const o of lista) {
-    const firma = JSON.stringify(o) + (o.id === sel ? '*' : '')
+    const firma = JSON.stringify(o) + (o.id === sel ? '*' : '') + (o.z === undefined || o.tipo === 'piazza' ? giro : '')
     if (firme.get(o.id) === firma) continue
     entita.get(o.id)?.forEach(e => ds.entities.remove(e))
     const es = costruisci(o, o.id === sel)

@@ -44,7 +44,7 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   s.screenSpaceCameraController.minimumZoomDistance = 2
   s.screenSpaceCameraController.maximumZoomDistance = 60000
   s.postProcessStages.fxaa.enabled = true
-  viewer.resolutionScale = new URLSearchParams(location.search).has('prova') ? 0.6 : Math.min(window.devicePixelRatio || 1, 1.5)
+  viewer.resolutionScale = new URLSearchParams(location.search).get('prova') === '' ? 0.6 : Math.min(window.devicePixelRatio || 1, 1.5)
   // il terreno e le immagini che arrivano chiedono un nuovo disegno
   s.globe.tileLoadProgressEvent.addEventListener(() => s.requestRender())
   ;(viewer.cesiumWidget.creditContainer as HTMLElement).classList.add('crediti')
@@ -102,6 +102,9 @@ export function impostaOrto(k: Livelli['orto']) {
 
 // ---------- Google 3D (via Cesium ion, gratuito, solo da guardare) ----------
 let google: C.Cesium3DTileset | undefined
+let onGoogle: (() => void) | undefined
+/** Chiamata ogni volta che Google ha finito di caricare la vista: le quote lette possono essere cambiate. */
+export const quandoGoogle = (f: () => void) => { onGoogle = f }
 export async function impostaGoogle(on: boolean, token: string): Promise<string | null> {
   if (!on) {
     if (google) google.show = false
@@ -112,7 +115,8 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
   try {
     if (!google) {
       C.Ion.defaultAccessToken = token
-      google = await C.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: 8 })
+      google = await C.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: matchMedia('(max-width: 760px)').matches ? 10 : 5, enableCollision: true })
+      google.allTilesLoaded.addEventListener(() => onGoogle?.())
       viewer.scene.primitives.add(google)
     }
     google.show = true
@@ -124,10 +128,10 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
 }
 export const googleTileset = () => google
 export const googleAcceso = () => !!google && google.show
-/** Quota (m s.l.m.) della superficie di Google 3D in un punto, se caricata. */
+/** Quota (m s.l.m.) della superficie di Google 3D in un punto, se caricata. Legge solo Google, non i nostri oggetti. */
 export function quotaGoogle(lon: number, lat: number): number | undefined {
-  if (!googleAcceso()) return undefined
-  const h = viewer.scene.sampleHeight(C.Cartographic.fromDegrees(lon, lat), undefined, 0.3)
+  if (!google || !google.show) return undefined
+  const h = google.getHeight(C.Cartographic.fromDegrees(lon, lat), viewer.scene)
   return h === undefined ? undefined : h - GEOIDE
 }
 
