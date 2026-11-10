@@ -78,3 +78,13 @@ describe('piazza a sbalzo', () => {
     expect(p.interferenze).toEqual(['w1'])
   })
 })
+
+describe('piazza con ingresso dal basso', () => {
+  it('senza rampa interna entrano più posti', () => {
+    const r: XY[] = [[0, 0], [40, 0], [40, 17], [0, 17]]
+    const con = calcolaPiazza(r, { ...PIAZZA_DEF, quota: 140 }, () => 130)
+    const senza = calcolaPiazza(r, { ...PIAZZA_DEF, quota: 140, rampa: false }, () => 130)
+    expect(senza.rampa).toBeNull()
+    expect(senza.stalliTot).toBeGreaterThan(con.stalliTot)
+  })
+})

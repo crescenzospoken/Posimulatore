@@ -164,7 +164,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
     }
     case 'testo': {
       const p = o.pts[0]
-      if (p) out.push(new C.Entity({ id: id(), position: pos(p[0], p[1], zDi(o, p) + Number(par.alto ?? 4)), label: { ...etichetta(String(par.testo ?? o.nome), selezionato), font: '600 16px system-ui, sans-serif' } }))
+      if (p) out.push(new C.Entity({ id: id(), position: pos(p[0], p[1], zDi(o, p) + Number(par.alto ?? 4)), label: etichetta(String(par.testo ?? o.nome), selezionato) }))
       break
     }
     case 'piazza': {
@@ -177,17 +177,23 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
       const g = GEOIDE
       const piano = posArr(f, P.poly, 0)
       const buco = P.rampa ? [new C.PolygonHierarchy(posArr(f, P.rampa, 0))] : []
-      // piazza
-      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota - pp.spessore + g, extrudedHeight: pp.quota + g, material: col(String(par.pavimento ?? '#d8c9ae')), shadows: C.ShadowMode.ENABLED } }))
-      // parapetti
+      // soletta
+      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota - pp.spessore + g, extrudedHeight: pp.quota + g, material: col('#cfc9bd'), shadows: C.ShadowMode.ENABLED } }))
+      // pavimentazione in pietra chiara a lastre di 60 cm
+      const xs = P.poly.map(q => q[0]), ys = P.poly.map(q => q[1])
+      const lato = 0.6, rw = (Math.max(...xs) - Math.min(...xs)) / (2 * lato), rh = (Math.max(...ys) - Math.min(...ys)) / (2 * lato)
+      out.push(new C.Entity({ id: id(), polygon: { hierarchy: new C.PolygonHierarchy(piano, buco), height: pp.quota + 0.02 + g, material: new C.CheckerboardMaterialProperty({ evenColor: col(String(par.pavimento ?? '#e3d9c6')), oddColor: col(String(par.pavimento ?? '#e3d9c6')).darken(0.07, new C.Color()), repeat: new C.Cartesian2(rw, rh) }), stRotation: Math.atan2(P.u[1], P.u[0]) } }))
+      // cordolo in pietra lungo il bordo
+      out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, [...P.poly, P.poly[0]], 0), width: 0.45, height: pp.quota + 0.05 + g, material: col('#f1ede4'), cornerType: C.CornerType.MITERED } }))
+      // parapetto in muratura bianca con copertina, sui lati liberi
       if (pp.parapetto) {
         const n = P.poly.length
         const ai = P.poly.findIndex((q, i) => { const r = P.poly[(i + 1) % n]; return Math.abs((r[0] - q[0]) * P.u[1] - (r[1] - q[1]) * P.u[0]) < 1e-6 && (r[0] - q[0]) * P.u[0] + (r[1] - q[1]) * P.u[1] > 0 })
         for (let i = 0; i < n; i++) {
           if (i === ai) continue
-          const seg = posArr(f, [P.poly[i], P.poly[(i + 1) % n]], 0)
-          out.push(new C.Entity({ id: id(), wall: { positions: seg, minimumHeights: [pp.quota + g, pp.quota + g], maximumHeights: [pp.quota + 1.1 + g, pp.quota + 1.1 + g], material: col('#cfe6ef', 0.35) } }))
-          out.push(new C.Entity({ id: id(), polyline: { positions: posArr(f, [P.poly[i], P.poly[(i + 1) % n]], pp.quota + 1.1), width: 3, material: col('#3a4a44') } }))
+          const seg = [P.poly[i], P.poly[(i + 1) % n]]
+          out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, seg, 0), width: 0.3, height: pp.quota + g, extrudedHeight: pp.quota + 1.05 + g, material: col('#f6f3ec'), cornerType: C.CornerType.MITERED, shadows: C.ShadowMode.ENABLED } }))
+          out.push(new C.Entity({ id: id(), corridor: { positions: posArr(f, seg, 0), width: 0.42, height: pp.quota + 1.05 + g, extrudedHeight: pp.quota + 1.11 + g, material: col('#d8d0c0'), cornerType: C.CornerType.MITERED } }))
         }
       }
       // piani di parcheggio
@@ -218,7 +224,7 @@ function costruisci(o: Obj, selezionato: boolean): C.Entity[] {
         if (m.cima.every(z => z <= m.base + 0.05)) continue
         out.push(new C.Entity({ id: id(), wall: { positions: ll.map((q, i) => pos(q[0], q[1], m.cima[i])), minimumHeights: ll.map(() => m.base + g), maximumHeights: m.cima.map(z => z + g), material: col('#b9b4aa', 0.95), shadows: C.ShadowMode.ENABLED } }))
       }
-      out.push(new C.Entity({ id: id(), position: pos(cen[0], cen[1], pp.quota + 6), label: etichetta(`${o.nome} · ${Math.round(P.area)} m²${P.stalliTot ? ` · ${P.stalliTot} posti` : ''}`, selezionato) }))
+      out.push(new C.Entity({ id: id(), position: pos(cen[0], cen[1], pp.quota + 9), label: etichetta(`${o.nome}\n${Math.round(P.area)} m²${P.stalliTot ? ` · ${P.stalliTot} posti auto` : ''}`, selezionato) }))
       break
     }
   }
@@ -228,12 +234,12 @@ function poligono(id: string, f: Frame, xy: XY[], c: C.Color, z?: number): C.Ent
   return new C.Entity({ id, polygon: { hierarchy: posArr(f, xy, z ?? 0), material: c, ...(z === undefined ? { classificationType: C.ClassificationType.BOTH } : { height: z + GEOIDE, perPositionHeight: false }) } })
 }
 function etichetta(t: string, sel: boolean): C.LabelGraphics.ConstructorOptions {
+  // cartellino pieno, senza contorno: si legge su qualsiasi sfondo e non si sdoppia
   return {
-    text: t, font: '600 13px system-ui, sans-serif', fillColor: sel ? C.Color.fromCssColorString('#0b3d5c') : C.Color.WHITE,
-    outlineColor: sel ? C.Color.fromCssColorString('#cfeeff') : C.Color.fromCssColorString('#1b2733'), outlineWidth: 3,
-    style: C.LabelStyle.FILL_AND_OUTLINE, verticalOrigin: C.VerticalOrigin.BOTTOM, showBackground: sel,
-    backgroundColor: C.Color.fromCssColorString('#cfeeff'), distanceDisplayCondition: new C.DistanceDisplayCondition(0, 1200),
-    disableDepthTestDistance: 2000,
+    text: t, font: '600 15px system-ui, sans-serif', fillColor: C.Color.WHITE, style: C.LabelStyle.FILL,
+    showBackground: true, backgroundColor: C.Color.fromCssColorString(sel ? '#1677b8' : '#10202c').withAlpha(0.88),
+    backgroundPadding: new C.Cartesian2(9, 6), verticalOrigin: C.VerticalOrigin.BOTTOM, pixelOffset: new C.Cartesian2(0, -8),
+    distanceDisplayCondition: new C.DistanceDisplayCondition(0, 1500), disableDepthTestDistance: Number.POSITIVE_INFINITY,
   }
 }
 function orient(l: LL, heading: number, pitch = 0, roll = 0) {

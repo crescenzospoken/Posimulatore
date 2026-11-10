@@ -37,6 +37,7 @@ const CAMPI: Record<Obj['tipo'], Campo[]> = {
     { k: 'corsia', nome: 'Corsia di manovra (m)', t: 'num', passo: 0.5 },
     { k: 'stalloL', nome: 'Larghezza stallo (m)', t: 'num', passo: 0.1 },
     { k: 'stalloP', nome: 'Profondità stallo (m)', t: 'num', passo: 0.1 },
+    { k: 'rampa', nome: 'Rampa interna dal piano strada', t: 'bool', aiuto: 'Spenta: si entra a raso dalla strada più bassa' },
     { k: 'rampaPend', nome: 'Pendenza rampa (0,16 = 16%)', t: 'num', passo: 0.01, max: 0.3, aiuto: `Massimo 20% (${NORME.rampaMax.fonte}, da verificare)` },
     { k: 'rampaPos', nome: 'Posizione rampa lungo il lato (0-1)', t: 'num', passo: 0.05, min: 0, max: 1 },
     { k: 'parapetto', nome: 'Parapetto sui lati liberi', t: 'bool' },

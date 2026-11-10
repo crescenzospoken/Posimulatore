@@ -62,7 +62,7 @@ type Stato = {
   salvaVista: (v: Vista) => void
   dici: (t: string) => void
 }
-const KEY = 'posimulatore.v2'
+const KEY = 'posimulatore.v3'
 type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }

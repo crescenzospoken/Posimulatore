@@ -14,6 +14,8 @@ export type PiazzaPar = {
   rampaPend: number // pendenza della rampa (0,16 = 16%)
   rampaPos: number // 0..1 lungo il lato d'attacco
   parapetto: boolean
+  /** false = si entra a raso dalla strada bassa, niente rampa interna */
+  rampa?: boolean
 }
 export const PIAZZA_DEF: Omit<PiazzaPar, 'quota'> = {
   spessore: 0.5, livelli: 1, hLiv: 3.2, campata: 7.5, attacco: 0, corsia: NORME.corsia90.valore,
@@ -79,11 +81,12 @@ export function calcolaPiazza(polyIn: XY[], par: PiazzaPar, h: (p: XY) => number
   if (!isFinite(tMin)) { tMin = tMx = h(poly[0]) }
 
   // rampa (una per piano, impilate)
-  const rampaL = par.livelli > 0 ? par.hLiv / Math.max(0.05, par.rampaPend) : 0
+  const conRampa = par.livelli > 0 && par.rampa !== false
+  const rampaL = conRampa ? par.hLiv / Math.max(0.05, par.rampaPend) : 0
   const m = 0.3
   const edgeLen = dist(A, B)
   let rampa: XY[] | null = null
-  if (par.livelli > 0) {
+  if (conRampa) {
     const s0 = m + par.rampaPos * Math.max(0, edgeLen - rampaL - 2 * m)
     rampa = rect(P(s0, m), u, rampaL, NORME.rampaL.valore)
   }
@@ -156,7 +159,8 @@ export function calcolaPiazza(polyIn: XY[], par: PiazzaPar, h: (p: XY) => number
     controlli.push(lib >= NORME.autorimessaH.valore
       ? { esito: 'ok', testo: `Altezza libera dei piani ${lib.toFixed(2).replace('.', ',')} m`, fonte: NORME.autorimessaH.fonte }
       : { esito: 'errore', testo: `Altezza libera ${lib.toFixed(2).replace('.', ',')} m, sotto 2,40 m`, fonte: NORME.autorimessaH.fonte })
-    controlli.push(par.rampaPend <= NORME.rampaMax.valore
+    if (!conRampa) controlli.push({ esito: 'attenzione', testo: 'Ingresso a raso dalla strada bassa: quota e varco da verificare sul posto' })
+    else controlli.push(par.rampaPend <= NORME.rampaMax.valore
       ? { esito: 'ok', testo: `Rampa al ${Math.round(par.rampaPend * 100)}%, lunga ${rampaL.toFixed(1).replace('.', ',')} m per piano`, fonte: NORME.rampaMax.fonte }
       : { esito: 'errore', testo: `Rampa al ${Math.round(par.rampaPend * 100)}%, oltre il 20%`, fonte: NORME.rampaMax.fonte })
     if (rampa && rampaL + 0.6 > edgeLen) controlli.push({ esito: 'errore', testo: `La rampa (${rampaL.toFixed(1).replace('.', ',')} m) non entra nel lato d'attacco (${edgeLen.toFixed(1).replace('.', ',')} m)` })
