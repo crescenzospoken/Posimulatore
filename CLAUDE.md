@@ -6,3 +6,6 @@
 - `requestRenderMode` è attivo: dopo ogni cambio di scena `viewer.scene.requestRender()`.
 - Prove: `npm test` per il motore; per la grafica `node scripts/serve.mjs` (con `NODE_USE_ENV_PROXY=1` dietro proxy) e Playwright su `/?prova` (espone `window.__S` e `window.__V`). Ogni modifica va vista in una schermata.
 - Cesium `1.146.0` con `@cesium/engine 26.4.0` fissato in `overrides`: la 26.5 non va con la 1.146.
+- Velocità: mai `scene.pick` o `pickPosition` nel movimento del mouse (ognuno ridisegna tutta la scena con Google). La barra delle coordinate si scrive nel DOM, non nello stato React. Gli oggetti si ricalcolano dopo i caricamenti di Google solo se la vista si è spostata (oltre 80 m, al massimo ogni 3 s). Livelli di qualità in `src/scene/viewer.ts` (`Q`): leggera di base sul telefono.
+- Gli oggetti hanno `nascosto`; «Com'è oggi» spegne tutto il progetto (`livelli.progetto`). La piazza toglie l'esistente da Google solo con `scava: true`.
+- Le anteprime dei rami non hanno il secret `CESIUM_ION_TOKEN`: per provare con Google, servire la build locale sotto l'indirizzo vero con `page.route` di Playwright.

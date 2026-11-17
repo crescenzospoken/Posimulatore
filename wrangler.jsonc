@@ -4,5 +4,7 @@
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   "assets": { "directory": "dist", "binding": "ASSETS", "run_worker_first": ["/wms/*", "/robots.txt", "/config"], "not_found_handling": "single-page-application" },
-  "observability": { "enabled": true }
+  "observability": { "enabled": true },
+  // serve al comando `wrangler preview`, che Workers Builds lancia sui rami diversi da main
+  "previews": {}
 }

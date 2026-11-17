@@ -2,10 +2,17 @@ import * as C from 'cesium'
 import { pos, viewer, googleTileset, quotaGoogle } from './viewer'
 import { quota as quotaTerreno, GEOIDE } from './terreno'
 /** Quota del suolo: Google 3D se acceso e caricato lì, altrimenti il nostro terreno a 10 m. */
-export const quota = (lon: number, lat: number) => quotaGoogle(lon, lat) ?? quotaTerreno(lon, lat)
+// le letture su Google costano (un raggio contro il modello): si tengono a mente al decimetro finché Google non cambia
+const memo = new Map<string, number>()
+export const quota = (lon: number, lat: number) => {
+  const k = lon.toFixed(6) + ',' + lat.toFixed(6)
+  let z = memo.get(k)
+  if (z === undefined) { z = quotaGoogle(lon, lat) ?? quotaTerreno(lon, lat); if (memo.size > 20000) memo.clear(); memo.set(k, z) }
+  return z
+}
 let giro = 0
 /** Da chiamare quando le quote di Google cambiano: ridisegna gli oggetti appoggiati al suolo. */
-export const quoteCambiate = () => { giro++ }
+export const quoteCambiate = () => { giro++; memo.clear() }
 import { edificiVicini } from './edifici'
 import { Frame, type LL, type XY, add, frameFor, mul, norm, perp, rect, sub, dist } from '../engine/geo'
 import type { Obj } from '../engine/model'
@@ -272,8 +279,10 @@ function parte(id: string, fr: Frame, z0: number, th: number, p: Parte, sc: numb
 }
 
 /** Ridisegna solo gli oggetti cambiati. */
-export function disegnaOggetti(lista: Obj[], sel: string | null, vSel: number | null = null) {
+export function disegnaOggetti(listaTutti: Obj[], sel: string | null, vSel: number | null = null, mostra = true) {
   if (!pronto) return
+  // gli oggetti nascosti (o tutto il progetto spento) restano nel progetto ma non si disegnano e non tolgono niente dalla vista
+  const lista = mostra ? listaTutti.filter(o => !o.nascosto) : []
   const vivi = new Set(lista.map(o => o.id))
   ds.entities.suspendEvents()
   for (const [id, es] of entita) if (!vivi.has(id)) { es.forEach(e => ds.entities.remove(e)); entita.delete(id); firme.delete(id); calcoli.delete(id) }
@@ -288,6 +297,7 @@ export function disegnaOggetti(lista: Obj[], sel: string | null, vSel: number | 
   }
   ds.entities.resumeEvents()
   maniglie(lista.find(o => o.id === sel) ?? null, vSel)
+  ds.show = mostra
   scavi(lista)
   viewer.scene.requestRender()
 }
