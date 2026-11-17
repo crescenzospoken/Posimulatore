@@ -27,7 +27,6 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
     animation: false, timeline: false, geocoder: false, homeButton: false, sceneModePicker: false,
     baseLayerPicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false, scene3DOnly: true, shadows: false,
-    contextOptions: { webgl: { preserveDrawingBuffer: true } },
     msaaSamples: 1,
     requestRenderMode: true,
     maximumRenderTimeChange: Infinity,
@@ -44,7 +43,7 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   s.screenSpaceCameraController.minimumZoomDistance = 2
   s.screenSpaceCameraController.maximumZoomDistance = 60000
   s.postProcessStages.fxaa.enabled = true
-  viewer.resolutionScale = new URLSearchParams(location.search).get('prova') === '' ? 0.6 : Math.min(window.devicePixelRatio || 1, 1.5)
+  impostaQualita(qualitaIniziale())
   // il terreno e le immagini che arrivano chiedono un nuovo disegno
   s.globe.tileLoadProgressEvent.addEventListener(() => s.requestRender())
   ;(viewer.cesiumWidget.creditContainer as HTMLElement).classList.add('crediti')
@@ -102,6 +101,27 @@ export function impostaOrto(k: Livelli['orto']) {
 
 // ---------- Google 3D (via Cesium ion, gratuito, solo da guardare) ----------
 let google: C.Cesium3DTileset | undefined
+// ---------- qualità ----------
+export type Qualita = 'leggera' | 'normale' | 'alta'
+export const telefono = () => matchMedia('(max-width: 760px), (pointer: coarse)').matches
+export const qualitaIniziale = (): Qualita => (telefono() ? 'leggera' : 'normale')
+let qAttuale: Qualita = 'normale'
+/** Errore a schermo di Google (più alto = meno dettaglio, più veloce) e risoluzione del disegno per ogni livello. */
+const Q: Record<Qualita, { sse: number; res: number; cacheMB: number }> = {
+  leggera: { sse: 24, res: 0.8, cacheMB: 160 },
+  normale: { sse: 14, res: 1, cacheMB: 384 },
+  alta: { sse: 6, res: 1.5, cacheMB: 768 },
+}
+export function impostaQualita(q: Qualita) {
+  qAttuale = q
+  const v = Q[q]
+  // la risoluzione alta ha senso solo su schermi densi
+  viewer.resolutionScale = q === 'alta' ? Math.min(window.devicePixelRatio || 1, v.res) : v.res
+  viewer.scene.postProcessStages.fxaa.enabled = q !== 'leggera'
+  viewer.scene.globe.maximumScreenSpaceError = q === 'leggera' ? 3 : q === 'alta' ? 1.5 : 2
+  if (google) { google.maximumScreenSpaceError = v.sse; google.cacheBytes = v.cacheMB * 1024 * 1024 }
+  viewer.scene.requestRender()
+}
 let onGoogle: (() => void) | undefined
 /** Chiamata ogni volta che Google ha finito di caricare la vista: le quote lette possono essere cambiate. */
 export const quandoGoogle = (f: () => void) => { onGoogle = f }
@@ -115,7 +135,13 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
   try {
     if (!google) {
       C.Ion.defaultAccessToken = token
-      google = await C.createGooglePhotorealistic3DTileset(undefined, { maximumScreenSpaceError: matchMedia('(max-width: 760px)').matches ? 8 : 4, enableCollision: true })
+      const v = Q[qAttuale]
+      google = await C.createGooglePhotorealistic3DTileset(undefined, {
+        maximumScreenSpaceError: v.sse, cacheBytes: v.cacheMB * 1024 * 1024,
+        // meno dettaglio ai bordi e in lontananza, niente tile a vuoto mentre si muove la vista
+        foveatedScreenSpaceError: true, dynamicScreenSpaceError: true, preloadFlightDestinations: false, loadSiblings: false,
+        enableCollision: false,
+      })
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY
       google.allTilesLoaded.addEventListener(() => onGoogle?.())

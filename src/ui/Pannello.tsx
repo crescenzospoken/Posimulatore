@@ -127,6 +127,7 @@ function Oggetto() {
         if (z === undefined) s.dici('Google 3D non ancora caricato lì: avvicinati e riprova')
         else { s.aggiorna(o.id, x => { x.z = Math.round(z * 10) / 10 }); s.dici(`Piazza alla quota della strada: ${z.toFixed(1).replace('.', ',')} m s.l.m.`) }
       }} data-tip="Porta il piano della piazza alla quota della strada letta sul 3D di Google">Piano alla quota della strada</button>}
+      <label className="riga"><span>Nascondi dalla vista<small>Resta nel progetto, non si disegna</small></span><input type="checkbox" checked={o.nascosto === true} onChange={e => s.aggiorna(o.id, x => { if (e.target.checked) x.nascosto = true; else delete x.nascosto })} /></label>
       <Geometria o={o} />
       <div className="bottoni">
         <button onClick={() => inquadra(o.pts, o.z ?? quota(o.pts[0][0], o.pts[0][1]))}>Inquadra</button>
@@ -230,8 +231,16 @@ function Livelli() {
           <small>Account gratuito su ion.cesium.com, sezione Access Tokens. Resta solo in questo browser.</small>
         </label>
       )}
+      <label>Qualità e velocità
+        <select value={l.qualita} onChange={e => s.setLivelli({ qualita: e.target.value as typeof l.qualita })}>
+          <option value="leggera">Leggera: veloce, adatta al telefono</option>
+          <option value="normale">Normale</option>
+          <option value="alta">Alta: più dettaglio, serve un computer potente</option>
+        </select>
+      </label>
+      {t('progetto', 'Oggetti di progetto', 'Spento: si vede Positano com\'è oggi')}
       {t('nitido', 'Immagine più nitida', 'Più dettaglio e colore sulle foto aeree')}
-      {t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese')}
+      {t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese. Rallenta molto')}
       {l.ombre && (
         <>
           <label>Giorno<input type="date" value={l.giorno} onChange={e => s.setLivelli({ giorno: e.target.value })} /></label>
@@ -269,7 +278,8 @@ function ProgettoP() {
       </div>
       <h3>Oggetti</h3>
       <ul className="elenco">{s.opzione().oggetti.map(o => (
-        <li key={o.id}><button className={o.id === s.sel ? 'acceso' : ''} onClick={() => { s.set({ sel: o.id, pannello: 'oggetto' }); inquadra(o.pts, o.z ?? quota(o.pts[0][0], o.pts[0][1])) }}>{o.nome}</button></li>
+        <li key={o.id} className="riga-oggetto"><button className={(o.id === s.sel ? 'acceso' : '') + (o.nascosto ? ' spento' : '')} onClick={() => { s.set({ sel: o.id, pannello: 'oggetto' }); inquadra(o.pts, o.z ?? quota(o.pts[0][0], o.pts[0][1])) }}>{o.nome}</button>
+          <button className="quiet occhio" aria-pressed={!o.nascosto} aria-label={o.nascosto ? `Mostra ${o.nome}` : `Nascondi ${o.nome}`} data-tip={o.nascosto ? 'Mostra' : 'Nascondi dalla vista'} onClick={() => s.aggiorna(o.id, x => { if (x.nascosto) delete x.nascosto; else x.nascosto = true })}>{o.nascosto ? 'Mostra' : 'Nascondi'}</button></li>
       ))}{!s.opzione().oggetti.length && <li className="nota">Ancora niente: scegli uno strumento a sinistra.</li>}</ul>
       <h3>Tutti i progetti</h3>
       <ul className="elenco">{s.progetti.map(x => <li key={x.id}><button className={x.id === p.id ? 'acceso' : ''} onClick={() => s.apriProgetto(x.id)}>{x.nome}</button></li>)}</ul>

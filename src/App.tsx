@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { Cartesian3 } from 'cesium'
 import { useS } from './store'
-import { impostaNitidezza, quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
+import { impostaQualita, impostaNitidezza, quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
@@ -17,7 +18,9 @@ export default function App() {
   const el = useRef<HTMLDivElement>(null)
   const [pronto, setPronto] = useState(false)
   const [errore, setErrore] = useState<string | null>(null)
-  const [cur, setCur] = useState<Punto | null>(null)
+  // la posizione sotto il cursore va scritta direttamente nella barra: passare da React ridisegnerebbe tutta l'interfaccia a ogni movimento
+  const barra = useRef<HTMLSpanElement>(null)
+  const setCur = (cur: Punto | null) => { const b = barra.current; if (b) b.textContent = cur ? `${cur.p[1].toFixed(5)}, ${cur.p[0].toFixed(5)} · ${cur.z.toFixed(1).replace('.', ',')} m s.l.m.` : 'Positano' }
   const [aperto, setAperto] = useState<string | null>(null)
   const [q, setQ] = useState('')
   const s = useS()
@@ -33,7 +36,16 @@ export default function App() {
         await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
         disegnaCupole(viewer)
         let tG: ReturnType<typeof setTimeout> | undefined
-        quandoGoogle(() => { clearTimeout(tG); tG = setTimeout(() => { quoteCambiate(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 })) }, 400) })
+        // Google finisce di caricare dopo ogni movimento: ricalcolare tutti gli oggetti ogni volta bloccava la pagina.
+        // Si ricalcola solo quando la vista si è spostata davvero (oltre 80 m) e al massimo ogni 3 secondi.
+        let ultimaPos: Cartesian3 | null = null, ultimaVolta = 0
+        quandoGoogle(() => { clearTimeout(tG); tG = setTimeout(() => {
+          const ora = viewer.camera.positionWC, t = performance.now()
+          if (ultimaPos && Cartesian3.distance(ora, ultimaPos) < 80) return
+          if (t - ultimaVolta < 3000) return
+          ultimaPos = Cartesian3.clone(ora); ultimaVolta = t
+          quoteCambiate(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))
+        }, 1200) })
         stop = avviaInterazione(setCur, finisci)
         const v = useS.getState().progetto().vista ?? VAI[1]
         vai(v, 0)
@@ -48,9 +60,9 @@ export default function App() {
   }, [])
 
   // scena <- stato
-  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel) }, [pronto, op, s.sel, s.vSel, s.googleGiro])
+  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto])
   useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido) } }, [pronto, s.livelli])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   useEffect(() => {
     if (!pronto) return
@@ -108,6 +120,7 @@ export default function App() {
             {VAI.map((v, i) => <option key={v.nome} value={i}>{v.nome}</option>)}
           </select>
           <button className="quiet" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista">⌖</button>
+          <button className={'quiet' + (s.livelli.progetto ? '' : ' acceso')} onClick={() => s.setLivelli({ progetto: !s.livelli.progetto })} aria-pressed={!s.livelli.progetto} data-tip={s.livelli.progetto ? 'Nascondi il progetto e guarda Positano com\'è oggi' : 'Mostra di nuovo il progetto'}>{s.livelli.progetto ? 'Com\'è oggi' : 'Progetto'}</button>
           <button className="quiet" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto">📷</button>
           <button className={'quiet' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} data-tip="Mappe, edifici, Google 3D, sole e ombre">Livelli</button>
           <button className={'quiet' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label="Guida" data-tip="Guida e fonti dei dati">?</button>
@@ -143,7 +156,7 @@ export default function App() {
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 
       <footer className="stato">
-        {cur ? <span>{cur.p[1].toFixed(5)}, {cur.p[0].toFixed(5)} · {cur.z.toFixed(1).replace('.', ',')} m s.l.m.</span> : <span>Positano</span>}
+        <span ref={barra}>Positano</span>
       </footer>
       {s.avviso && <div className="avviso" role="status">{s.avviso}</div>}
       <Suggerimenti />

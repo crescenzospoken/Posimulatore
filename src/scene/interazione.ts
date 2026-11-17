@@ -1,5 +1,5 @@
 import * as C from 'cesium'
-import { viewer, pos, googleAcceso } from './viewer'
+import { viewer, pos, googleAcceso, quotaGoogle } from './viewer'
 import { GEOIDE, quota } from './terreno'
 import { useS, type Misura } from '../store'
 import type { LL } from '../engine/geo'
@@ -7,7 +7,7 @@ import { uid } from '../engine/model'
 
 export type Punto = { p: LL; z: number; su?: string }
 /** Punto 3D sotto il cursore: terreno, edifici, oggetti o Google 3D. */
-export function puntoA(win: C.Cartesian2): Punto | null {
+export function puntoA(win: C.Cartesian2, conOggetto = true): Punto | null {
   const s = viewer.scene
   let c: C.Cartesian3 | undefined
   if (s.pickPositionSupported) c = s.pickPosition(win)
@@ -21,7 +21,8 @@ export function puntoA(win: C.Cartesian2): Punto | null {
   // se il punto è a meno di 30 cm dal terreno lo appoggiamo al terreno
   // sul terreno nostro: se il punto è a meno di 30 cm lo appoggiamo al terreno; su Google 3D vale la superficie vera
   if (!isFinite(z) || (!googleAcceso() && Math.abs(z - zt) < 0.3)) z = zt
-  const pk = s.pick(win)
+  // chi c'è sotto il cursore costa un secondo disegno della scena: solo sui clic, mai mentre il mouse si muove
+  const pk = conOggetto ? s.pick(win) : undefined
   const su = pk && pk.id instanceof C.Entity ? String(pk.id.id).split(':')[0] : undefined
   return { p, z, su }
 }
@@ -33,9 +34,10 @@ const idDi = (pk: unknown): string | null => {
   return null
 }
 
+const quotaSuolo = (lon: number, lat: number) => quotaGoogle(lon, lat) ?? quota(lon, lat)
 let anteprima: C.Entity | undefined
 let cursore: LL | null = null
-let trascina: { id: string; i: number | null; da: LL; orig: LL[] } | null = null
+let trascina: { id: string; i: number | null; da: LL; z: number; orig: LL[] } | null = null
 
 export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () => void) {
   const h = new C.ScreenSpaceEventHandler(viewer.canvas)
@@ -108,18 +110,21 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     ctrl.enableInputs = false
     s.aggiorna(o.id, () => {}, true) // un passo nella storia prima di muovere
     useS.setState({ vSel: i })
-    trascina = { id: o.id, i, da: pt.p, orig: o.pts.map(q => [...q] as LL) }
+    trascina = { id: o.id, i, da: pt.p, z: pt.z, orig: o.pts.map(q => [...q] as LL) }
   }, C.ScreenSpaceEventType.LEFT_DOWN)
 
   h.setInputAction(() => {
     if (trascina) { trascina = null; ctrl.enableInputs = true }
   }, C.ScreenSpaceEventType.LEFT_UP)
 
-  let ultimo = 0
+  let ultimo = 0, ultimoFondo = 0, premuto = false
+  viewer.canvas.addEventListener('pointerdown', () => (premuto = true))
+  window.addEventListener('pointerup', () => (premuto = false))
+  window.addEventListener('pointercancel', () => (premuto = false))
   h.setInputAction((e: C.ScreenSpaceEventHandler.MotionEvent) => {
     const now = performance.now()
     if (trascina) {
-      const pt = puntoGlobo(e.endPosition)
+      const pt = puntoPiano(e.endPosition, trascina.z)
       if (!pt) return
       // lo spostamento si arrotonda al passo scelto (in metri, verso est e verso nord)
       const fr = new Frame(trascina.da[0], trascina.da[1]), m = fr.toXY(pt), ps = S().passo
@@ -132,13 +137,25 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
       }, false)
       return
     }
-    if (now - ultimo < 40) return
+    // mentre si disegna o si misura serve il punto 3D preciso, ma non più di 8 volte al secondo;
+    // altrimenti basta la posizione sul terreno per la barra in basso, 4 volte al secondo e mai durante il movimento della vista
+    const k = S().strumento.k, disegno = k === 'disegna' || k === 'misura'
+    if (now - ultimo < (disegno ? 120 : 250)) return
+    if (!disegno && premuto) return // la vista si sta muovendo: la barra può aspettare
     ultimo = now
-    const pt = puntoA(e.endPosition)
-    cursore = pt?.p ?? null
-    onCursore(pt)
-    const k = S().strumento.k
-    if (k === 'disegna' || k === 'misura') viewer.scene.requestRender()
+    if (disegno) {
+      const pt = puntoA(e.endPosition, false)
+      cursore = pt?.p ?? null
+      onCursore(pt)
+      viewer.scene.requestRender()
+    } else if (viewer.scene.globe.show) {
+      const g = puntoGlobo(e.endPosition)
+      onCursore(g ? { p: g, z: quotaSuolo(g[0], g[1]) } : null)
+    } else if (now - ultimoFondo > 400) {
+      // con Google acceso il terreno nostro è spento: un punto preciso, ma al massimo due volte e mezza al secondo
+      ultimoFondo = now
+      onCursore(puntoA(e.endPosition, false))
+    }
   }, C.ScreenSpaceEventType.MOUSE_MOVE)
 
   // tocco: su telefono il trascinamento con un dito sposta l'oggetto selezionato come col mouse
@@ -146,6 +163,19 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
 }
 let zBozza: number | undefined
 export const quotaBozza = () => zBozza
+/** Dove il raggio del cursore incontra il piano orizzontale alla quota z (m s.l.m.): conti puri, nessun disegno. */
+function puntoPiano(win: C.Cartesian2, z: number): LL | null {
+  const ray = viewer.camera.getPickRay(win)
+  if (!ray) return null
+  const c = viewer.camera.positionCartographic
+  const o = C.Cartesian3.fromRadians(c.longitude, c.latitude, z + GEOIDE)
+  const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(o)
+  const pl = C.Plane.fromPointNormal(o, n)
+  const x = C.IntersectionTests.rayPlane(ray, pl)
+  if (!x) return null
+  const g = C.Cartographic.fromCartesian(x)
+  return [C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)]
+}
 function puntoGlobo(win: C.Cartesian2): LL | null {
   const ray = viewer.camera.getPickRay(win)
   const c = ray && viewer.scene.globe.pick(ray, viewer.scene)

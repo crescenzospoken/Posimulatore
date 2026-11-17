@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { telefono, qualitaIniziale } from './scene/viewer'
 import type { LL } from './engine/geo'
 import { type Obj, type Opzione, type Progetto, type Tipo, type Vista, uid } from './engine/model'
 import { esempio } from './esempio'
@@ -20,6 +21,9 @@ export type Livelli = {
   googleScelto?: boolean
   ombre: boolean
   nitido: boolean
+  /** mostra gli oggetti di progetto (piazze, segnaletica, arredi) */
+  progetto: boolean
+  qualita: 'leggera' | 'normale' | 'alta'
   ora: number // ore decimali, ora locale
   giorno: string // AAAA-MM-GG
 }
@@ -72,7 +76,7 @@ type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
-const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: true, nitido: true, ora: 12.5, giorno: '2026-06-21' }
+const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: true, qualita: qualitaIniziale(), ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
 const prog0 = iniziale?.progetti?.length ? iniziale.progetti : [esempio()]
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -91,7 +95,8 @@ export const useS = create<Stato>((set, get) => ({
   strumento: { k: 'naviga' },
   bozza: [],
   misure: [],
-  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
+  // chi aveva salvato i livelli prima della qualità aveva le ombre accese di base: si ripartono spente (pesano molto)
+  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
   ionToken: iniziale?.ionToken ?? '',
   ionTokenSito: '',
   ultimaQuota: null,
