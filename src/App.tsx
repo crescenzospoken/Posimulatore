@@ -119,7 +119,7 @@ export default function App() {
             <option value="">Vai a…</option>
             {VAI.map((v, i) => <option key={v.nome} value={i}>{v.nome}</option>)}
           </select>
-          <button className="quiet" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista">⌖</button>
+          <button className="quiet solo-desktop" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista">⌖</button>
           <button className={'quiet' + (s.livelli.progetto ? '' : ' acceso')} onClick={() => s.setLivelli({ progetto: !s.livelli.progetto })} aria-pressed={!s.livelli.progetto} data-tip={s.livelli.progetto ? 'Nascondi il progetto e guarda Positano com\'è oggi' : 'Mostra di nuovo il progetto'}>{s.livelli.progetto ? 'Com\'è oggi' : 'Progetto'}</button>
           <button className="quiet" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto">📷</button>
           <button className={'quiet' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} data-tip="Mappe, edifici, Google 3D, sole e ombre">Livelli</button>
