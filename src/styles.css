@@ -216,3 +216,28 @@ textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px;
   .pubblico .pannello { bottom: 6px; }
   .pubblico .cesium-widget-credits { bottom: 8px; }
 }
+
+/* nomi delle vie e simboli dei punti, in HTML sopra la scena (nitidi anche quando la scena è a bassa risoluzione) */
+.sovrapposti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.sovrapposti > * { position: absolute; left: 0; top: 0; will-change: transform; }
+.nome-via {
+  margin: -9px 0 0 -60px; width: 120px; text-align: center; font: 600 12px/1.2 system-ui, -apple-system, sans-serif; color: #202124;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.segno-poi {
+  pointer-events: auto; border: 0; padding: 0; background: none; margin: -13px 0 0 -13px; display: flex; align-items: center; gap: 4px; cursor: pointer;
+}
+.segno-poi:hover:not(:disabled) { background: none; }
+.segno-poi .icona {
+  width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 14px; line-height: 1;
+  border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35); flex: none;
+}
+.segno-poi .testo {
+  display: none; font: 600 12px/1.2 system-ui, -apple-system, sans-serif; color: #202124; white-space: nowrap; max-width: 160px; overflow: hidden; text-overflow: ellipsis;
+  text-shadow: 0 0 2px #fff, 0 0 2px #fff, 0 0 3px #fff, 0 0 4px #fff;
+}
+.segno-poi.con-nome .testo { display: block; }
+.segno-poi.scelto .icona { width: 34px; height: 34px; font-size: 18px; border-width: 3px; }
+.segno-poi.scelto { margin: -17px 0 0 -17px; }
+.segno-poi.tenue { opacity: 0.5; }
+.barra .utente { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }

@@ -122,7 +122,10 @@ export function impostaQualita(q: Qualita) {
   if (google) { google.maximumScreenSpaceError = v.sse; google.cacheBytes = v.cacheMB * 1024 * 1024 }
   viewer.scene.requestRender()
 }
-let onGoogle: (() => void) | undefined
+let onGoogle: (() => void) | undefined, onGoogleKo: (() => void) | undefined
+let googlePronto = false
+/** Chiamata quando Google smette di rispondere e si torna al satellite. */
+export const quandoGoogleKo = (f: () => void) => { onGoogleKo = f }
 /** Chiamata ogni volta che Google ha finito di caricare la vista: le quote lette possono essere cambiate. */
 export const quandoGoogle = (f: () => void) => { onGoogle = f }
 export async function impostaGoogle(on: boolean, token: string): Promise<string | null> {
@@ -145,10 +148,19 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY
       google.allTilesLoaded.addEventListener(() => onGoogle?.())
+      // il satellite resta sotto finché Google non ha la prima vista: prima, se Google tardava o falliva, restava tutto blu
+      google.initialTilesLoaded.addEventListener(() => { googlePronto = true; if (google?.show) { viewer.scene.globe.show = false; viewer.scene.requestRender() } })
+      // se le tessere di Google falliscono a raffica si torna al satellite (e si riprova al prossimo caricamento)
+      let errori: number[] = []
+      google.tileFailed.addEventListener(() => {
+        const t = performance.now(); errori = [...errori.filter(x => t - x < 15000), t]
+        if (errori.length >= 8 && !viewer.scene.globe.show) { viewer.scene.globe.show = true; googlePronto = false; viewer.scene.requestRender(); onGoogleKo?.() }
+      })
+      google.tileLoad.addEventListener(() => { if (!googlePronto && google?.show && errori.length < 8) { googlePronto = true; viewer.scene.globe.show = false } })
       viewer.scene.primitives.add(google)
     }
     google.show = true
-    viewer.scene.globe.show = false
+    viewer.scene.globe.show = !googlePronto
     return null
   } catch (e) {
     return 'Google 3D non disponibile: ' + (e instanceof Error ? e.message : String(e))
