@@ -1,7 +1,8 @@
 :root {
-  --fondo: #f7f5f0; --carta: rgba(255, 255, 255, 0.96); --testo: #1d2730; --tenue: #5d6b78; --linea: #dfe3e6;
-  --accento: #1677b8; --accento-soft: #cfeeff; --pericolo: #c0392b; --ok: #2e8b57; --attenzione: #b7791f;
-  --r: 10px; --ombra: 0 6px 24px rgba(16, 32, 48, 0.18);
+  --fondo: #f7f5f0; --carta: rgba(255, 255, 255, 0.78); --testo: #1b1f24; --tenue: #5f6b76; --linea: rgba(27, 31, 36, 0.1);
+  --accento: #0b6bcb; --accento-soft: #d3e8ff; --pericolo: #c5221f; --ok: #188038; --attenzione: #b06000;
+  --r: 18px; --ombra: 0 8px 32px rgba(10, 24, 40, 0.18), 0 1px 2px rgba(10, 24, 40, 0.12);
+  --vetro: rgba(255, 255, 255, 0.72); --vetro-forte: rgba(255, 255, 255, 0.88); --bordo-vetro: rgba(255, 255, 255, 0.6); --sfoca: blur(18px) saturate(1.6);
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--testo);
 }
 * { box-sizing: border-box; }
@@ -22,7 +23,7 @@ button.acceso, button.quiet.acceso { background: var(--accento-soft); border-col
 input, select { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px; background: #fff; min-width: 0; }
 .app { position: relative; height: 100%; }
 .scena { position: absolute; inset: 0; }
-.cesium-viewer-bottom { display: none; }
+
 .caricamento { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 18px; background: #10202c; z-index: 5; }
 .caricamento.errore { padding: 24px; text-align: center; }
 
@@ -98,8 +99,11 @@ input, select { border: 1px solid var(--linea); border-radius: 7px; padding: 6px
 .misure { padding-left: 18px; margin: 0; }
 
 .stato { position: absolute; left: 10px; bottom: 10px; z-index: 2; background: rgba(16, 32, 44, 0.72); color: #fff; font-size: 12px; padding: 4px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
-.crediti { position: absolute !important; right: 10px; bottom: 8px; left: auto !important; z-index: 2; font-size: 10px !important; max-width: 50%; }
-.cesium-widget-credits { display: block !important; position: absolute; right: 10px; bottom: 8px; font-size: 10px; background: rgba(255,255,255,0.7); padding: 2px 6px; border-radius: 4px; color: #333; max-width: 55%; }
+.crediti { position: absolute !important; left: 10px !important; right: auto !important; bottom: 8px !important; top: auto !important; z-index: 2; max-width: calc(100% - 96px); display: flex !important; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 10px !important; line-height: 1.3; color: #333;
+  background: rgba(255, 255, 255, 0.75); padding: 2px 8px; border-radius: 8px; }
+.crediti a { color: #333; }
+.crediti img { height: 14px; vertical-align: middle; }
+.cesium-widget-credits { display: block !important; position: static !important; font-size: 10px; color: #333; background: none !important; padding: 0 !important; max-width: none !important; }
 .cesium-widget-credits a { color: #333; }
 .cesium-credit-logoContainer img { height: 14px; }
 .avviso { position: absolute; left: 50%; bottom: 46px; transform: translateX(-50%); z-index: 6; background: #10202c; color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 14px; }
@@ -175,10 +179,8 @@ input.num.largo { width: 76px; }
   .stato { display: none; }
   .pad { left: 10px; bottom: 96px; }
   .pad-nota { display: none; }
-  .cesium-widget-credits { bottom: 86px; }
   .scheda-percorso { top: auto; left: 6px; right: 6px; bottom: 84px; width: auto; max-height: 56vh; }
   .ospite .scheda-percorso { bottom: 6px; max-height: 50vh; }
-  .ospite .cesium-widget-credits { bottom: auto; top: 58px; }
   .scheda-percorso.riapri { left: auto; }
 }
 
@@ -214,7 +216,6 @@ textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px;
   .guida-strumento { top: 140px; }
   .pubblico .scheda-percorso { bottom: 6px; }
   .pubblico .pannello { bottom: 6px; }
-  .pubblico .cesium-widget-credits { bottom: 8px; }
 }
 
 /* nomi delle vie e simboli dei punti, in HTML sopra la scena (nitidi anche quando la scena è a bassa risoluzione) */
@@ -241,3 +242,105 @@ textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px;
 .segno-poi.scelto { margin: -17px 0 0 -17px; }
 .segno-poi.tenue { opacity: 0.5; }
 .barra .utente { max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; }
+
+/* ======== Interfaccia a vetro (18/11): barra di ricerca a pillola, filtri, pulsanti tondi, schede che salgono dal basso ======== */
+.vetro, .pannello, .scheda-percorso, .scheda-poi, .strumenti, .menu, .guida-strumento, .barra-modifica {
+  background: var(--vetro); -webkit-backdrop-filter: var(--sfoca); backdrop-filter: var(--sfoca);
+  border: 1px solid var(--bordo-vetro); box-shadow: var(--ombra);
+}
+@media (pointer: coarse) { :root { --sfoca: blur(10px) saturate(1.4); --vetro: rgba(255, 255, 255, 0.82); } }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { :root { --vetro: rgba(255, 255, 255, 0.95); } }
+.icona-m { display: inline-flex; width: 1.25em; height: 1.25em; flex: none; }
+.icona-m svg { width: 100%; height: 100%; }
+button, .bottone { border-radius: 999px; padding: 8px 14px; border-color: var(--linea); background: rgba(255, 255, 255, 0.9); font-weight: 500; }
+button.primary { box-shadow: 0 1px 3px rgba(11, 107, 203, 0.35); }
+button.tondo { padding: 7px; border-radius: 50%; }
+button.tondo .icona-m { width: 22px; height: 22px; }
+input, select, textarea { border-radius: 12px; padding: 8px 10px; border-color: var(--linea); background: rgba(255, 255, 255, 0.92); }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); outline-offset: -1px; }
+
+.cima { position: absolute; top: 12px; left: 12px; right: 12px; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; pointer-events: none; }
+.cima > * { pointer-events: auto; }
+.ricerca { position: relative; display: flex; align-items: center; gap: 4px; width: min(420px, 100%); height: 50px; padding: 0 6px 0 16px; border-radius: 999px; }
+.ricerca .lente { width: 22px; height: 22px; color: var(--tenue); }
+.ricerca input { flex: 1; border: 0; background: transparent; font-size: 16px; padding: 8px 6px; outline: none; }
+.ricerca input:focus { outline: none; }
+.avatar { width: 38px; height: 38px; padding: 0; border-radius: 50%; justify-content: center; border: 0; background: #e8eaed; color: #3c4043; font-weight: 700; flex: none; }
+.avatar.con-utente { background: var(--accento); color: #fff; }
+.avatar .icona-m { width: 22px; height: 22px; }
+.ricerca .risultati { position: absolute; top: calc(100% + 8px); left: 0; right: 0; margin: 0; padding: 6px; list-style: none; border-radius: 20px; max-height: 60vh; overflow: auto; z-index: 5; }
+.risultati button { width: 100%; justify-content: flex-start; gap: 12px; border: 0; background: transparent; border-radius: 12px; padding: 10px 12px; text-align: left; }
+.risultati button:hover:not(:disabled) { background: rgba(11, 107, 203, 0.08); }
+.risultati button .icona-m { color: var(--tenue); }
+.risultati button span { flex: 1; }
+.risultati .titoletto { font-size: 12px; font-weight: 600; color: var(--tenue); padding: 6px 12px 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+.barra-modifica { display: flex; align-items: center; gap: 2px; height: 50px; padding: 0 8px; border-radius: 999px; }
+.barra-modifica .progetto-nome { max-width: 240px; font-weight: 600; }
+.cima .servizi { position: static; flex-basis: 100%; padding: 2px 2px 8px; margin: -2px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px 7px 10px; border-radius: 999px; font-size: 14px; font-weight: 500;
+  background: var(--vetro-forte); -webkit-backdrop-filter: var(--sfoca); backdrop-filter: var(--sfoca); border: 1px solid var(--bordo-vetro); box-shadow: 0 2px 8px rgba(10, 24, 40, 0.16); }
+.chip-icona { display: inline-flex; }
+.chip-icona .icona-m { width: 18px; height: 18px; }
+.chip.acceso { background: var(--accento-soft); border-color: #a8cdf5; color: #062e57; }
+.chip.quiet { background: var(--vetro); }
+
+.fab { position: absolute; right: 16px; bottom: 28px; z-index: 3; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.fab-piccolo { width: 48px; height: 48px; padding: 0; border-radius: 50%; justify-content: center; color: #3c4043; }
+.fab-piccolo .icona-m { width: 24px; height: 24px; }
+.fab-piccolo.acceso { background: var(--accento-soft); color: var(--accento); }
+.fab-grande { height: 56px; padding: 0 22px 0 18px; border-radius: 18px; border: 0; background: var(--accento); color: #fff; font-size: 15px; font-weight: 600; gap: 10px; box-shadow: 0 4px 14px rgba(11, 107, 203, 0.4); }
+.fab-grande .icona-m { width: 24px; height: 24px; }
+.fab-grande:hover:not(:disabled) { background: #0a5db0; }
+.fab-grande.acceso { background: #062e57; }
+
+.pannello, .scheda-percorso, .scheda-poi { border-radius: 24px; }
+.pannello { top: 128px; right: 16px; bottom: 100px; width: 380px; }
+.scheda-percorso, .scheda-poi { top: 128px; right: 16px; }
+.in-modifica .pannello, .in-modifica .scheda-percorso, .in-modifica .scheda-poi { top: 128px; }
+.pannello-testa { padding: 14px 12px 6px 20px; }
+.pannello-testa h2 { font-size: 18px; font-weight: 650; display: flex; align-items: center; gap: 10px; }
+.pannello-corpo { padding: 4px 20px 20px; }
+.scheda-percorso { padding: 0 18px 18px; }
+.scheda-percorso .pannello-testa, .scheda-poi .pannello-testa { background: transparent; padding-left: 0; padding-right: 0; }
+.scheda-poi { padding: 0 18px 18px; }
+.icona-tonda { width: 34px; height: 34px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; flex: none; }
+.icona-tonda .icona-m { width: 20px; height: 20px; }
+.in-modifica .strumenti { top: 128px; left: 12px; border-radius: 20px; }
+.strumenti > button, .gruppo > button { border-radius: 14px; }
+.strumenti .icona-m { width: 24px; height: 24px; }
+.menu { border-radius: 16px; }
+.guida-strumento { top: 128px; border-radius: 999px; padding: 8px 10px 8px 18px; }
+.in-modifica .fab .fab-grande { display: none; }
+.avviso { border-radius: 999px; padding: 10px 18px; bottom: 100px; background: rgba(27, 31, 36, 0.9); }
+.stato { border-radius: 999px; padding: 4px 10px; bottom: 34px; }
+
+.segno-poi .icona { width: 28px; height: 28px; color: #fff; }
+.segno-poi .icona svg { width: 17px; height: 17px; }
+.segno-poi.scelto .icona svg { width: 22px; height: 22px; }
+.ospite .cima, .ospite .fab { display: none; }
+
+@media (max-width: 760px) {
+  .cima { top: 8px; left: 8px; right: 8px; gap: 8px; }
+  .ricerca { width: 100%; height: 48px; }
+  .barra-modifica { order: 3; height: 44px; max-width: 100%; overflow-x: auto; }
+  .cima .servizi { order: 4; }
+  .fab { right: 10px; bottom: 18px; }
+  .in-modifica .fab { bottom: 96px; }
+  .fab-grande > span:not(.icona-m) { display: none; }
+  .fab-grande { width: 56px; padding: 0; justify-content: center; }
+  /* schede e pannelli salgono dal basso, a tutta larghezza */
+  .pannello, .scheda-percorso, .scheda-poi { top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: auto !important; border-radius: 24px 24px 0 0; max-height: 62vh; border-bottom: 0; }
+  .in-modifica .pannello, .in-modifica .scheda-percorso, .in-modifica .scheda-poi { bottom: 78px !important; border-radius: 24px; left: 6px !important; right: 6px !important; }
+  .pannello::before, .scheda-percorso::before, .scheda-poi::before { content: ''; display: block; width: 36px; height: 4px; border-radius: 2px; background: rgba(60, 64, 67, 0.3); margin: 8px auto 0; }
+  .in-modifica .strumenti { top: auto; bottom: 6px; left: 6px; right: 6px; border-radius: 20px; }
+  .guida-strumento { top: 150px; border-radius: 20px; }
+  .avviso { bottom: 90px; }
+  .in-modifica .crediti { bottom: 84px !important; }
+  .ospite .crediti { top: 8px !important; bottom: auto !important; }
+  .stato { display: none; }
+}
+.segno-poi.lontano .icona { width: 20px; height: 20px; border-width: 1.5px; }
+.segno-poi.lontano .icona svg { width: 12px; height: 12px; }
+.segno-poi.lontano { margin: -10px 0 0 -10px; }
+.segno-poi.tappa .testo { background: var(--vetro-forte); padding: 3px 8px; border-radius: 999px; text-shadow: none; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
+.ospite .crediti { background: var(--vetro-forte); }

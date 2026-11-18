@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import QRCode from 'qrcode'
+import { Icona } from './Icona'
 import { useS } from '../store'
 import { cerca } from '../scene/contesto'
 import { minutiTesto, tappaInLink, type Percorso, type Tappa } from '../engine/percorso'
@@ -60,7 +61,7 @@ export function SchedaPercorso({ calc, esci }: { calc: Percorso | null; esci: ()
     <section className="scheda-percorso" aria-label="Percorso a piedi">
       <div className="pannello-testa">
         <h2>{s.ospite && r.a?.nome ? r.a.nome : 'Percorso a piedi'}</h2>
-        <button className="quiet" onClick={() => (s.ospite ? setChiuso(true) : esci())} aria-label={s.ospite ? 'Riduci' : 'Chiudi'}>{s.ospite ? '▾' : '✕'}</button>
+        <button className="tondo quiet" onClick={() => (s.ospite ? setChiuso(true) : esci())} aria-label={s.ospite ? 'Riduci' : 'Chiudi'}><Icona n="close" /></button>
       </div>
       {!cambia && (
         <div className="tratta">
@@ -70,9 +71,9 @@ export function SchedaPercorso({ calc, esci }: { calc: Percorso | null; esci: ()
         </div>
       )}
       {cambia && <>
-      <RigaTappa titolo="Da" t={r.da} scegli={r.scegli === 'da'} onScegli={() => set({ scegli: r.scegli === 'da' ? null : 'da' })} onCambia={t => set({ da: t, scegli: r.a ? null : 'a' })} extra={<button className="quiet" onClick={posizione} data-tip="Parti da dove sei adesso">📍 Da qui</button>} ospite={s.ospite} />
+      <RigaTappa titolo="Da" t={r.da} scegli={r.scegli === 'da'} onScegli={() => set({ scegli: r.scegli === 'da' ? null : 'da' })} onCambia={t => set({ da: t, scegli: r.a ? null : 'a' })} extra={<button className="quiet" onClick={posizione} data-tip="Parti da dove sei adesso"><Icona n="my_location" />Da qui</button>} ospite={s.ospite} />
       <RigaTappa titolo="A" t={r.a} scegli={r.scegli === 'a'} onScegli={() => set({ scegli: r.scegli === 'a' ? null : 'a' })} onCambia={t => set({ a: t, scegli: r.da ? null : 'da' })} ospite={s.ospite} />
-      {r.da && r.a && <button className="quiet inverti" onClick={() => set({ da: r.a, a: r.da })} data-tip="Scambia partenza e arrivo">⇅ Inverti</button>}
+      {r.da && r.a && <button className="quiet inverti" onClick={() => set({ da: r.a, a: r.da })} data-tip="Scambia partenza e arrivo"><Icona n="swap_vert" />Inverti</button>}
       </>}
       {r.scegli && <p className="nota">Tocca la mappa per scegliere {r.scegli === 'da' ? 'la partenza' : 'l\'arrivo'}.</p>}
       {r.da && r.a && (calc ? (

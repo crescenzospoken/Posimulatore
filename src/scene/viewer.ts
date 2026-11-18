@@ -118,6 +118,8 @@ export function impostaQualita(q: Qualita) {
   // la risoluzione alta ha senso solo su schermi densi
   viewer.resolutionScale = q === 'alta' ? Math.min(window.devicePixelRatio || 1, v.res) : v.res
   viewer.scene.postProcessStages.fxaa.enabled = q !== 'leggera'
+  // sul leggero 30 fotogrammi al secondo costanti: meglio di 40-60 a strappi (e il telefono scalda meno)
+  viewer.targetFrameRate = q === 'leggera' ? 30 : (undefined as unknown as number)
   viewer.scene.globe.maximumScreenSpaceError = q === 'leggera' ? 3 : q === 'alta' ? 1.5 : 2
   if (google) { google.maximumScreenSpaceError = v.sse; google.cacheBytes = v.cacheMB * 1024 * 1024 }
   viewer.scene.requestRender()
@@ -144,6 +146,8 @@ export async function impostaGoogle(on: boolean, token: string): Promise<string 
         // meno dettaglio ai bordi e in lontananza, niente tile a vuoto mentre si muove la vista
         foveatedScreenSpaceError: true, dynamicScreenSpaceError: true, preloadFlightDestinations: false, loadSiblings: false,
         enableCollision: false,
+        // salta i livelli intermedi: meno tessere da scaricare e decodificare mentre ci si muove (era la causa degli scatti sul telefono)
+        skipLevelOfDetail: true, baseScreenSpaceError: 1024, skipScreenSpaceErrorFactor: 16, skipLevels: 1, immediatelyLoadDesiredLevelOfDetail: false,
       })
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY

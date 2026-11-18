@@ -31,7 +31,7 @@ export function disegnaPoi(cat: Set<string>, sel: string | null, conNascosti: bo
     const c = categoria(p.c), id = p.id
     voci.push({
       id: 'poi:' + id, tipo: 'poi', pos: pos(p.p[0], p.p[1], quota(p.p[0], p.p[1]) + 2.5), testo: p.n ?? (id === sel ? c.nome : ''),
-      icona: c.icona, col: c.col, scelto: id === sel, tenue: p.nascosto, maxDist: 3500,
+      icona: c.s, col: c.col, scelto: id === sel, tenue: p.nascosto, maxDist: 3500,
       clic: () => {
         const s = useS.getState()
         if (s.strumento.k === 'poi') useS.setState({ selPoi: id, pannello: 'poi', poiPos: null })
