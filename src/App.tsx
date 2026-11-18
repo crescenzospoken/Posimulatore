@@ -1,9 +1,16 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Cartesian3 } from 'cesium'
-import { useS } from './store'
+import { useS, type Utente } from './store'
 import { impostaQualita, impostaNitidezza, quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
-import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
+import { caricaContesto, mostraContesto, cerca, reteVie } from './scene/contesto'
+import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
+import { cammino, tappaDaLink } from './engine/percorso'
+import { SchedaPercorso } from './ui/Percorso'
+import { Servizi, SchedaPoi, chiama, puoModificare } from './ui/Pubblico'
+import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
+import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps } from './scene/gps'
+import { categoria } from './engine/poi'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
@@ -14,6 +21,15 @@ import { Suggerimenti } from './ui/Suggerimenti'
 import type { Obj } from './engine/model'
 import { trasla } from './engine/modifica'
 
+const st0 = (k: string) => k === 'percorso'
+/** Cerca fra punti di interesse (per nome o categoria), vie e luoghi. */
+function cercaTutto(q: string) {
+  const t = q.trim().toLowerCase()
+  if (t.length < 2) return []
+  const poi = elencoPoi().filter(p => !p.nascosto && ((p.n ?? '').toLowerCase().includes(t) || categoria(p.c).nome.toLowerCase().includes(t)))
+    .slice(0, 6).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
+  return [...poi, ...cerca(q).map(r => ({ ...r, poi: undefined as string | undefined }))].slice(0, 12)
+}
 export default function App() {
   const el = useRef<HTMLDivElement>(null)
   const [pronto, setPronto] = useState(false)
@@ -22,6 +38,17 @@ export default function App() {
   const barra = useRef<HTMLSpanElement>(null)
   const setCur = (cur: Punto | null) => { const b = barra.current; if (b) b.textContent = cur ? `${cur.p[1].toFixed(5)}, ${cur.p[0].toFixed(5)} · ${cur.z.toFixed(1).replace('.', ',')} m s.l.m.` : 'Positano' }
   const [aperto, setAperto] = useState<string | null>(null)
+  const [gps, setGps] = useState(false)
+  const dove = () => {
+    if (gpsAcceso()) { fermaGps(); setGps(false); return }
+    let primo = true
+    setGps(true)
+    avviaGps(p => {
+      if (!primo) return
+      primo = false
+      if (dentroPositano(p.p)) centraSu(p.p); else useS.getState().dici('Sei fuori Positano: il pallino blu compare quando arrivi')
+    }, t => { setGps(false); useS.getState().dici(t) })
+  }
   const [q, setQ] = useState('')
   const s = useS()
   const op = s.opzione()
@@ -33,7 +60,12 @@ export default function App() {
         try { const c = await (await fetch('/config')).json(); if (c.ionToken) useS.setState(st => ({ ionTokenSito: c.ionToken, livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
         await creaViewer(el.current!)
         impostaOrto(useS.getState().livelli.orto)
-        await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
+        // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
+        chiama<Utente | null>('io').then(u => useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })), () => {})
+        chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
+        await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi()])
+        // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo
+        setTimeout(() => caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))), 4000)
         disegnaCupole(viewer)
         let tG: ReturnType<typeof setTimeout> | undefined
         // Google finisce di caricare dopo ogni movimento: ricalcolare tutti gli oggetti ogni volta bloccava la pagina.
@@ -44,11 +76,14 @@ export default function App() {
           if (ultimaPos && Cartesian3.distance(ora, ultimaPos) < 80) return
           if (t - ultimaVolta < 3000) return
           ultimaPos = Cartesian3.clone(ora); ultimaVolta = t
-          quoteCambiate(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))
+          quoteCambiate(); rifaiPoi(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))
         }, 1200) })
         stop = avviaInterazione(setCur, finisci)
+        // link o QR con il percorso: ?da=lon,lat,Nome&a=lon,lat,Nome
+        const u = new URLSearchParams(location.search), da = tappaDaLink(u.get('da')), a = tappaDaLink(u.get('a'))
+        if (a || da) useS.setState(st => ({ percorso: { da: da ?? st.percorso.da, a, scegli: da && a ? null : da ? 'a' : 'da' }, strumento: { k: 'percorso' }, ospite: Boolean(a), pannello: null }))
         const v = useS.getState().progetto().vista ?? VAI[1]
-        vai(v, 0)
+        if (!a) vai(v, 0)
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
       } catch (e) {
@@ -59,11 +94,22 @@ export default function App() {
     return () => stop?.()
   }, [])
 
+  // modifica = account abilitato e modalità accesa; altrimenti la mappa è quella pubblica
+  const mod = s.inModifica && puoModificare(s.utente)
   // scena <- stato
-  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto])
-  useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli])
+  useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto && mod) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto, mod])
+  useEffect(() => { if (pronto) disegnaPoi(new Set(s.poiCat), s.selPoi, mod) }, [pronto, s.poiCat, s.selPoi, mod, s.googleGiro])
+  useEffect(() => { if (pronto && !mod && s.strumento.k !== 'naviga' && s.strumento.k !== 'percorso') s.set({ strumento: { k: 'naviga' }, bozza: [] }) }, [pronto, mod])
+  useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
+  // percorso a piedi
+  const inPercorso = st0(s.strumento.k)
+  const { da, a } = s.percorso
+  const calc = useMemo(() => (pronto && inPercorso && da && a ? cammino(reteVie(), da.p, a.p) : null), [pronto, inPercorso, da?.p[0], da?.p[1], a?.p[0], a?.p[1]])
+  useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? da : null, inPercorso ? a : null) }, [pronto, inPercorso, calc, da?.nome, a?.nome, s.livelli.google, s.googleGiro])
+  useEffect(() => { if (calc) inquadraPercorso(calc) }, [calc])
+  useEffect(() => { document.title = s.ospite && a?.nome ? `Come arrivare a ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome])
   useEffect(() => {
     if (!pronto) return
     impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
@@ -95,39 +141,47 @@ export default function App() {
     return () => window.removeEventListener('keydown', k)
   }, [])
 
-  const risultati = q ? cerca(q) : []
+  const risultati = q ? cercaTutto(q) : []
   const st = s.strumento
   return (
-    <div className="app">
+    <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>
       <div ref={el} className="scena" />
       {!pronto && !errore && <div className="caricamento">Preparo Positano in 3D…</div>}
       {errore && <div className="caricamento errore">Il 3D non parte su questo dispositivo: {errore}</div>}
 
       <header className="barra">
         <div className="marchio">Posimulatore</div>
-        <button className="quiet progetto-nome" onClick={() => s.set({ pannello: 'progetto' })} data-tip="Progetti e opzioni">{s.progetto().nome} · {op.nome}</button>
+        {mod && <button className="quiet progetto-nome" onClick={() => s.set({ pannello: 'progetto' })} data-tip="Progetti e opzioni">{s.progetto().nome} · {op.nome}</button>}
         <div className="cerca">
           <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cerca via o luogo" aria-label="Cerca via o luogo" />
           {risultati.length > 0 && <ul className="risultati">{risultati.map(r => (
-            <li key={r.nome + r.tipo}><button onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ('') }}>{r.nome} <small>{r.tipo}</small></button></li>
+            <li key={r.nome + r.tipo + (r.poi ?? '')}><button onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ(''); if (r.poi) { const c = elencoPoi().find(x => x.id === r.poi)!.c; s.set({ selPoi: r.poi, poiCat: s.poiCat.includes(c) ? s.poiCat : [...s.poiCat, c] }) } }}>{r.nome} <small>{r.tipo}</small></button></li>
           ))}</ul>}
         </div>
         <div className="azioni">
+          {mod && <>
           <button className="quiet" disabled={!s.passato.length} onClick={s.annulla} data-tip="Annulla (Ctrl+Z)" aria-label="Annulla">↶</button>
           <button className="quiet" disabled={!s.futuro.length} onClick={s.ripeti} data-tip="Ripeti (Ctrl+Y)" aria-label="Ripeti">↷</button>
+          </>}
           <select className="quiet" value="" onChange={e => { const v = VAI[Number(e.target.value)]; if (v) vai(v) }} aria-label="Vai a" data-tip="Vai a un punto di Positano">
             <option value="">Vai a…</option>
             {VAI.map((v, i) => <option key={v.nome} value={i}>{v.nome}</option>)}
           </select>
+          {mod && <>
           <button className="quiet solo-desktop" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista">⌖</button>
           <button className={'quiet' + (s.livelli.progetto ? '' : ' acceso')} onClick={() => s.setLivelli({ progetto: !s.livelli.progetto })} aria-pressed={!s.livelli.progetto} data-tip={s.livelli.progetto ? 'Nascondi il progetto e guarda Positano com\'è oggi' : 'Mostra di nuovo il progetto'}>{s.livelli.progetto ? 'Com\'è oggi' : 'Progetto'}</button>
-          <button className="quiet" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto">📷</button>
+          </>}
+          <button className={'quiet' + (gps ? ' acceso' : '')} aria-pressed={gps} onClick={dove} data-tip="Mostra dove sei (GPS)" aria-label="Dove sono">📍</button>
+          {!mod && <button className={'quiet' + (st.k === 'percorso' ? ' acceso' : '')} onClick={() => s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, scegli: s.percorso.da ? (s.percorso.a ? null : 'a') : 'da' }, selPoi: null, pannello: null })} data-tip="Da un punto a un altro a piedi, con salite e scale">🧭 <span className="solo-desktop">Percorso</span></button>}
+          <button className="quiet solo-desktop" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto">📷</button>
           <button className={'quiet' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} data-tip="Mappe, edifici, Google 3D, sole e ombre">Livelli</button>
           <button className={'quiet' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label="Guida" data-tip="Guida e fonti dei dati">?</button>
+          <button className={'quiet utente' + (s.pannello === 'accesso' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'accesso' ? null : 'accesso' })} data-tip={s.utente ? 'Il tuo account' : 'Accedi per progettare e aggiornare la mappa'}>{s.utente ? s.utente.nome.split(' ')[0] : 'Accedi'}</button>
         </div>
       </header>
 
-      <nav className="strumenti" aria-label="Strumenti">
+      {!s.ospite && <Servizi />}
+      {mod && <nav className="strumenti" aria-label="Strumenti">
         <button className={st.k === 'naviga' ? 'acceso' : ''} onClick={() => { s.set({ strumento: { k: 'naviga' }, bozza: [] }); setAperto(null) }} data-tip="Muovi la vista, tocca per scegliere e trascina per spostare"><span>🖐️</span>Naviga</button>
         {GRUPPI.map(g => (
           <div key={g.id} className="gruppo">
@@ -138,8 +192,10 @@ export default function App() {
           </div>
         ))}
         <button className={s.pannello === 'catalogo' ? 'acceso' : ''} onClick={() => { s.set({ pannello: s.pannello === 'catalogo' ? null : 'catalogo' }); setAperto(null) }} data-tip="Auto, bus, gazebo, palchi, tende, arredi"><span>📦</span>Catalogo</button>
+        <button className={st.k === 'percorso' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, scegli: s.percorso.da ? (s.percorso.a ? null : 'a') : 'da' }, bozza: [], sel: null, pannello: null }); setAperto(null) }} data-tip="Da un punto a un altro a piedi, con salite e scale; link e QR da condividere"><span>🧭</span>Percorso</button>
         <button className={st.k === 'cammina' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'cammina' ? { k: 'naviga' } : { k: 'cammina' }, bozza: [] }); setAperto(null) }} data-tip="Cammina ad altezza d'uomo dal punto al centro dello schermo"><span>🚶</span>Cammina</button>
-      </nav>
+        <button className={st.k === 'poi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'poi' ? { k: 'naviga' } : { k: 'poi' }, sel: null, selPoi: null, pannello: st.k === 'poi' ? null : 'poi', spostaPoi: false }); setAperto(null) }} data-tip="Aggiungi o correggi bagni, fermate, parcheggi e altri punti: li vedono tutti"><span>📌</span>Punti</button>
+      </nav>}
 
       {(st.k === 'disegna' || st.k === 'misura') && (
         <div className="guida-strumento">
@@ -152,7 +208,9 @@ export default function App() {
       )}
 
       {st.k === 'cammina' && <Pad />}
+      {st.k === 'percorso' && <SchedaPercorso calc={calc} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
+      {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 
       <footer className="stato">

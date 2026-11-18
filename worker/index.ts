@@ -1,5 +1,6 @@
 // Posimulatore: file statici + proxy dell'ortofoto del Geoportale Nazionale (servita solo in http).
-interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string }
+import { api } from './api'
+export interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string; DB: D1Database; ADMIN_EMAIL?: string }
 const PCN = 'http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map'
 const AMMESSI = new Set(['service', 'request', 'version', 'layers', 'styles', 'srs', 'crs', 'bbox', 'width', 'height', 'format', 'transparent'])
 
@@ -28,6 +29,7 @@ export default {
     const url = new URL(req.url)
     if (url.pathname === '/robots.txt') return new Response('User-agent: *\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain' } })
     if (url.pathname === '/wms/pcn') return ortofoto(req, url, ctx)
+    if (url.pathname.startsWith('/api/')) return api(req, url, env)
     // codice pubblico di Cesium ion (token da browser, da limitare agli URL del sito su ion.cesium.com)
     if (url.pathname === '/config') return Response.json({ ionToken: env.CESIUM_ION_TOKEN ?? '' }, { headers: { 'Cache-Control': 'no-store' } })
     return env.ASSETS.fetch(req)

@@ -14,6 +14,8 @@ button, .bottone {
 button:hover:not(:disabled), .bottone:hover { border-color: #b9c3cc; background: #fafcfd; }
 button:disabled { opacity: 0.45; cursor: default; }
 button.primary { background: var(--accento); color: #fff; border-color: var(--accento); }
+button.primary:hover:not(:disabled) { background: #0f679f; border-color: #0f679f; }
+button.acceso:hover:not(:disabled) { background: var(--accento-soft); border-color: #8ccbf0; }
 button.danger { color: var(--pericolo); }
 button.quiet { border-color: transparent; background: transparent; }
 button.acceso, button.quiet.acceso { background: var(--accento-soft); border-color: #8ccbf0; color: #0b3d5c; }
@@ -123,6 +125,37 @@ input.num.largo { width: 76px; }
 .sposta label { flex-direction: column; font-size: 12px; color: var(--tenue); }
 .pannello { width: 400px; }
 
+/* percorso a piedi */
+.scheda-percorso {
+  position: absolute; top: 70px; right: 10px; width: 380px; max-height: calc(100% - 110px); overflow: auto; z-index: 3;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 0 14px 14px; font-size: 14px;
+}
+.scheda-percorso .pannello-testa { padding: 10px 0 6px; position: sticky; top: 0; background: var(--carta); z-index: 1; }
+.scheda-percorso h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tenue); margin: 14px 0 4px; }
+.scheda-percorso.riapri { width: auto; padding: 10px 16px; font-weight: 600; }
+.tappa { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--linea); }
+.tappa .lettera { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; background: #1f9d55; margin-top: 4px; }
+.tappa + .tappa .lettera, .lettera.b { background: #d93a2b !important; }
+.tratta p { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-weight: 600; }
+.tratta .lettera { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; background: #1f9d55; flex: none; }
+.tappa-corpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tappa-corpo .cerca { max-width: none; position: relative; }
+.tappa-corpo .cerca input { width: 100%; }
+.riga-bottoni { display: flex; flex-wrap: wrap; gap: 6px; }
+.inverti { margin-top: 4px; }
+.esito { margin-top: 8px; }
+.esito p { margin: 4px 0; }
+.esito .tempo { font-size: 20px; }
+.esito .tempo span { font-size: 14px; color: var(--tenue); }
+.condividi .qr { width: 100%; border: 1px solid var(--linea); border-radius: 8px; margin: 8px 0 6px; }
+.colori-vie { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding-left: 4px; }
+.campi .colori-vie label.colore { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; }
+.colori-vie input[type=color] { width: 30px; height: 24px; padding: 1px; border-radius: 5px; flex: none; }
+.colori-vie button { grid-column: 1 / -1; justify-self: start; }
+/* aperto da un link o da un QR: solo il percorso */
+.ospite .strumenti, .ospite .progetto-nome, .ospite .azioni, .ospite .barra .cerca, .ospite .servizi { display: none; }
+.ospite .barra { right: auto; }
+
 @media (max-width: 760px) {
   .barra { top: 6px; left: 6px; right: 6px; flex-wrap: wrap; gap: 4px; }
   .progetto-nome { max-width: 46vw; }
@@ -143,4 +176,42 @@ input.num.largo { width: 76px; }
   .pad { left: 10px; bottom: 96px; }
   .pad-nota { display: none; }
   .cesium-widget-credits { bottom: 86px; }
+  .scheda-percorso { top: auto; left: 6px; right: 6px; bottom: 84px; width: auto; max-height: 56vh; }
+  .ospite .scheda-percorso { bottom: 6px; max-height: 50vh; }
+  .ospite .cesium-widget-credits { bottom: auto; top: 58px; }
+  .scheda-percorso.riapri { left: auto; }
+}
+
+/* mappa pubblica: filtri dei punti di interesse, scheda del punto, accesso */
+.servizi { position: absolute; top: 64px; left: 10px; right: 10px; z-index: 2; display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.servizi::-webkit-scrollbar { display: none; }
+.in-modifica .servizi { left: 118px; }
+.chip { flex: none; border-radius: 999px; padding: 6px 12px; background: #fff; box-shadow: 0 1px 4px rgba(16, 32, 48, 0.25); border-color: transparent; font-size: 13px; white-space: nowrap; }
+.chip.quiet { background: rgba(255, 255, 255, 0.85); }
+.chip.acceso { background: var(--accento-soft); border-color: #8ccbf0; }
+.pannello, .scheda-percorso { top: 110px; }
+.in-modifica .strumenti { top: 110px; }
+.guida-strumento { top: 110px; }
+.scheda-poi { position: absolute; top: 110px; right: 10px; width: 340px; z-index: 3; background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 0 14px 14px; font-size: 14px; }
+.scheda-poi .pannello-testa { padding: 10px 0 2px; }
+.scheda-poi p { margin: 6px 0; }
+.errore-campo { color: var(--pericolo); font-size: 13px; margin: 0; }
+textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px; font: inherit; resize: vertical; }
+.elenco-utenti { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.elenco-utenti li { display: flex; align-items: center; gap: 8px; }
+.elenco-utenti li > span { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.elenco-utenti small { color: var(--tenue); overflow: hidden; text-overflow: ellipsis; }
+.barra .utente { font-weight: 600; }
+@media (max-width: 760px) {
+  .servizi { top: 104px; left: 6px; right: 6px; }
+  .pubblico .azioni { flex: 1 1 0; min-width: 0; }
+  .pubblico .marchio { font-size: 14px; }
+  .in-modifica .servizi { left: 6px; }
+  .scheda-poi { top: auto; left: 6px; right: 6px; bottom: 6px; width: auto; }
+  .in-modifica .scheda-poi { bottom: 84px; }
+  .pannello, .scheda-percorso { top: auto; }
+  .guida-strumento { top: 140px; }
+  .pubblico .scheda-percorso { bottom: 6px; }
+  .pubblico .pannello { bottom: 6px; }
+  .pubblico .cesium-widget-credits { bottom: 8px; }
 }

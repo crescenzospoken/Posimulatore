@@ -62,6 +62,26 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     const s = S()
     const t = s.strumento
     if (t.k === 'cammina') return
+    if (t.k === 'percorso') {
+      // il clic sceglie la partenza o l'arrivo; dal link (ospite) solo se si è chiesto di scegliere
+      const r = s.percorso, quale = r.scegli ?? (s.ospite ? null : r.da ? 'a' : 'da')
+      if (!quale) return
+      const q = puntoA(e.position, false)
+      if (!q) return
+      const altro = quale === 'da' ? 'a' : 'da'
+      useS.setState({ percorso: { ...r, [quale]: { p: q.p }, scegli: r[altro] ? null : altro } })
+      return
+    }
+    if (t.k === 'poi') {
+      // punto di interesse: tocca un simbolo per correggerlo, o la mappa per aggiungerne uno lì (o spostare quello aperto)
+      const id = idDi(viewer.scene.pick(e.position))
+      if (id?.startsWith('poi:') && !s.spostaPoi) { useS.setState({ selPoi: id.slice(4), pannello: 'poi', poiPos: null }); return }
+      const q = puntoA(e.position, false)
+      if (!q) return
+      if (s.spostaPoi && s.selPoi) { useS.setState({ poiPos: q.p, spostaPoi: false }); return }
+      useS.setState({ poiPos: null, selPoi: `nuovo:${q.p[0].toFixed(7)}:${q.p[1].toFixed(7)}`, pannello: 'poi' })
+      return
+    }
     const pt = puntoA(e.position)
     if (t.k === 'disegna') {
       if (!pt) return
@@ -85,6 +105,9 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     // naviga: selezione
     const pk = viewer.scene.pick(e.position)
     const id = idDi(pk)
+    if (id?.startsWith('poi:')) { useS.setState({ selPoi: id.slice(4), sel: null, selEdificio: null, pannello: null }); return }
+    // fuori dalla modalità modifica la mappa si guarda e basta: niente schede di punti o oggetti
+    if (!s.inModifica || !(s.utente?.ruolo === 'editor' || s.utente?.ruolo === 'admin')) { if (s.selPoi) useS.setState({ selPoi: null }); return }
     if (id?.startsWith('ed:')) { useS.setState({ selEdificio: id.slice(3), sel: null, pannello: 'oggetto', info: pt ? { p: pt.p, z: pt.z } : null }); return }
     if (id && !id.startsWith('st:') && !id.startsWith('lu:') && !id.startsWith('h:')) {
       const oid = id.split(':')[0]

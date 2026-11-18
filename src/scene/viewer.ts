@@ -159,8 +159,10 @@ export const googleAcceso = () => !!google && google.show
 /** Quota (m s.l.m.) della superficie di Google 3D in un punto, se caricata. Legge solo Google, non i nostri oggetti. */
 export function quotaGoogle(lon: number, lat: number): number | undefined {
   if (!google || !google.show) return undefined
-  const h = google.getHeight(C.Cartographic.fromDegrees(lon, lat), viewer.scene)
-  return h === undefined ? undefined : h - GEOIDE
+  // getHeight a volte lancia un errore interno (punto su una tessera non ancora pronta): vale come «non caricato»
+  let h: number | undefined
+  try { h = google.getHeight(C.Cartographic.fromDegrees(lon, lat), viewer.scene) } catch { return undefined }
+  return h === undefined || !isFinite(h) ? undefined : h - GEOIDE
 }
 
 // ---------- nitidezza e colore ----------

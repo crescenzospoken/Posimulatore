@@ -3,12 +3,17 @@ import { telefono, qualitaIniziale } from './scene/viewer'
 import type { LL } from './engine/geo'
 import { type Obj, type Opzione, type Progetto, type Tipo, type Vista, uid } from './engine/model'
 import { esempio } from './esempio'
+import type { Tappa } from './engine/percorso'
+import { CATEGORIE } from './engine/poi'
 
 export type Strumento =
   | { k: 'naviga' }
   | { k: 'disegna'; tipo: Tipo; par: Obj['par']; nome: string; min: number; max: number; aiuto: string }
   | { k: 'misura'; modo: 'distanza' | 'area' | 'altezza' | 'quota' }
   | { k: 'cammina' }
+  | { k: 'percorso' }
+  | { k: 'poi' }
+export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
 export type Livelli = {
   orto: 'pcn2012' | 'esri' | 'osm'
@@ -24,6 +29,10 @@ export type Livelli = {
   /** mostra gli oggetti di progetto (piazze, segnaletica, arredi) */
   progetto: boolean
   qualita: 'leggera' | 'normale' | 'alta'
+  /** colori delle vie per gruppo (statale, strade, scale...): vuoto = colori di base */
+  coloriVie: Record<string, string>
+  /** versione delle impostazioni di base, per cambiarle una volta a chi le aveva già salvate */
+  rev?: number
   ora: number // ore decimali, ora locale
   giorno: string // AAAA-MM-GG
 }
@@ -45,7 +54,24 @@ type Stato = {
   /** passo delle modifiche in metri (0 = libero) */
   passo: number
   info: { p: LL; z: number } | null
-  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | null
+  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | null
+  /** chi ha fatto l'accesso (null = visitatore); solo editor e admin vedono gli strumenti di modifica */
+  utente: Utente | null
+  /** l'editor ha acceso la modalità modifica (progetti, disegno, edifici) */
+  inModifica: boolean
+  /** categorie di punti di interesse accese */
+  poiCat: string[]
+  /** punto di interesse scelto (scheda aperta) o in modifica */
+  selPoi: string | null
+  /** nuova posizione scelta sulla mappa per il punto aperto (quando si sposta) */
+  poiPos: LL | null
+  spostaPoi: boolean
+  /** colori di base delle vie per tutti, scelti dall'amministratore */
+  coloriBase: Record<string, string>
+  /** percorso a piedi da A a B; scegli = quale dei due prende il prossimo clic sulla mappa */
+  percorso: { da: Tappa | null; a: Tappa | null; scegli: 'da' | 'a' | null }
+  /** aperto da un link o da un QR: interfaccia ridotta al solo percorso */
+  ospite: boolean
   passato: string[]
   futuro: string[]
   avviso: string | null
@@ -72,18 +98,18 @@ type Stato = {
   dici: (t: string) => void
 }
 const KEY = 'posimulatore.v5'
-type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string }
+type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
-const LIV0: Livelli = { orto: 'esri', edifici: true, stile: 'plastico', strade: false, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: true, qualita: qualitaIniziale(), ora: 12.5, giorno: '2026-06-21' }
+const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, rev: 3, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
 const prog0 = iniziale?.progetti?.length ? iniziale.progetti : [esempio()]
 let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -96,7 +122,8 @@ export const useS = create<Stato>((set, get) => ({
   bozza: [],
   misure: [],
   // chi aveva salvato i livelli prima della qualità aveva le ombre accese di base: si ripartono spente (pesano molto)
-  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
+  // rev 2 (18/11): edifici OSM e oggetti di progetto spenti di base, sono i livelli che pesano di più
+  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), ...((iniziale?.livelli?.rev ?? 0) < 2 ? { edifici: false, progetto: false } : {}), ...((iniziale?.livelli?.rev ?? 0) < 3 ? { strade: true, coloriVie: {}, rev: 3 } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
   ionToken: iniziale?.ionToken ?? '',
   ionTokenSito: '',
   ultimaQuota: null,
@@ -105,6 +132,15 @@ export const useS = create<Stato>((set, get) => ({
   passo: 0.1,
   info: null,
   pannello: null,
+  percorso: { da: iniziale?.partenza ?? null, a: null, scegli: null },
+  ospite: false,
+  utente: null,
+  inModifica: iniziale?.inModifica ?? false,
+  poiCat: iniziale?.poiCat ?? CATEGORIE.filter(c => c.base).map(c => c.k),
+  selPoi: null,
+  poiPos: null,
+  spostaPoi: false,
+  coloriBase: {},
   passato: [],
   futuro: [],
   avviso: null,
@@ -157,7 +193,7 @@ export const useS = create<Stato>((set, get) => ({
     set({ progetti: s.progetti.map(p => p.id !== s.pid ? p : { ...p, opzioni: p.opzioni.map(x => (x.id === o.id ? o : x)) }), futuro: s.futuro.slice(0, -1), passato: [...s.passato, ora] })
     salva(get())
   },
-  set(p) { set(p); if ('ionToken' in p) salva(get()) },
+  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p) salva(get()) },
   setLivelli(p) { set({ livelli: { ...get().livelli, ...p, ...('google' in p ? { googleScelto: p.google } : {}) } }); salva(get()) },
   nuovoProgetto(nome) {
     const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }
