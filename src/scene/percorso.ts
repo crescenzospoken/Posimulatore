@@ -2,18 +2,17 @@ import * as C from 'cesium'
 import { viewer, pos, quotaGoogle, googleAcceso } from './viewer'
 import { quota as quotaTerreno } from './terreno'
 import { puntiVia } from './contesto'
+import { impostaVoci } from './sovrapposti'
 import type { Percorso, Tappa } from '../engine/percorso'
 
 const BLU = C.Color.fromCssColorString('#0a7cff')
 let linea: C.Entity | undefined
-const segni: C.Entity[] = []
 
 const zSuolo = (p: [number, number]) => quotaGoogle(p[0], p[1]) ?? quotaTerreno(p[0], p[1])
 
 /** Disegna il percorso: linea blu alla quota vera della strada, visibile anche dietro gli edifici (più chiara). */
 export function disegnaPercorso(r: Percorso | null, da: Tappa | null, a: Tappa | null) {
   if (linea) viewer.entities.remove(linea)
-  segni.splice(0).forEach(e => viewer.entities.remove(e))
   linea = undefined
   if (r && r.pts.length > 1) {
     linea = viewer.entities.add({
@@ -25,18 +24,11 @@ export function disegnaPercorso(r: Percorso | null, da: Tappa | null, a: Tappa |
       },
     })
   }
-  ;([['A', da, '#1f9d55'], ['B', a, '#d93a2b']] as const).forEach(([lettera, t, col]) => {
-    if (!t) return
-    segni.push(viewer.entities.add({
-      position: pos(t.p[0], t.p[1], zSuolo(t.p) + 3),
-      point: { pixelSize: 18, color: C.Color.fromCssColorString(col), outlineColor: C.Color.WHITE, outlineWidth: 3, disableDepthTestDistance: Number.POSITIVE_INFINITY },
-      label: {
-        text: t.nome ? `${lettera} · ${t.nome}` : lettera, font: '600 15px system-ui, sans-serif', fillColor: C.Color.WHITE,
-        showBackground: true, backgroundColor: C.Color.fromCssColorString(col), backgroundPadding: new C.Cartesian2(8, 5),
-        verticalOrigin: C.VerticalOrigin.BOTTOM, pixelOffset: new C.Cartesian2(0, -16), disableDepthTestDistance: Number.POSITIVE_INFINITY,
-      },
-    }))
-  })
+  // A e B in HTML sopra la scena, come i punti di interesse (nitidi sul telefono)
+  impostaVoci('tappa', ([['A', da, '#188038'], ['B', a, '#c5221f']] as const).flatMap(([lettera, t, col]) => t ? [{
+    id: 'tappa:' + lettera, tipo: 'tappa' as const, pos: pos(t.p[0], t.p[1], zSuolo(t.p) + 3), testo: (lettera === 'A' ? 'Da ' : 'A ') + (t.nome ?? 'punto scelto'),
+    icona: lettera === 'A' ? 'my_location' : 'location_on', col, scelto: true, maxDist: 1e9,
+  }] : []))
   viewer.scene.requestRender()
 }
 

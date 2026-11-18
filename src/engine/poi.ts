@@ -1,28 +1,29 @@
 // Punti di interesse: categorie, unione fra OpenStreetMap (public/data/poi.json) e correzioni a mano (API /api/poi).
 import type { LL } from './geo'
 
-export type Categoria = { k: string; nome: string; icona: string; col: string; base: boolean }
+/** s = nome dell'icona Material (src/ui/icone.ts); icona = emoji, solo per i testi semplici */
+export type Categoria = { k: string; s: string; nome: string; icona: string; col: string; base: boolean }
 /** base = accesa all'apertura */
 export const CATEGORIE: Categoria[] = [
-  { k: 'bagni', nome: 'Bagni pubblici', icona: '🚻', col: '#1a73e8', base: true },
-  { k: 'fermate', nome: 'Fermate bus', icona: '🚌', col: '#188038', base: true },
-  { k: 'biglietti', nome: 'Biglietti bus', icona: '🎫', col: '#188038', base: true },
-  { k: 'parcheggi', nome: 'Parcheggi', icona: '🅿️', col: '#1967d2', base: true },
-  { k: 'traghetti', nome: 'Traghetti', icona: '⛴️', col: '#0b8a9e', base: true },
-  { k: 'taxi', nome: 'Taxi', icona: '🚕', col: '#b06000', base: false },
-  { k: 'bar', nome: 'Bar e caffè', icona: '☕', col: '#e8710a', base: false },
-  { k: 'ristoranti', nome: 'Ristoranti', icona: '🍝', col: '#e8710a', base: false },
-  { k: 'alimentari', nome: 'Alimentari', icona: '🛒', col: '#9334e6', base: false },
-  { k: 'farmacie', nome: 'Farmacie', icona: '💊', col: '#d93025', base: true },
-  { k: 'salute', nome: 'Salute e defibrillatori', icona: '⛑️', col: '#d93025', base: false },
-  { k: 'bancomat', nome: 'Bancomat', icona: '🏧', col: '#5f6368', base: false },
-  { k: 'acqua', nome: 'Acqua potabile', icona: '🚰', col: '#1a73e8', base: false },
-  { k: 'info', nome: 'Informazioni', icona: 'ℹ️', col: '#1a73e8', base: false },
-  { k: 'spiagge', nome: 'Spiagge', icona: '🏖️', col: '#0b8a9e', base: false },
-  { k: 'panorami', nome: 'Panorami', icona: '📷', col: '#0b8a9e', base: false },
-  { k: 'chiese', nome: 'Chiese', icona: '⛪', col: '#5f6368', base: false },
-  { k: 'sicurezza', nome: 'Polizia e soccorso', icona: '🚓', col: '#3c4043', base: false },
-  { k: 'altro', nome: 'Altro', icona: '📍', col: '#5f6368', base: false },
+  { k: 'bagni', s: 'wc', nome: 'Bagni pubblici', icona: '🚻', col: '#1a73e8', base: true },
+  { k: 'fermate', s: 'directions_bus', nome: 'Fermate bus', icona: '🚌', col: '#188038', base: true },
+  { k: 'biglietti', s: 'confirmation_number', nome: 'Biglietti bus', icona: '🎫', col: '#188038', base: true },
+  { k: 'parcheggi', s: 'local_parking', nome: 'Parcheggi', icona: '🅿️', col: '#1967d2', base: true },
+  { k: 'traghetti', s: 'directions_boat', nome: 'Traghetti', icona: '⛴️', col: '#0b8a9e', base: true },
+  { k: 'taxi', s: 'local_taxi', nome: 'Taxi', icona: '🚕', col: '#b06000', base: false },
+  { k: 'bar', s: 'local_cafe', nome: 'Bar e caffè', icona: '☕', col: '#e8710a', base: false },
+  { k: 'ristoranti', s: 'restaurant', nome: 'Ristoranti', icona: '🍝', col: '#e8710a', base: false },
+  { k: 'alimentari', s: 'shopping_cart', nome: 'Alimentari', icona: '🛒', col: '#9334e6', base: false },
+  { k: 'farmacie', s: 'local_pharmacy', nome: 'Farmacie', icona: '💊', col: '#d93025', base: true },
+  { k: 'salute', s: 'medical_services', nome: 'Salute e defibrillatori', icona: '⛑️', col: '#d93025', base: false },
+  { k: 'bancomat', s: 'local_atm', nome: 'Bancomat', icona: '🏧', col: '#5f6368', base: false },
+  { k: 'acqua', s: 'water_drop', nome: 'Acqua potabile', icona: '🚰', col: '#1a73e8', base: false },
+  { k: 'info', s: 'info', nome: 'Informazioni', icona: 'ℹ️', col: '#1a73e8', base: false },
+  { k: 'spiagge', s: 'beach_access', nome: 'Spiagge', icona: '🏖️', col: '#0b8a9e', base: false },
+  { k: 'panorami', s: 'photo_camera', nome: 'Panorami', icona: '📷', col: '#0b8a9e', base: false },
+  { k: 'chiese', s: 'church', nome: 'Chiese', icona: '⛪', col: '#5f6368', base: false },
+  { k: 'sicurezza', s: 'local_police', nome: 'Polizia e soccorso', icona: '🚓', col: '#3c4043', base: false },
+  { k: 'altro', s: 'location_on', nome: 'Altro', icona: '📍', col: '#5f6368', base: false },
 ]
 export const categoria = (k: string) => CATEGORIE.find(c => c.k === k) ?? CATEGORIE[CATEGORIE.length - 1]
 

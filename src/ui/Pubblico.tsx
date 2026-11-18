@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { useS, type Utente } from '../store'
+import { Icona } from './Icona'
+import type { NomeIcona } from './icone'
 import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
 import { poiDa, ricaricaPoi } from '../scene/poi'
 import { ultimaPosizione, dentroPositano } from '../scene/gps'
@@ -25,7 +27,7 @@ export function Servizi() {
   return (
     <div className="servizi" role="toolbar" aria-label="Punti di interesse">
       {lista.map(c => (
-        <button key={c.k} className={'chip' + (on.has(c.k) ? ' acceso' : '')} aria-pressed={on.has(c.k)} onClick={() => cambia(c.k)}><span aria-hidden>{c.icona}</span>{c.nome}</button>
+        <button key={c.k} className={'chip' + (on.has(c.k) ? ' acceso' : '')} aria-pressed={on.has(c.k)} onClick={() => cambia(c.k)}><span className="chip-icona" style={{ color: c.col }}><Icona n={c.s as NomeIcona} /></span>{c.nome}</button>
       ))}
       <button className="chip quiet" onClick={() => setTutte(!tutte)}>{tutte ? 'Meno' : 'Altri…'}</button>
     </div>
@@ -47,8 +49,8 @@ export function SchedaPoi() {
   return (
     <section className="scheda-poi" aria-label={p.n ?? c.nome}>
       <div className="pannello-testa">
-        <h2><span aria-hidden>{c.icona}</span> {p.n ?? c.nome}</h2>
-        <button className="quiet" onClick={() => s.set({ selPoi: null })} aria-label="Chiudi">✕</button>
+        <h2><span className="icona-tonda" style={{ background: c.col }}><Icona n={c.s as NomeIcona} /></span>{p.n ?? c.nome}</h2>
+        <button className="tondo quiet" onClick={() => s.set({ selPoi: null })} aria-label="Chiudi"><Icona n="close" /></button>
       </div>
       <p className="nota">{c.nome}{p.nascosto ? ' · nascosto ai visitatori' : ''}</p>
       {p.note && <p>{p.note}</p>}
@@ -57,7 +59,7 @@ export function SchedaPoi() {
       {x.wheelchair === 'yes' && <p>Accessibile in sedia a rotelle</p>}
       {x.phone && <p><a href={'tel:' + x.phone.replace(/\s/g, '')}>{x.phone}</a></p>}
       <div className="riga-bottoni">
-        <button className="primary" onClick={portami}>🧭 Portami qui</button>
+        <button className="primary" onClick={portami}><Icona n="directions" />Portami qui</button>
         {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>Modifica</button>}
       </div>
       <p className="nota">{p.fonte === 'osm' ? 'Dati © OpenStreetMap' : 'Aggiunto dal Comune'}</p>
@@ -91,7 +93,7 @@ export function ModificaPoi() {
   return (
     <div className="campi">
       <label>Categoria
-        <select value={d.c} onChange={e => setD({ ...d, c: e.target.value })}>{CATEGORIE.map(c => <option key={c.k} value={c.k}>{c.icona} {c.nome}</option>)}</select>
+        <select value={d.c} onChange={e => setD({ ...d, c: e.target.value })}>{CATEGORIE.map(c => <option key={c.k} value={c.k}>{c.nome}</option>)}</select>
       </label>
       <label>Nome<input value={d.n} maxLength={80} placeholder="Es. Bagni pubblici di Piazza dei Mulini" onChange={e => setD({ ...d, n: e.target.value })} /></label>
       <label>Note per chi lo cerca<textarea value={d.note} maxLength={400} rows={3} placeholder="Orari, prezzo, come si arriva" onChange={e => setD({ ...d, note: e.target.value })} /></label>

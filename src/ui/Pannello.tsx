@@ -5,6 +5,7 @@ import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
 import { GRUPPI_VIE } from '../scene/contesto'
+import { Icona } from './Icona'
 import { Accesso, Utenti, ModificaPoi, chiama, puoModificare } from './Pubblico'
 import { quota } from '../scene/oggetti'
 import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
@@ -55,7 +56,7 @@ export function Pannello({ chiudi }: { chiudi: () => void }) {
   const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse' }[s.pannello!]
   return (
     <aside className="pannello" aria-label={titolo}>
-      <div className="pannello-testa"><h2>{titolo}</h2><button className="quiet" onClick={chiudi} aria-label="Chiudi">✕</button></div>
+      <div className="pannello-testa"><h2>{titolo}</h2><button className="tondo quiet" onClick={chiudi} aria-label="Chiudi"><Icona n="close" /></button></div>
       <div className="pannello-corpo">
         {s.pannello === 'oggetto' && (s.sel ? <Oggetto /> : s.selEdificio ? <EdificioP /> : <PuntoP />)}
         {s.pannello === 'livelli' && <Livelli />}
@@ -345,7 +346,7 @@ function Aiuto() {
         <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
         <li><b>Cammina</b>: vedi la scena ad altezza d'uomo, anche sopra le piazze disegnate.</li>
         <li><b>Punti di interesse</b>: i filtri sotto la barra accendono bagni, fermate, biglietti, parcheggi e altro. Tocca un simbolo per i dettagli e «Portami qui».</li>
-        <li><b>📍</b>: mostra dove sei col GPS del telefono.</li>
+        <li><b>Dove sono</b> (pulsante tondo in basso): mostra dove sei col GPS del telefono.</li>
         <li><b>Accedi</b>: chi progetta si registra; l'amministratore abilita l'account alla modifica.</li>
         <li><b>Percorso</b>: scegli partenza e arrivo (cerca, tocca la mappa o «Da qui») e vedi il tempo a piedi con salite e scale. «Crea QR da stampare» fa un cartello: chi lo inquadra vede solo quel percorso.</li>
         <li>Un punto qualsiasi apre Street View e Google Earth lì, per confrontare con lo stato di fatto.</li>

@@ -1,5 +1,6 @@
 import * as C from 'cesium'
 import { pos, viewer } from './viewer'
+import { impostaVoci, type Voce } from './sovrapposti'
 import type { LL } from '../engine/geo'
 import { GEOIDE, quota as quotaTerreno } from './terreno'
 import { creaRete, quoteVia, type Rete } from '../engine/percorso'
@@ -21,7 +22,8 @@ export const GRUPPI_VIE: { k: string; nome: string; tipi: string[]; col: string;
 ]
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
 let vie: C.PolylineCollection | undefined
-let nomiVie: C.LabelCollection | undefined
+let nomiOn = false
+let vociVie: Voce[] = []
 const mat = new Map<string, C.Material>()
 let quoteLidar = new Map<string, number>(), superficie = new Map<string, number>()
 let rete: Rete | undefined
@@ -63,7 +65,7 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
   dn.show = nomi && !google; dc.show = confine
   if (conStrade) disegnaVie(google)
   if (vie) vie.show = conStrade
-  if (nomiVie) nomiVie.show = conStrade && nomi
+  if (nomiOn !== (conStrade && nomi)) { nomiOn = conStrade && nomi; impostaVoci('via', nomiOn ? vociVie : []) }
   for (const g of GRUPPI_VIE) { const m = mat.get(g.k); if (m) m.uniforms.color = C.Color.fromCssColorString(colori[g.k] ?? g.col).withAlpha(0.92) }
   viewer.scene.requestRender()
 }
@@ -92,9 +94,8 @@ function disegnaVie(google: boolean) {
   const t0 = performance.now()
   fatteCon = google
   if (vie) viewer.scene.primitives.remove(vie)
-  if (nomiVie) viewer.scene.primitives.remove(nomiVie)
   vie = viewer.scene.primitives.add(new C.PolylineCollection())
-  nomiVie = viewer.scene.primitives.add(new C.LabelCollection())
+  vociVie = []
   const r = reteVie()
   strade.forEach((s, i) => {
     const g = gruppoDi(s.k)
@@ -106,13 +107,10 @@ function disegnaVie(google: boolean) {
     if (s.n && s.c.length > 1) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
       const lo = (p[0] + q[0]) / 2, la = (p[1] + q[1]) / 2, zz = google ? (z[k] + z[k + 1]) / 2 : quotaTerreno(lo, la)
-      nomiVie!.add({
-        position: C.Cartesian3.fromDegrees(lo, la, zz + 4 + GEOIDE), text: s.n, font: '600 13px system-ui, sans-serif',
-        fillColor: C.Color.fromCssColorString('#202124'), outlineColor: C.Color.WHITE, outlineWidth: 4, style: C.LabelStyle.FILL_AND_OUTLINE,
-        distanceDisplayCondition: new C.DistanceDisplayCondition(0, s.k === 'primary' ? 900 : 380), disableDepthTestDistance: 300,
-      })
+      vociVie.push({ id: 'via:' + s.id, tipo: 'via', pos: C.Cartesian3.fromDegrees(lo, la, zz + 3 + GEOIDE), testo: s.n, maxDist: s.k === 'primary' ? 900 : 420 })
     }
   })
+  if (nomiOn) impostaVoci('via', vociVie)
   if (location.search.includes('prova')) console.info('vie disegnate in', Math.round(performance.now() - t0), 'ms')
 }
 export const strada = (id: string) => strade.find(s => s.id === id)

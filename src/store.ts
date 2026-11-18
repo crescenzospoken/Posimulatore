@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { telefono, qualitaIniziale } from './scene/viewer'
 import type { LL } from './engine/geo'
 import { type Obj, type Opzione, type Progetto, type Tipo, type Vista, uid } from './engine/model'
-import { esempio } from './esempio'
 import type { Tappa } from './engine/percorso'
 import { CATEGORIE } from './engine/poi'
 
@@ -98,18 +97,25 @@ type Stato = {
   dici: (t: string) => void
 }
 const KEY = 'posimulatore.v5'
-type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean }
+type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
 const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, rev: 3, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
-const prog0 = iniziale?.progetti?.length ? iniziale.progetti : [esempio()]
+/** Progetto vuoto di partenza (la piazza d'esempio a Chiesa Nuova è stata tolta su richiesta, 18/11). */
+function vuoto(): Progetto {
+  const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }
+  return { id: uid(), nome: 'Nuovo progetto', creato: new Date().toISOString(), modificato: new Date().toISOString(), opzioni: [o], attiva: o.id }
+}
+// chi aveva già salvato il progetto d'esempio «Piazza a Chiesa Nuova» lo perde una volta sola; i suoi progetti restano
+const salvati = (iniziale?.progetti ?? []).filter(p => iniziale?.senzaEsempio || p.nome !== 'Piazza a Chiesa Nuova')
+const prog0 = salvati.length ? salvati : [vuoto()]
 let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -204,7 +210,7 @@ export const useS = create<Stato>((set, get) => ({
   rinominaProgetto(nome) { set({ progetti: get().progetti.map(p => (p.id === get().pid ? { ...p, nome } : p)) }); salva(get()) },
   eliminaProgetto(id) {
     let progetti = get().progetti.filter(p => p.id !== id)
-    if (!progetti.length) progetti = [esempio()]
+    if (!progetti.length) progetti = [vuoto()]
     set({ progetti, pid: progetti[0].id, sel: null, passato: [], futuro: [] }); salva(get())
   },
   nuovaOpzione(copia) {
