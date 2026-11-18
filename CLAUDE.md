@@ -12,3 +12,6 @@
 - Vie OSM disegnate in 3D alla quota LiDAR (`public/data/quote-vie.json`, DTM 2 m; quarto valore = superficie DSM se c'è, per le strade su arcate), non più `clampToGround`: proiettate sul terreno a 10 m alla Sponda finivano sui tetti. Mai `getHeight` di Google su tutte le vie (6 s).
 - Percorso A→B: `src/engine/percorso.ts` (DIN 33466, test in `tests/percorso.test.ts`). Link `?da=lon,lat,Nome&a=lon,lat,Nome` apre la modalità ospite (solo percorso), per i QR.
 - Di base edifici OSM e oggetti di progetto spenti (`rev: 2` nei livelli salvati).
+- Due modalità: pubblica (mappa, ricerca, punti di interesse, GPS, percorso) per tutti; modifica solo per account `editor`/`admin` con «Modalità modifica» accesa (`inModifica`). Il gate vero è nel Worker (`worker/api.ts`): i progetti restano nel browser.
+- D1 `posimulatore` (binding `DB`, schema in `migrations/`): utenti (PBKDF2), sessioni (cookie `ps`), poi (correzioni a mano, stesso id dei punti OSM di `public/data/poi.json`), impostazioni (`coloriVie` di base). Scritture solo con intestazione `X-Posimulatore: 1`. Prove: `npx wrangler d1 execute posimulatore --local --file migrations/0001_iniziale.sql` e `npx wrangler dev --local`.
+- Punti di interesse di Google: non si possono salvare né mostrare fuori da Google (regole Places API, e serve un conto a pagamento). Base: OpenStreetMap (`scripts/poi-osm.py`).

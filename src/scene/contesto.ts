@@ -11,15 +11,17 @@ const dn = new C.CustomDataSource('contesto-nomi')
 const dc = new C.CustomDataSource('contesto-confine')
 /** Gruppi di vie per colore; i colori si cambiano dai Livelli. */
 export const GRUPPI_VIE: { k: string; nome: string; tipi: string[]; col: string; w: number }[] = [
-  { k: 'statale', nome: 'Statale', tipi: ['primary'], col: '#ffcf4a', w: 4.5 },
+  // di partenza come Google Maps sul satellite: statale gialla, strade bianche; pedonali, scale e sentieri distinti
+  { k: 'statale', nome: 'Statale', tipi: ['primary'], col: '#fbc02d', w: 4.5 },
   { k: 'strade', nome: 'Strade', tipi: ['tertiary', 'unclassified', 'residential'], col: '#ffffff', w: 3.5 },
-  { k: 'servizio', nome: 'Accessi e cortili', tipi: ['service', 'living_street'], col: '#d9d9d9', w: 3 },
-  { k: 'pedonali', nome: 'Vie pedonali', tipi: ['pedestrian', 'footway'], col: '#c9b8ff', w: 3 },
-  { k: 'scale', nome: 'Scale', tipi: ['steps'], col: '#ff8a8a', w: 3 },
-  { k: 'sentieri', nome: 'Sentieri e mulattiere', tipi: ['path', 'track'], col: '#e0b27a', w: 3 },
+  { k: 'servizio', nome: 'Accessi e cortili', tipi: ['service', 'living_street'], col: '#f1f3f4', w: 2.5 },
+  { k: 'pedonali', nome: 'Vie pedonali', tipi: ['pedestrian', 'footway'], col: '#d2e3fc', w: 3 },
+  { k: 'scale', nome: 'Scale', tipi: ['steps'], col: '#f6aea9', w: 3 },
+  { k: 'sentieri', nome: 'Sentieri e mulattiere', tipi: ['path', 'track'], col: '#a8dab5', w: 3 },
 ]
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
 let vie: C.PolylineCollection | undefined
+let nomiVie: C.LabelCollection | undefined
 const mat = new Map<string, C.Material>()
 let quoteLidar = new Map<string, number>(), superficie = new Map<string, number>()
 let rete: Rete | undefined
@@ -58,9 +60,10 @@ export async function caricaContesto() {
   await Promise.all([viewer.dataSources.add(dn), viewer.dataSources.add(dc)])
 }
 export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boolean, google: boolean, colori: Record<string, string> = {}) {
-  dn.show = nomi; dc.show = confine
+  dn.show = nomi && !google; dc.show = confine
   if (conStrade) disegnaVie(google)
   if (vie) vie.show = conStrade
+  if (nomiVie) nomiVie.show = conStrade && nomi
   for (const g of GRUPPI_VIE) { const m = mat.get(g.k); if (m) m.uniforms.color = C.Color.fromCssColorString(colori[g.k] ?? g.col).withAlpha(0.92) }
   viewer.scene.requestRender()
 }
@@ -89,13 +92,26 @@ function disegnaVie(google: boolean) {
   const t0 = performance.now()
   fatteCon = google
   if (vie) viewer.scene.primitives.remove(vie)
+  if (nomiVie) viewer.scene.primitives.remove(nomiVie)
   vie = viewer.scene.primitives.add(new C.PolylineCollection())
+  nomiVie = viewer.scene.primitives.add(new C.LabelCollection())
   const r = reteVie()
   strade.forEach((s, i) => {
     const g = gruppoDi(s.k)
     let m = mat.get(g.k)
     if (!m) { m = C.Material.fromType('Color', { color: C.Color.fromCssColorString(g.col) }); mat.set(g.k, m) }
-    vie!.add({ positions: puntiVia(s.c, r.quote[i] ?? quoteVia(s, zVertice, sVertice), google), width: g.w, material: m, id: 'st:' + s.id })
+    const z = r.quote[i] ?? quoteVia(s, zVertice, sVertice)
+    vie!.add({ positions: puntiVia(s.c, z, google), width: g.w, material: m, id: 'st:' + s.id })
+    // nome della via a metà, come su Google Maps: si legge solo da vicino
+    if (s.n && s.c.length > 1) {
+      const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
+      const lo = (p[0] + q[0]) / 2, la = (p[1] + q[1]) / 2, zz = google ? (z[k] + z[k + 1]) / 2 : quotaTerreno(lo, la)
+      nomiVie!.add({
+        position: C.Cartesian3.fromDegrees(lo, la, zz + 4 + GEOIDE), text: s.n, font: '600 13px system-ui, sans-serif',
+        fillColor: C.Color.fromCssColorString('#202124'), outlineColor: C.Color.WHITE, outlineWidth: 4, style: C.LabelStyle.FILL_AND_OUTLINE,
+        distanceDisplayCondition: new C.DistanceDisplayCondition(0, s.k === 'primary' ? 900 : 380), disableDepthTestDistance: 300,
+      })
+    }
   })
   if (location.search.includes('prova')) console.info('vie disegnate in', Math.round(performance.now() - t0), 'ms')
 }

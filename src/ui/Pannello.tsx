@@ -5,6 +5,7 @@ import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
 import { GRUPPI_VIE } from '../scene/contesto'
+import { Accesso, Utenti, ModificaPoi, chiama, puoModificare } from './Pubblico'
 import { quota } from '../scene/oggetti'
 import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
 import { Frame, add, mul } from '../engine/geo'
@@ -51,7 +52,7 @@ const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, 
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
-  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso' }[s.pannello!]
+  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse' }[s.pannello!]
   return (
     <aside className="pannello" aria-label={titolo}>
       <div className="pannello-testa"><h2>{titolo}</h2><button className="quiet" onClick={chiudi} aria-label="Chiudi">✕</button></div>
@@ -61,6 +62,9 @@ export function Pannello({ chiudi }: { chiudi: () => void }) {
         {s.pannello === 'progetto' && <ProgettoP />}
         {s.pannello === 'catalogo' && <Catalogo />}
         {s.pannello === 'aiuto' && <Aiuto />}
+        {s.pannello === 'accesso' && <Accesso />}
+        {s.pannello === 'utenti' && <Utenti />}
+        {s.pannello === 'poi' && <ModificaPoi />}
       </div>
     </aside>
   )
@@ -200,6 +204,7 @@ function Misure() {
 
 function Livelli() {
   const s = useS()
+  const mod = s.inModifica && puoModificare(s.utente)
   const l = s.livelli
   const t = (k: keyof typeof l, nome: string, aiuto?: string) => (
     <label className="riga"><span>{nome}{aiuto && <small>{aiuto}</small>}</span><input type="checkbox" checked={Boolean(l[k])} onChange={e => s.setLivelli({ [k]: e.target.checked })} /></label>
@@ -213,8 +218,8 @@ function Livelli() {
           <option value="osm">Mappa OpenStreetMap</option>
         </select>
       </label>
-      {t('edifici', 'Edifici (OpenStreetMap)', 'Volumi semplici, altezze stimate')}
-      {l.edifici && (
+      {mod && t('edifici', 'Edifici (OpenStreetMap)', 'Volumi semplici, altezze stimate')}
+      {mod && l.edifici && (
         <label>Aspetto degli edifici
           <select value={l.stile} onChange={e => s.setLivelli({ stile: e.target.value as typeof l.stile })}>
             <option value="plastico">Plastico (volumi puliti)</option>
@@ -226,9 +231,13 @@ function Livelli() {
       {l.strade && (
         <div className="colori-vie">
           {GRUPPI_VIE.map(g => (
-            <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{g.nome}</label>
+            <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{g.nome}</label>
           ))}
-          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>Colori di base</button>}
+          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>Torna ai colori di base</button>}
+          {s.utente?.ruolo === 'admin' && <button onClick={async () => {
+            const v = Object.fromEntries(GRUPPI_VIE.map(g => [g.k, l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col]))
+            try { await chiama('impostazioni/coloriVie', 'PUT', { v }); s.set({ coloriBase: v }); s.setLivelli({ coloriVie: {} }); s.dici('Colori di base salvati per tutti') } catch (e) { s.dici((e as Error).message) }
+          }} data-tip="Diventano i colori che vede chiunque apra il sito">Usa questi colori per tutti</button>}
         </div>
       )}
       {t('nomi', 'Nomi dei luoghi')}
@@ -247,10 +256,10 @@ function Livelli() {
           <option value="alta">Alta: più dettaglio, serve un computer potente</option>
         </select>
       </label>
-      {t('progetto', 'Oggetti di progetto', 'Spento: si vede Positano com\'è oggi')}
+      {mod && t('progetto', 'Oggetti di progetto', 'Spento: si vede Positano com\'è oggi')}
       {t('nitido', 'Immagine più nitida', 'Più dettaglio e colore sulle foto aeree')}
-      {t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese. Rallenta molto')}
-      {l.ombre && (
+      {mod && t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese. Rallenta molto')}
+      {mod && l.ombre && (
         <>
           <label>Giorno<input type="date" value={l.giorno} onChange={e => s.setLivelli({ giorno: e.target.value })} /></label>
           <label>Ora: {Math.floor(l.ora)}:{String(Math.round((l.ora % 1) * 60)).padStart(2, '0')}
@@ -335,6 +344,9 @@ function Aiuto() {
         <li><b>Edifici</b>: tocca un edificio per correggerne l'altezza o toglierlo in un'opzione.</li>
         <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
         <li><b>Cammina</b>: vedi la scena ad altezza d'uomo, anche sopra le piazze disegnate.</li>
+        <li><b>Punti di interesse</b>: i filtri sotto la barra accendono bagni, fermate, biglietti, parcheggi e altro. Tocca un simbolo per i dettagli e «Portami qui».</li>
+        <li><b>📍</b>: mostra dove sei col GPS del telefono.</li>
+        <li><b>Accedi</b>: chi progetta si registra; l'amministratore abilita l'account alla modifica.</li>
         <li><b>Percorso</b>: scegli partenza e arrivo (cerca, tocca la mappa o «Da qui») e vedi il tempo a piedi con salite e scale. «Crea QR da stampare» fa un cartello: chi lo inquadra vede solo quel percorso.</li>
         <li>Un punto qualsiasi apre Street View e Google Earth lì, per confrontare con lo stato di fatto.</li>
       </ul>
