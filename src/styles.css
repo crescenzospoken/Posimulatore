@@ -204,7 +204,8 @@ textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px;
 .barra .utente { font-weight: 600; }
 @media (max-width: 760px) {
   .servizi { top: 104px; left: 6px; right: 6px; }
-  .pubblico .azioni { flex: 1 1 0; min-width: 0; }
+  .pubblico .azioni { flex: 1 1 0; min-width: 0; gap: 0; }
+  .pubblico .azioni select { min-width: 0; max-width: 64px; }
   .pubblico .marchio { font-size: 14px; }
   .in-modifica .servizi { left: 6px; }
   .scheda-poi { top: auto; left: 6px; right: 6px; bottom: 6px; width: auto; }
