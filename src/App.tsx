@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Cartesian3 } from 'cesium'
 import { useS } from './store'
 import { impostaQualita, impostaNitidezza, quandoGoogle, googleAcceso, creaViewer, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
-import { caricaContesto, mostraContesto, cerca } from './scene/contesto'
+import { caricaContesto, mostraContesto, cerca, reteVie } from './scene/contesto'
+import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
+import { cammino, tappaDaLink } from './engine/percorso'
+import { SchedaPercorso } from './ui/Percorso'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
@@ -14,6 +17,7 @@ import { Suggerimenti } from './ui/Suggerimenti'
 import type { Obj } from './engine/model'
 import { trasla } from './engine/modifica'
 
+const st0 = (k: string) => k === 'percorso'
 export default function App() {
   const el = useRef<HTMLDivElement>(null)
   const [pronto, setPronto] = useState(false)
@@ -33,7 +37,9 @@ export default function App() {
         try { const c = await (await fetch('/config')).json(); if (c.ionToken) useS.setState(st => ({ ionTokenSito: c.ionToken, livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
         await creaViewer(el.current!)
         impostaOrto(useS.getState().livelli.orto)
-        await Promise.all([caricaEdifici(), caricaContesto(), avviaOggetti()])
+        await Promise.all([caricaContesto(), avviaOggetti()])
+        // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo
+        setTimeout(() => caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))), 4000)
         disegnaCupole(viewer)
         let tG: ReturnType<typeof setTimeout> | undefined
         // Google finisce di caricare dopo ogni movimento: ricalcolare tutti gli oggetti ogni volta bloccava la pagina.
@@ -47,8 +53,11 @@ export default function App() {
           quoteCambiate(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))
         }, 1200) })
         stop = avviaInterazione(setCur, finisci)
+        // link o QR con il percorso: ?da=lon,lat,Nome&a=lon,lat,Nome
+        const u = new URLSearchParams(location.search), da = tappaDaLink(u.get('da')), a = tappaDaLink(u.get('a'))
+        if (a || da) useS.setState(st => ({ percorso: { da: da ?? st.percorso.da, a, scegli: da && a ? null : da ? 'a' : 'da' }, strumento: { k: 'percorso' }, ospite: Boolean(a), pannello: null }))
         const v = useS.getState().progetto().vista ?? VAI[1]
-        vai(v, 0)
+        if (!a) vai(v, 0)
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
       } catch (e) {
@@ -62,8 +71,15 @@ export default function App() {
   // scena <- stato
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto])
   useEffect(() => { if (pronto) disegnaEdifici(s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi && !s.livelli.google, s.livelli.confine && !s.ospite, s.livelli.google, s.livelli.coloriVie); mostraCupole(!s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli, s.ospite])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
+  // percorso a piedi
+  const inPercorso = st0(s.strumento.k)
+  const { da, a } = s.percorso
+  const calc = useMemo(() => (pronto && inPercorso && da && a ? cammino(reteVie(), da.p, a.p) : null), [pronto, inPercorso, da?.p[0], da?.p[1], a?.p[0], a?.p[1]])
+  useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? da : null, inPercorso ? a : null) }, [pronto, inPercorso, calc, da?.nome, a?.nome, s.livelli.google, s.googleGiro])
+  useEffect(() => { if (calc) inquadraPercorso(calc) }, [calc])
+  useEffect(() => { document.title = s.ospite && a?.nome ? `Come arrivare a ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome])
   useEffect(() => {
     if (!pronto) return
     impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
@@ -98,7 +114,7 @@ export default function App() {
   const risultati = q ? cerca(q) : []
   const st = s.strumento
   return (
-    <div className="app">
+    <div className={'app' + (s.ospite ? ' ospite' : '')}>
       <div ref={el} className="scena" />
       {!pronto && !errore && <div className="caricamento">Preparo Positano in 3D…</div>}
       {errore && <div className="caricamento errore">Il 3D non parte su questo dispositivo: {errore}</div>}
@@ -138,6 +154,7 @@ export default function App() {
           </div>
         ))}
         <button className={s.pannello === 'catalogo' ? 'acceso' : ''} onClick={() => { s.set({ pannello: s.pannello === 'catalogo' ? null : 'catalogo' }); setAperto(null) }} data-tip="Auto, bus, gazebo, palchi, tende, arredi"><span>📦</span>Catalogo</button>
+        <button className={st.k === 'percorso' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, scegli: s.percorso.da ? (s.percorso.a ? null : 'a') : 'da' }, bozza: [], sel: null, pannello: null }); setAperto(null) }} data-tip="Da un punto a un altro a piedi, con salite e scale; link e QR da condividere"><span>🧭</span>Percorso</button>
         <button className={st.k === 'cammina' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'cammina' ? { k: 'naviga' } : { k: 'cammina' }, bozza: [] }); setAperto(null) }} data-tip="Cammina ad altezza d'uomo dal punto al centro dello schermo"><span>🚶</span>Cammina</button>
       </nav>
 
@@ -152,6 +169,7 @@ export default function App() {
       )}
 
       {st.k === 'cammina' && <Pad />}
+      {st.k === 'percorso' && <SchedaPercorso calc={calc} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 

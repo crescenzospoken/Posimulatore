@@ -4,6 +4,7 @@ import type { Obj, Progetto } from '../engine/model'
 import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
+import { GRUPPI_VIE } from '../scene/contesto'
 import { quota } from '../scene/oggetti'
 import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
 import { Frame, add, mul } from '../engine/geo'
@@ -50,7 +51,7 @@ const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, 
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
-  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida' }[s.pannello!]
+  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso' }[s.pannello!]
   return (
     <aside className="pannello" aria-label={titolo}>
       <div className="pannello-testa"><h2>{titolo}</h2><button className="quiet" onClick={chiudi} aria-label="Chiudi">✕</button></div>
@@ -221,7 +222,15 @@ function Livelli() {
           </select>
         </label>
       )}
-      {t('strade', 'Strade e scale (OpenStreetMap)')}
+      {t('strade', 'Strade e scale (OpenStreetMap)', 'Alla quota vera della strada (LiDAR 2 m)')}
+      {l.strade && (
+        <div className="colori-vie">
+          {GRUPPI_VIE.map(g => (
+            <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{g.nome}</label>
+          ))}
+          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>Colori di base</button>}
+        </div>
+      )}
       {t('nomi', 'Nomi dei luoghi')}
       {t('confine', 'Confine comunale')}
       {t('google', 'Google 3D fotorealistico', 'La base più fedele: i progetti si disegnano sopra. Solo da guardare, mai copiato')}
@@ -326,6 +335,7 @@ function Aiuto() {
         <li><b>Edifici</b>: tocca un edificio per correggerne l'altezza o toglierlo in un'opzione.</li>
         <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
         <li><b>Cammina</b>: vedi la scena ad altezza d'uomo, anche sopra le piazze disegnate.</li>
+        <li><b>Percorso</b>: scegli partenza e arrivo (cerca, tocca la mappa o «Da qui») e vedi il tempo a piedi con salite e scale. «Crea QR da stampare» fa un cartello: chi lo inquadra vede solo quel percorso.</li>
         <li>Un punto qualsiasi apre Street View e Google Earth lì, per confrontare con lo stato di fatto.</li>
       </ul>
       <h3>Da dove vengono i dati</h3>

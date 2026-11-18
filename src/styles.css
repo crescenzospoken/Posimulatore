@@ -123,6 +123,37 @@ input.num.largo { width: 76px; }
 .sposta label { flex-direction: column; font-size: 12px; color: var(--tenue); }
 .pannello { width: 400px; }
 
+/* percorso a piedi */
+.scheda-percorso {
+  position: absolute; top: 70px; right: 10px; width: 380px; max-height: calc(100% - 110px); overflow: auto; z-index: 3;
+  background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 0 14px 14px; font-size: 14px;
+}
+.scheda-percorso .pannello-testa { padding: 10px 0 6px; position: sticky; top: 0; background: var(--carta); z-index: 1; }
+.scheda-percorso h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tenue); margin: 14px 0 4px; }
+.scheda-percorso.riapri { width: auto; padding: 10px 16px; font-weight: 600; }
+.tappa { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--linea); }
+.tappa .lettera { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; background: #1f9d55; margin-top: 4px; }
+.tappa + .tappa .lettera, .lettera.b { background: #d93a2b !important; }
+.tratta p { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-weight: 600; }
+.tratta .lettera { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; background: #1f9d55; flex: none; }
+.tappa-corpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tappa-corpo .cerca { max-width: none; position: relative; }
+.tappa-corpo .cerca input { width: 100%; }
+.riga-bottoni { display: flex; flex-wrap: wrap; gap: 6px; }
+.inverti { margin-top: 4px; }
+.esito { margin-top: 8px; }
+.esito p { margin: 4px 0; }
+.esito .tempo { font-size: 20px; }
+.esito .tempo span { font-size: 14px; color: var(--tenue); }
+.condividi .qr { width: 100%; border: 1px solid var(--linea); border-radius: 8px; margin: 8px 0 6px; }
+.colori-vie { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; padding-left: 4px; }
+.campi .colori-vie label.colore { flex-direction: row; align-items: center; gap: 6px; font-size: 13px; }
+.colori-vie input[type=color] { width: 30px; height: 24px; padding: 1px; border-radius: 5px; flex: none; }
+.colori-vie button { grid-column: 1 / -1; justify-self: start; }
+/* aperto da un link o da un QR: solo il percorso */
+.ospite .strumenti, .ospite .progetto-nome, .ospite .azioni, .ospite .barra .cerca { display: none; }
+.ospite .barra { right: auto; }
+
 @media (max-width: 760px) {
   .barra { top: 6px; left: 6px; right: 6px; flex-wrap: wrap; gap: 4px; }
   .progetto-nome { max-width: 46vw; }
@@ -143,4 +174,8 @@ input.num.largo { width: 76px; }
   .pad { left: 10px; bottom: 96px; }
   .pad-nota { display: none; }
   .cesium-widget-credits { bottom: 86px; }
+  .scheda-percorso { top: auto; left: 6px; right: 6px; bottom: 84px; width: auto; max-height: 56vh; }
+  .ospite .scheda-percorso { bottom: 6px; max-height: 50vh; }
+  .ospite .cesium-widget-credits { bottom: auto; top: 58px; }
+  .scheda-percorso.riapri { left: auto; }
 }
