@@ -18,8 +18,8 @@
 - Interfaccia a vetro (18/11): barra di ricerca a pillola + filtri in `.cima`, pulsanti tondi in `.fab`, schede che salgono dal basso sul telefono. Icone Material Symbols (`@material-symbols/svg-400`, Apache 2.0) importate una per una in `src/ui/icone.ts` (`<Icona n=…>`); niente emoji nell'interfaccia. Nomi delle vie, punti di interesse e tappe A/B sono HTML sopra la scena (`src/scene/sovrapposti.ts`), non etichette Cesium (sgranate sul telefono).
 - 3D: prima Google diretto con `GOOGLE_TILES_KEY` (secret Cloudflare, chiave limitata al dominio e con tetto giornaliero nella console Google: mai a pagamento), se non risponde Cesium ion (`CESIUM_ION_TOKEN`). `window.__V.fonte3D()` dice quale.
 - I crediti di Cesium e Google devono restare visibili (`.crediti`, in basso a sinistra): obbligo delle condizioni d'uso.
-- Vie: una primitiva per gruppo di colore (il drappeggio `GroundPolylinePrimitive` è stato tolto: «gelato sciolto»); scale e vicoli si nascondono sopra 800 m di quota della camera, strade sopra 2,5 km.
-- Modo «Mappa» (Livelli): Google spento, terreno 3D con Esri Light Gray + rilievo. Vista totale `VAI[0]` (`vistaTotale`), pulsante «Rimetti la vista» (percorso, posizione, tutta Positano). Punto Casa del visitatore (`casa` nello store, scheda «Dove alloggi?» al primo avvio).
+- Vie: una primitiva per gruppo di colore (il drappeggio `GroundPolylinePrimitive` è stato tolto: «gelato sciolto»); scale e sentieri si nascondono sopra 1400 m dal terreno, strade sopra 3 km.
+- Modo «Mappa» (Livelli): Google spento, terreno 3D con Esri Light Gray + rilievo. Vista totale `VAI[0]` (`vistaTotale`), pulsante «Rimetti la vista» (percorso, posizione, tutta Positano). Punto Casa del visitatore (`casa` nello store).
 - Percorsi: `alternative()` (veloce, meno scale, meno salita), `tratti` per le indicazioni, `confrontoMezzi()` (bus e auto stimati, a piedi preferito se non costa più di 10 min).
 - Correzione vie a mano (strumento «Vie», editor): maniglie HTML in `src/scene/correggiVia.ts`, pannello `src/ui/CorreggiVia.tsx`, D1 `vie` (`migrations/0002_vie.sql`, API `/api/vie`). Durante la correzione la base è il satellite Esri, mai Google 3D. Le vie si disegnano come linee nette alla quota LiDAR (punto LiDAR più vicino entro 12 m per i vertici spostati) più `dz`.
 - Recinto della camera in `viewer.ts`: entro 9 km da Positano, sotto 5 km di quota.
@@ -33,3 +33,6 @@
 - Camera: mai sotto 55 m dal terreno (`ALTEZZA_MIN`, il 3D di Google da vicino è distorto), tranne in Cammina. Se ci si muove di colpo il pulsante «Rimetti la vista» (`.fab-reset`) lampeggia 6 s.
 - Telefono: le schede si chiudono trascinandole in giù (`src/ui/gesti.ts`, clicca il pulsante della testata). Casa si apre solo dal pulsante con la casetta (`casaAperta`).
 - Vie a più punti: «Più punti», «Riquadro», «Tutti», «Intervallo», «Raddrizza», «Liscia», «Togli i N punti»; trascinando un punto scelto si muovono tutti (`viaSel`).
+- Nome pubblico «Positano 3D» (titolo, manifest, anteprima `public/anteprima.jpg`). Il Worker passa anche da `/` (`run_worker_first`) per riscrivere titolo e Open Graph dei link `?da=&a=`, `?t=`, `?punto=` («Come arrivare a …», per WhatsApp).
+- iPhone: tutto ciò che sta sui bordi usa `env(safe-area-inset-*)` (notch, isola, barra home). Sui touch i campi hanno 16 px, altrimenti iOS ingrandisce la pagina. In orizzontale le schede vanno a sinistra.
+- Livelli e Guida pubblici tradotti; le voci tecniche (ortofoto 2012, codice ion, edifici, ombre, progetto) solo in modifica. Controllo dei testi senza traduzione: cercare `t('…')` assenti in `EN`.

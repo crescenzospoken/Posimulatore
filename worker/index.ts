@@ -24,6 +24,23 @@ async function ortofoto(req: Request, url: URL, ctx: ExecutionContext): Promise<
   return out
 }
 
+// Anteprima dei link (WhatsApp, Telegram, iMessage): per un percorso o un punto il titolo dice dove porta.
+const nomeDaLink = (v: string | null) => (v ?? '').split(',').slice(2).join(',').trim().slice(0, 80)
+const pulisci = (x: string) => x.replace(/[<>"&]/g, '')
+function anteprima(url: URL, r: Response): Response {
+  const q = url.searchParams, en = q.get('lang') === 'en'
+  const tappe = q.get('t') ? q.get('t')!.split('|').map(x => nomeDaLink(x)) : q.get('a') ? [nomeDaLink(q.get('da')), nomeDaLink(q.get('a'))] : []
+  const punto = nomeDaLink(q.get('punto'))
+  let titolo = ''
+  if (tappe.length >= 2) { const a = tappe[tappe.length - 1], da = tappe[0]; titolo = a ? (en ? `How to get to ${a}` : `Come arrivare a ${a}`) + (da ? (en ? ` from ${da}` : ` da ${da}`) : '') : (en ? 'Walking route in Positano' : 'Percorso a piedi a Positano') }
+  else if (punto) titolo = `${punto} · Positano`
+  if (!titolo) return r
+  titolo = pulisci(titolo)
+  const descr = en ? 'Walking route in 3D with time, steps and climb.' : 'Percorso a piedi in 3D con tempo, scale e salita.'
+  const meta = (el: Element) => { const k = el.getAttribute('property') ?? el.getAttribute('name'); if (k === 'og:title' || k === 'twitter:title') el.setAttribute('content', titolo); if (k === 'og:description' || k === 'description') el.setAttribute('content', descr) }
+  return new HTMLRewriter().on('title', { element: el => { el.setInnerContent(titolo) } }).on('meta', { element: meta }).transform(r)
+}
+
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url)
@@ -32,6 +49,8 @@ export default {
     if (url.pathname.startsWith('/api/')) return api(req, url, env)
     // chiavi da browser: Google Map Tiles (limitata al dominio e con tetto giornaliero nella console Google) e, di riserva, Cesium ion
     if (url.pathname === '/config') return Response.json({ googleKey: env.GOOGLE_TILES_KEY ?? '', ionToken: env.CESIUM_ION_TOKEN ?? '' }, { headers: { 'Cache-Control': 'no-store' } })
-    return env.ASSETS.fetch(req)
+    const r = await env.ASSETS.fetch(req)
+    if (url.pathname === '/' && url.search && (r.headers.get('content-type') ?? '').includes('text/html')) return anteprima(url, r)
+    return r
   },
 }

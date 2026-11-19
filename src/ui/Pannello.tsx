@@ -56,10 +56,10 @@ const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, 
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
-  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse', via: 'Correggi le vie', evento: 'Evento' }[s.pannello!]
+  const titolo = tr({ oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse', via: 'Correggi le vie', evento: 'Evento' }[s.pannello!] ?? '')
   return (
     <aside className="pannello" aria-label={titolo}>
-      <div className="pannello-testa"><h2>{titolo}</h2><button className="tondo quiet" onClick={chiudi} aria-label="Chiudi"><Icona n="close" /></button></div>
+      <div className="pannello-testa"><h2>{titolo}</h2><button className="tondo quiet" onClick={chiudi} aria-label={tr('Chiudi')}><Icona n="close" /></button></div>
       <div className="pannello-corpo">
         {s.pannello === 'oggetto' && (s.sel ? <Oggetto /> : s.selEdificio ? <EdificioP /> : <PuntoP />)}
         {s.pannello === 'livelli' && <Livelli />}
@@ -212,15 +212,15 @@ function Livelli() {
   const s = useS()
   const mod = s.inModifica && puoModificare(s.utente)
   const l = s.livelli
-  const t = (k: keyof typeof l, nome: string, aiuto?: string) => (
-    <label className="riga"><span>{nome}{aiuto && <small>{aiuto}</small>}</span><input type="checkbox" checked={Boolean(l[k])} onChange={e => s.setLivelli({ [k]: e.target.checked })} /></label>
+  const casella = (k: keyof typeof l, nome: string, aiuto?: string) => (
+    <label className="riga"><span>{tr(nome)}{aiuto && <small>{tr(aiuto)}</small>}</span><input type="checkbox" checked={Boolean(l[k])} onChange={e => s.setLivelli({ [k]: e.target.checked })} /></label>
   )
   return (
     <div className="campi">
       {/* due modi: la foto 3D di Google, o una mappa semplice sul terreno in 3D dove le vie colorate si leggono meglio */}
-      <div className="segmenti" role="radiogroup" aria-label="Tipo di mappa">
-        <button role="radio" aria-checked={l.google} className={l.google ? 'acceso' : ''} onClick={() => s.setLivelli({ google: true, orto: 'esri' })}><Icona n="photo_camera" />Foto 3D</button>
-        <button role="radio" aria-checked={!l.google && l.orto === 'mappa'} className={!l.google && l.orto === 'mappa' ? 'acceso' : ''} onClick={() => s.setLivelli({ google: false, orto: 'mappa', strade: true })}><Icona n="map" />Mappa</button>
+      <div className="segmenti" role="radiogroup" aria-label={tr('Tipo di mappa')}>
+        <button role="radio" aria-checked={l.google} className={l.google ? 'acceso' : ''} onClick={() => s.setLivelli({ google: true, orto: 'esri' })}><Icona n="photo_camera" />{tr('Foto 3D')}</button>
+        <button role="radio" aria-checked={!l.google && l.orto === 'mappa'} className={!l.google && l.orto === 'mappa' ? 'acceso' : ''} onClick={() => s.setLivelli({ google: false, orto: 'mappa', strade: true })}><Icona n="map" />{tr('Mappa')}</button>
       </div>
       {l.google && (
         <label>{tr('Attenua il 3D')}: {Math.round((l.attenua ?? 0) * 100)}%
@@ -228,15 +228,17 @@ function Livelli() {
           <small>{tr('Schiarisce le foto del 3D: vie, percorsi e punti risaltano di più')}</small>
         </label>
       )}
-      <label>Immagine del suolo
-        <select value={l.orto} onChange={e => s.setLivelli({ orto: e.target.value as typeof l.orto })}>
-          <option value="esri">Satellite (Esri World Imagery)</option>
-          <option value="pcn2012">Ortofoto 2012 (Geoportale Nazionale, a volte non risponde)</option>
-          <option value="mappa">Mappa semplice grigio chiaro (Esri)</option>
-          <option value="osm">Mappa OpenStreetMap</option>
-        </select>
-      </label>
-      {mod && t('edifici', 'Edifici (OpenStreetMap)', 'Volumi semplici, altezze stimate')}
+      {!l.google && (
+        <label>{tr('Immagine del suolo')}
+          <select value={l.orto} onChange={e => s.setLivelli({ orto: e.target.value as typeof l.orto })}>
+            <option value="mappa">{tr('Mappa semplice')}</option>
+            <option value="esri">{tr('Satellite')}</option>
+            <option value="osm">{tr('Mappa OpenStreetMap')}</option>
+            {mod && <option value="pcn2012">Ortofoto 2012 (Geoportale Nazionale, a volte non risponde)</option>}
+          </select>
+        </label>
+      )}
+      {mod && casella('edifici', 'Edifici (OpenStreetMap)', 'Volumi semplici, altezze stimate')}
       {mod && l.edifici && (
         <label>Aspetto degli edifici
           <select value={l.stile} onChange={e => s.setLivelli({ stile: e.target.value as typeof l.stile })}>
@@ -245,38 +247,37 @@ function Livelli() {
           </select>
         </label>
       )}
-      {t('strade', 'Strade e scale (OpenStreetMap)', 'Alla quota vera della strada (LiDAR 2 m)')}
+      {casella('strade', 'Vie, scale e sentieri', 'Tocca un colore per cambiarlo')}
       {l.strade && (
         <div className="colori-vie">
           {GRUPPI_VIE.map(g => (
-            <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{g.nome}</label>
+            <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{tr(g.nome)}</label>
           ))}
-          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>Torna ai colori di base</button>}
+          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>{tr('Torna ai colori di base')}</button>}
           {s.utente?.ruolo === 'admin' && <button onClick={async () => {
             const v = Object.fromEntries(GRUPPI_VIE.map(g => [g.k, l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col]))
             try { await chiama('impostazioni/coloriVie', 'PUT', { v }); s.set({ coloriBase: v }); s.setLivelli({ coloriVie: {} }); s.dici('Colori di base salvati per tutti') } catch (e) { s.dici((e as Error).message) }
           }} data-tip="Diventano i colori che vede chiunque apra il sito">Usa questi colori per tutti</button>}
         </div>
       )}
-      {t('nomi', 'Nomi dei luoghi')}
-      {t('confine', 'Confine comunale')}
-      {t('google', 'Google 3D fotorealistico', 'La base più fedele: i progetti si disegnano sopra. Solo da guardare, mai copiato')}
-      {!s.ionTokenSito && !s.googleKey && (l.google || !s.ionToken) && (
+      {casella('nomi', 'Nomi dei luoghi')}
+      {casella('confine', 'Confine comunale')}
+      {mod && !s.ionTokenSito && !s.googleKey && (l.google || !s.ionToken) && (
         <label>Codice Cesium ion
           <input type="password" value={s.ionToken} placeholder="Incolla il codice di accesso" onChange={e => s.set({ ionToken: e.target.value.trim() })} />
           <small>Account gratuito su ion.cesium.com, sezione Access Tokens. Resta solo in questo browser.</small>
         </label>
       )}
-      <label>Qualità e velocità
+      <label>{tr('Qualità e velocità')}
         <select value={l.qualita} onChange={e => s.setLivelli({ qualita: e.target.value as typeof l.qualita })}>
-          <option value="leggera">Leggera: veloce, adatta al telefono</option>
-          <option value="normale">Normale</option>
-          <option value="alta">Alta: più dettaglio, serve un computer potente</option>
+          <option value="leggera">{tr('Leggera: veloce, adatta al telefono')}</option>
+          <option value="normale">{tr('Normale')}</option>
+          <option value="alta">{tr('Alta: più dettaglio, serve un telefono o computer potente')}</option>
         </select>
       </label>
-      {mod && t('progetto', 'Oggetti di progetto', 'Spento: si vede Positano com\'è oggi')}
-      {t('nitido', 'Immagine più nitida', 'Più dettaglio e colore sulle foto aeree')}
-      {mod && t('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese. Rallenta molto')}
+      {mod && casella('progetto', 'Oggetti di progetto', 'Spento: si vede Positano com\'è oggi')}
+      {casella('nitido', 'Immagine più nitida', 'Più dettaglio e colore sulle foto aeree')}
+      {mod && casella('ombre', 'Sole e ombre', 'Gli oggetti di progetto fanno ombra sul paese. Rallenta molto')}
       {mod && l.ombre && (
         <>
           <label>Giorno<input type="date" value={l.giorno} onChange={e => s.setLivelli({ giorno: e.target.value })} /></label>
@@ -352,31 +353,43 @@ function Catalogo() {
 }
 
 function Aiuto() {
+  const s = useS()
+  const mod = s.inModifica && puoModificare(s.utente)
+  const voce = (titolo: string, testo: string) => <li><b>{tr(titolo)}</b>: {tr(testo)}</li>
   return (
     <div className="campi testo">
-      <h3>Come si usa</h3>
+      <h3>{tr('Come si usa')}</h3>
       <ul>
-        <li><b>Muoversi</b>: trascina per spostare, rotella o due dita per avvicinarti, tasto destro (o Ctrl) e trascina per inclinare. «Vai a» porta nei punti principali.</li>
-        <li><b>Disegnare</b>: scegli uno strumento a sinistra e clicca sulla mappa. Doppio clic, Invio o «Fine» chiudono. Esc annulla.</li>
-        <li><b>Modificare</b>: tocca un oggetto, cambia i valori nel pannello, trascina l'oggetto o i punti azzurri. Canc lo elimina, Ctrl+Z annulla.</li>
-        <li><b>Edifici</b>: tocca un edificio per correggerne l'altezza o toglierlo in un'opzione.</li>
-        <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
-        <li><b>Cammina</b>: vedi la scena ad altezza d'uomo, anche sopra le piazze disegnate.</li>
-        <li><b>Punti di interesse</b>: i filtri sotto la barra accendono bagni, fermate, biglietti, parcheggi e altro. Tocca un simbolo per i dettagli e «Portami qui».</li>
-        <li><b>Dove sono</b> (pulsante tondo in basso): mostra dove sei col GPS del telefono.</li>
-        <li><b>Accedi</b>: chi progetta si registra; l'amministratore abilita l'account alla modifica.</li>
-        <li><b>Percorso</b>: scegli partenza e arrivo (cerca, tocca la mappa o «Da qui») e vedi il tempo a piedi con salite e scale. «Crea QR da stampare» fa un cartello: chi lo inquadra vede solo quel percorso.</li>
-        <li>Un punto qualsiasi apre Street View e Google Earth lì, per confrontare con lo stato di fatto.</li>
+        {voce('Muoversi', 'un dito sposta la mappa, due dita avvicinano e ruotano, due dita in su o in giù inclinano. Se ti perdi, il pulsante con le frecce rimette la vista.')}
+        {voce('Cercare', 'scrivi nella barra in alto una via, un luogo, un negozio o un servizio. Tocca un risultato per vederlo sulla mappa.')}
+        {voce('Servizi', 'i bottoni sotto la barra mostrano bagni, fermate, biglietti, parcheggi, traghetti e farmacie.')}
+        {voce('Percorso', 'scegli due o più tappe dalla ricerca, dalla mappa, dalla tua posizione o da Casa; trascinale per cambiare ordine. Vedi il tempo a piedi, le scale, la salita e le alternative.')}
+        {voce('Casa', 'il pulsante con la casetta ricorda dove alloggi e ti riporta lì.')}
+        {voce('Dove sono', 'il pulsante col mirino mostra la tua posizione col GPS del telefono.')}
+        {voce('Livelli', 'foto 3D o mappa semplice, 3D più chiaro, colori delle vie, qualità.')}
+        {voce('Street View', 'in un punto o lungo il percorso, le foto a 360° di Google.')}
+        {voce('Condividi', 'ogni punto e ogni percorso ha un link da mandare su WhatsApp.')}
       </ul>
-      <h3>Da dove vengono i dati</h3>
+      {mod && <>
+        <h3>Per chi modifica</h3>
+        <ul>
+          <li><b>Disegnare</b>: scegli uno strumento e tocca la mappa. Doppio clic, Invio o «Fine» chiudono. Esc annulla.</li>
+          <li><b>Modificare</b>: tocca un oggetto, cambia i valori nel pannello, trascina l'oggetto o i punti azzurri. Canc lo elimina, Ctrl+Z annulla.</li>
+          <li><b>Edifici</b>: tocca un edificio per correggerne l'altezza o toglierlo in un'opzione.</li>
+          <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
+          <li><b>Vie</b>: correggi il tracciato sul satellite, anche più punti insieme.</li>
+          <li><b>Eventi</b>: compaiono sulla mappa solo mentre sono in corso.</li>
+          <li><b>QR</b>: dal percorso, «Crea QR da stampare»: chi lo inquadra vede solo quel percorso.</li>
+        </ul>
+      </>}
+      <h3>{tr('Da dove vengono i dati')}</h3>
       <ul>
-        <li>Terreno: TINITALY 1.1, INGV, 10 m (CC BY 4.0). Attorno: Copernicus DEM GLO-30. Quote s.l.m. con geoide EGM96.</li>
-        <li>Edifici, strade, luoghi e confine: © OpenStreetMap contributors (ODbL), scaricati il 9/11/2026.</li>
-        <li>Ortofoto 2012: Geoportale Nazionale, Ministero dell'Ambiente.</li>
-        <li>Google 3D: Google Maps Platform tramite Cesium ion, solo visualizzazione.</li>
-        <li>Misure di norma (stalli, rampe, altezze): indicate con la fonte e «da verificare».</li>
+        <li>{tr('Foto 3D')}: Google Map Tiles API, {tr('solo da guardare')}.</li>
+        <li>{tr('Terreno')}: TINITALY 1.1, INGV, 10 m (CC BY 4.0); {tr('vie')}: LiDAR 2 m, PST-A, {tr('Ministero dell\'Ambiente')}.</li>
+        <li>{tr('Vie, luoghi e confine')}: © OpenStreetMap contributors (ODbL).</li>
+        <li>{tr('Satellite e mappa semplice')}: Esri.</li>
       </ul>
-      <p className="nota">Il terreno a 10 m arrotonda muri, scale e tornanti: le quote sono indicative, non sostituiscono un rilievo.</p>
+      <p className="nota">{tr('Tempi e quote sono indicativi: in paese ci sono molte scale, calcola qualche minuto in più.')}</p>
     </div>
   )
 }

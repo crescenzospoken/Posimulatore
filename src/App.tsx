@@ -181,7 +181,7 @@ export default function App() {
     impostaVoci('casa', c && !s.ospite ? [{ id: 'casa', tipo: 'tappa', pos: pos(c.p[0], c.p[1], quota(c.p[0], c.p[1]) + 3), testo: c.nome && c.nome !== 'Casa' ? 'Casa · ' + c.nome : 'Casa', icona: 'home', col: '#0b6bcb', scelto: true, maxDist: 1e9,
       clic: () => portamiA(c) }] : [])
   }, [pronto, s.casa?.p[0], s.casa?.p[1], s.casa?.nome, s.ospite, s.googleGiro])
-  useEffect(() => { document.title = s.ospite && a?.nome ? `${t('Come arrivare a')} ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome, s.lingua])
+  useEffect(() => { document.title = s.ospite && a?.nome ? `${t('Come arrivare a')} ${a.nome} · Positano 3D` : 'Positano 3D · ' + t('mappa e percorsi a piedi') }, [s.ospite, a?.nome, s.lingua])
   useEffect(() => {
     if (!pronto) return
     impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
