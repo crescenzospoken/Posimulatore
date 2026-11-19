@@ -1,8 +1,11 @@
 import { portamiA } from './tappe'
 import { useRicerca } from './ricerca'
 import { t, linguaAttuale } from '../i18n'
-import { useEffect, useState, type FormEvent } from 'react'
-import { useS, type Utente } from '../store'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { useS, type Utente, type Preferito } from '../store'
+import { caricaMiei, caricaGis, google, eSalvato, salvaOTogli } from './account'
+import { vai } from '../scene/viewer'
+import { quota } from '../scene/terreno'
 import { Icona } from './Icona'
 import type { NomeIcona } from './icone'
 import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
@@ -66,6 +69,7 @@ export function SchedaPoi() {
         <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
         <button className="quiet" onClick={() => s.set({ vista360: { modo: 'punto', p: p.p, titolo: p.n ?? t(c.nome) } })}><Icona n="streetview" />Street View</button>
         <button className="quiet" onClick={() => condividi(p.n ?? c.nome, linkPunto({ id: p.id, p: p.p, nome: p.n }, true), s.dici)}><Icona n="share" />{t('Condividi')}</button>
+        <BottoneSalva x={{ id: p.id, p: p.p, nome: p.n ?? t(c.nome) }} />
         {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>{t('Modifica')}</button>}
       </div>
       <p className="nota">{p.fonte === 'osm' ? t('Dati © OpenStreetMap') : t('Aggiunto dal Comune')}</p>
@@ -127,33 +131,43 @@ export function Accesso() {
       <div className="campi">
         <p>{t('Hai fatto l\'accesso come')} <b>{u.nome}</b> ({u.email}).</p>
         <RigaCasa />
-        {u.ruolo === 'attesa' && <p className="nota">{t('Il tuo account aspetta di essere abilitato dall\'amministratore. Intanto puoi usare la mappa come tutti.')}</p>}
+        <MieiLuoghi />
+        <p className="nota">{t('Casa e luoghi salvati restano nel tuo account, su ogni telefono.')}</p>
         {puoModificare(u) && <label className="riga"><span>Modalità modifica<small>Progetti, disegno, edifici, punti di interesse</small></span><input type="checkbox" checked={s.inModifica} onChange={e => s.set({ inModifica: e.target.checked })} /></label>}
         {u.ruolo === 'admin' && <button onClick={() => s.set({ pannello: 'utenti' })}>Utenti e permessi</button>}
-        <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Sei uscito')) }}>{t('Esci')}</button>
+        <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } google()?.accounts.id.disableAutoSelect(); s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Sei uscito')) }}>{t('Esci')}</button>
       </div>
     )
   }
+  const entrato = (u: Utente) => { s.set({ utente: u, inModifica: puoModificare(u), pannello: puoModificare(u) ? null : 'accesso' }); caricaMiei() }
   const invia = async (e: FormEvent) => {
     e.preventDefault(); setErr(null); setLavoro(true)
     try {
       const u = await chiama<Utente>(modo, 'POST', d)
-      s.set({ utente: u, inModifica: puoModificare(u), pannello: puoModificare(u) ? null : 'accesso' })
-      s.dici(modo === 'registrati' ? 'Registrazione fatta' : 'Bentornato, ' + u.nome)
+      entrato(u)
+      s.dici(modo === 'registrati' ? t('Registrazione fatta') : t('Bentornato') + ', ' + u.nome)
     } catch (x) { setErr((x as Error).message) } finally { setLavoro(false) }
   }
   return (
-    <form className="campi" onSubmit={invia}>
+    <div className="campi">
       <RigaCasa />
-      <p className="nota">{t('La mappa è aperta a tutti. L\'accesso serve a chi progetta e aggiorna i punti di interesse.')}</p>
-      {modo === 'registrati' && <label>{t('Nome e cognome')}<input value={d.nome} autoComplete="name" onChange={e => setD({ ...d, nome: e.target.value })} required /></label>}
-      <label>{t('Email')}<input type="email" value={d.email} autoComplete="email" onChange={e => setD({ ...d, email: e.target.value })} required /></label>
-      <label>{t('Password')}<input type="password" value={d.password} autoComplete={modo === 'accedi' ? 'current-password' : 'new-password'} minLength={modo === 'registrati' ? 8 : undefined} onChange={e => setD({ ...d, password: e.target.value })} required />{modo === 'registrati' && <small>{t('Almeno 8 caratteri')}</small>}</label>
+      <MieiLuoghi />
+      {s.googleClientId && <>
+        <BottoneGoogle entrato={entrato} errore={setErr} />
+        <p className="nota">{t('Con l\'accesso Casa e luoghi salvati ti seguono su ogni telefono. La mappa resta aperta a tutti.')}</p>
+      </>}
       {err && <p className="errore-campo" role="alert">{err}</p>}
-      <button className="primary" disabled={lavoro}>{modo === 'accedi' ? 'Accedi' : 'Registrati'}</button>
-      <button type="button" className="quiet" onClick={() => { setModo(modo === 'accedi' ? 'registrati' : 'accedi'); setErr(null) }}>{modo === 'accedi' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}</button>
-      {modo === 'registrati' && <p className="nota">{t('Dopo la registrazione l\'amministratore abilita il tuo account alla modifica.')}</p>}
-    </form>
+      <details className="accesso-email" open={!s.googleClientId}><summary>{s.googleClientId ? t('Email e password (per chi modifica)') : t('Accedi')}</summary>
+        <form className="campi" onSubmit={invia}>
+          {modo === 'registrati' && <label>{t('Nome e cognome')}<input value={d.nome} autoComplete="name" onChange={e => setD({ ...d, nome: e.target.value })} required /></label>}
+          <label>{t('Email')}<input type="email" value={d.email} autoComplete="email" onChange={e => setD({ ...d, email: e.target.value })} required /></label>
+          <label>{t('Password')}<input type="password" value={d.password} autoComplete={modo === 'accedi' ? 'current-password' : 'new-password'} minLength={modo === 'registrati' ? 8 : undefined} onChange={e => setD({ ...d, password: e.target.value })} required />{modo === 'registrati' && <small>{t('Almeno 8 caratteri')}</small>}</label>
+          <button className="primary" disabled={lavoro}>{modo === 'accedi' ? t('Accedi') : t('Registrati')}</button>
+          <button type="button" className="quiet" onClick={() => { setModo(modo === 'accedi' ? 'registrati' : 'accedi'); setErr(null) }}>{modo === 'accedi' ? t('Non hai un account? Registrati') : t('Hai già un account? Accedi')}</button>
+          {modo === 'registrati' && <p className="nota">{t('Dopo la registrazione l\'amministratore abilita il tuo account alla modifica.')}</p>}
+        </form>
+      </details>
+    </div>
   )
 }
 
@@ -239,12 +253,57 @@ export function SchedaCasa() {
 }
 
 /** Il punto Casa nel pannello dell'account: si cambia o si toglie. */
+/** Pulsante ufficiale di Google (Google Identity Services): il token firmato va al Worker, che lo controlla. */
+function BottoneGoogle({ entrato, errore }: { entrato: (u: Utente) => void; errore: (e: string | null) => void }) {
+  const s = useS()
+  const el = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    let vivo = true
+    caricaGis().then(() => {
+      const g = google()
+      if (!vivo || !g || !el.current) return
+      g.accounts.id.initialize({
+        client_id: s.googleClientId, ux_mode: 'popup', use_fedcm_for_prompt: true,
+        callback: async (r: { credential: string }) => {
+          errore(null)
+          try { const u = await chiama<Utente>('google', 'POST', { credential: r.credential }); entrato(u); s.dici(t('Bentornato') + ', ' + u.nome) } catch (x) { errore((x as Error).message) }
+        },
+      })
+      g.accounts.id.renderButton(el.current, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', locale: s.lingua, width: Math.min(320, el.current.clientWidth || 320) })
+    }, () => errore(t('Google non risponde, riprova più tardi')))
+    return () => { vivo = false }
+  }, [s.googleClientId, s.lingua])
+  return <div ref={el} className="bottone-google" />
+}
+
+/** Luoghi salvati: tocca per andarci, X per toglierli. */
+function MieiLuoghi() {
+  const s = useS()
+  if (!s.preferiti.length) return null
+  return (
+    <div className="miei-luoghi">
+      <h3>{t('I tuoi luoghi')}</h3>
+      <ul>{s.preferiti.map(x => (
+        <li key={x.id ?? x.p.join()}>
+          <button className="quiet" onClick={() => { vai({ lon: x.p[0], lat: x.p[1] - 0.0012, h: quota(x.p[0], x.p[1]) + 110, heading: 0, pitch: -40 }); s.set(x.id ? { selPoi: x.id, pannello: null } : { pannello: null }) }}><Icona n="bookmark" /><span>{x.nome}</span></button>
+          <button className="tondo quiet" onClick={() => salvaOTogli(x)} aria-label={t('Togli dai salvati')}><Icona n="close" /></button>
+        </li>
+      ))}</ul>
+    </div>
+  )
+}
+export function BottoneSalva({ x }: { x: Preferito }) {
+  useS(st => st.preferiti)
+  const si = eSalvato(x)
+  return <button className={'quiet' + (si ? ' acceso' : '')} aria-pressed={si} onClick={() => salvaOTogli(x)}><Icona n={si ? 'bookmark' : 'bookmark_add'} />{si ? t('Salvato') : t('Salva')}</button>
+}
+
 function RigaCasa() {
   const s = useS()
   return (
     <div className="riga-casa">
-      <Icona n="home" /><span>{s.casa ? <>Casa: <b>{s.casa.nome && s.casa.nome !== 'Casa' ? s.casa.nome : 'punto scelto'}</b></> : 'Nessun punto Casa'}</span>
-      <button type="button" className="quiet" onClick={() => s.set({ casaAperta: true, pannello: null })}>{s.casa ? 'Cambia' : 'Scegli'}</button>
+      <Icona n="home" /><span>{s.casa ? <>{t('Casa')}: <b>{s.casa.nome && s.casa.nome !== 'Casa' ? s.casa.nome : t('punto scelto')}</b></> : t('Nessun punto Casa')}</span>
+      <button type="button" className="quiet" onClick={() => s.set({ casaAperta: true, pannello: null })}>{s.casa ? t('Cambia') : t('Scegli')}</button>
     </div>
   )
 }

@@ -15,6 +15,7 @@ export type Strumento =
   | { k: 'poi' }
   | { k: 'vie' }
   | { k: 'eventi' }
+export type Preferito = { id?: string; p: [number, number]; nome: string }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
 export type Livelli = {
@@ -92,6 +93,10 @@ type Stato = {
   aggiungiDaMappa: boolean
   /** punto «Casa» del visitatore (dove alloggia): partenza di base dei percorsi; scegliCasa = il prossimo clic sulla mappa lo fissa */
   casa: Tappa | null
+  /** luoghi salvati dal visitatore (solo nostri: punti OSM o del Comune, mai di Google); con l'accesso si salvano nell'account */
+  preferiti: Preferito[]
+  /** client ID di Google per «Accedi con Google» (dal Worker; vuoto = pulsante nascosto) */
+  googleClientId: string
   scegliCasa: boolean
   lingua: Lingua
   /** il visitatore ha già visto (o chiuso) la richiesta del punto Casa */
@@ -126,7 +131,7 @@ type Stato = {
   dici: (t: string) => void
 }
 const KEY = 'posimulatore.v5'
-type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean; casa?: Tappa | null; casaChiesta?: boolean; lingua?: Lingua }
+type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean; casa?: Tappa | null; casaChiesta?: boolean; lingua?: Lingua; preferiti?: Preferito[] }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
@@ -147,7 +152,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.tappe[0] ?? leggi()?.partenza, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta, lingua: s.lingua })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.tappe[0] ?? leggi()?.partenza, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta, lingua: s.lingua, preferiti: s.preferiti })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -182,6 +187,8 @@ export const useS = create<Stato>((set, get) => ({
   viaSel: [],
   lingua: linguaAttualeIniziale,
   casa: iniziale?.casa ?? null,
+  preferiti: iniziale?.preferiti ?? [],
+  googleClientId: '',
   scegliCasa: false,
   casaAperta: false,
   casaChiesta: iniziale?.casaChiesta ?? false,
@@ -245,7 +252,7 @@ export const useS = create<Stato>((set, get) => ({
     set({ progetti: s.progetti.map(p => p.id !== s.pid ? p : { ...p, opzioni: p.opzioni.map(x => (x.id === o.id ? o : x)) }), futuro: s.futuro.slice(0, -1), passato: [...s.passato, ora] })
     salva(get())
   },
-  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p || 'casa' in p || 'casaChiesta' in p || 'lingua' in p) salva(get()); if (p.lingua) impostaLingua(p.lingua) },
+  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p || 'casa' in p || 'preferiti' in p || 'casaChiesta' in p || 'lingua' in p) salva(get()); if (p.lingua) impostaLingua(p.lingua) },
   setLivelli(p) { set({ livelli: { ...get().livelli, ...p, ...('google' in p ? { googleScelto: p.google } : {}) } }); salva(get()) },
   nuovoProgetto(nome) {
     const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }

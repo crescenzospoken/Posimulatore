@@ -1,6 +1,6 @@
 // Posimulatore: file statici + proxy dell'ortofoto del Geoportale Nazionale (servita solo in http).
 import { api } from './api'
-export interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string; GOOGLE_TILES_KEY?: string; DB: D1Database; ADMIN_EMAIL?: string }
+export interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string; GOOGLE_TILES_KEY?: string; GOOGLE_CLIENT_ID?: string; DB: D1Database; ADMIN_EMAIL?: string }
 const PCN = 'http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map'
 const AMMESSI = new Set(['service', 'request', 'version', 'layers', 'styles', 'srs', 'crs', 'bbox', 'width', 'height', 'format', 'transparent'])
 
@@ -48,7 +48,7 @@ export default {
     if (url.pathname === '/wms/pcn') return ortofoto(req, url, ctx)
     if (url.pathname.startsWith('/api/')) return api(req, url, env)
     // chiavi da browser: Google Map Tiles (limitata al dominio e con tetto giornaliero nella console Google) e, di riserva, Cesium ion
-    if (url.pathname === '/config') return Response.json({ googleKey: env.GOOGLE_TILES_KEY ?? '', ionToken: env.CESIUM_ION_TOKEN ?? '' }, { headers: { 'Cache-Control': 'no-store' } })
+    if (url.pathname === '/config') return Response.json({ googleKey: env.GOOGLE_TILES_KEY ?? '', ionToken: env.CESIUM_ION_TOKEN ?? '', googleClientId: env.GOOGLE_CLIENT_ID ?? '' }, { headers: { 'Cache-Control': 'no-store' } })
     const r = await env.ASSETS.fetch(req)
     if (url.pathname === '/' && url.search && (r.headers.get('content-type') ?? '').includes('text/html')) return anteprima(url, r)
     return r
