@@ -24,6 +24,19 @@ export const GRUPPI_VIE: { k: string; nome: string; tipi: string[]; col: string;
   { k: 'scale', nome: 'Scale', tipi: ['steps'], col: '#f6aea9', w: 3 },
   { k: 'sentieri', nome: 'Sentieri e mulattiere', tipi: ['path', 'track'], col: '#a8dab5', w: 3 },
 ]
+// Vie con i bordi morbidi (antialiasing nello shader, come Google Maps): st.t va da 0 a 1 attraverso la linea;
+// fwidth dà quanto vale un pixel, l'ultimo pixel per lato sfuma. Un filo più scuro sul bordo le stacca dal 3D.
+const MATERIALE_VIA = `czm_material czm_getMaterial(czm_materialInput materialInput) {
+  czm_material m = czm_getDefaultMaterial(materialInput);
+  float d = abs(materialInput.st.t - 0.5) * 2.0;
+  float px = max(fwidth(d), 1e-4);
+  float a = 1.0 - smoothstep(1.0 - 1.2 * px, 1.0, d);
+  float bordo = smoothstep(1.0 - 2.6 * px, 1.0 - 1.4 * px, d);
+  m.diffuse = mix(color.rgb, color.rgb * 0.6, bordo * 0.7);
+  m.alpha = color.a * a;
+  return m;
+}`
+const materialeVia = (c: C.Color) => new C.Material({ translucent: true, fabric: { type: 'ViaMorbida', uniforms: { color: c }, source: MATERIALE_VIA } })
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
 let vie: C.PrimitiveCollection | undefined
 let nomiOn = false
@@ -168,7 +181,7 @@ function disegnaVie(google: boolean) {
     const g = gruppoDi(s.k)
     const z = quoteDi(s)
     const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
@@ -181,10 +194,10 @@ function disegnaVie(google: boolean) {
     if (!inst?.length) continue
     const c = C.Color.fromCssColorString(coloriAttuali[g.k] ?? g.col)
     let m = mat.get(g.k)
-    if (!m) { m = C.Material.fromType('Color', { color: c.withAlpha(0.95) }); mat.set(g.k, m) }
+    if (!m) { m = materialeVia(c.withAlpha(0.95)); mat.set(g.k, m) }
     primPerGruppo.set(g.k, vie.add(new C.Primitive({
       geometryInstances: inst, asynchronous: true,
-      appearance: new C.PolylineMaterialAppearance({ material: m }),
+      appearance: new C.PolylineMaterialAppearance({ material: m, translucent: true }),
     })))
   }
   altezzaVie()

@@ -167,6 +167,8 @@ export function impostaQualita(q: Qualita) {
   const dpr = window.devicePixelRatio || 1
   viewer.resolutionScale = Math.min(dpr, v.res) / dpr
   viewer.scene.postProcessStages.fxaa.enabled = q !== 'leggera'
+  // MSAA: bordi lisci su vie, 3D e simboli; i telefoni (GPU a tasselli) lo fanno quasi gratis. Solo WebGL2.
+  if (viewer.scene.msaaSupported) viewer.scene.msaaSamples = 4
   // sul leggero 30 fotogrammi al secondo costanti: meglio di 40-60 a strappi (e il telefono scalda meno)
   viewer.targetFrameRate = q === 'leggera' ? 30 : (undefined as unknown as number)
   viewer.scene.globe.maximumScreenSpaceError = q === 'leggera' ? 3 : q === 'alta' ? 1.5 : 2

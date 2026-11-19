@@ -114,7 +114,20 @@ export function BarraTappe({ esci }: { esci: () => void }) {
   const [modifica, setModifica] = useState(!s.ospite)
   // con il percorso pronto la barra si riduce a una riga, così sul telefono resta spazio per la mappa
   const [aperta, setAperta] = useState(tappe.length < 2)
-  useEffect(() => { if (tappe.length < 2) setAperta(true) }, [tappe.length])
+  // appena ci sono partenza e arrivo la barra si chiude da sola e si vedono mappa e risultati
+  const primaN = useRef(tappe.length)
+  useEffect(() => {
+    if (tappe.length < 2) setAperta(true)
+    else if (primaN.current < 2) { setAperta(false); s.set({ aggiungiDaMappa: false }) }
+    primaN.current = tappe.length
+  }, [tappe.length])
+  // sul telefono, mentre si cambiano le tappe, la scheda dei risultati si toglie di mezzo (classi sul body, vedi styles.css)
+  const inModificaTappe = modifica && (aperta || tappe.length < 2)
+  useEffect(() => {
+    document.body.classList.toggle('tappe-aperte', inModificaTappe)
+    document.body.classList.toggle('scegli-mappa', inModificaTappe && s.aggiungiDaMappa)
+    return () => { document.body.classList.remove('tappe-aperte', 'scegli-mappa') }
+  }, [inModificaTappe, s.aggiungiDaMappa])
   const [trascina, setTrascina] = useState<{ da: number; a: number } | null>(null)
   const righe = useRef<(HTMLLIElement | null)[]>([])
   const { nostri, google } = useRicerca(q)
