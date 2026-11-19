@@ -6,3 +6,9 @@ public/cesium
 
 # Claude Code: approvazioni locali, possono contenere token
 .claude/settings.local.json
+
+# mai i .js compilati accanto ai .ts: Vite li leggerebbe al posto dei sorgenti
+src/**/*.js
+tests/**/*.js
+worker/**/*.js
+*.tsbuildinfo

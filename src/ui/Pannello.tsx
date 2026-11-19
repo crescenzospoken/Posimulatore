@@ -7,6 +7,7 @@ import { calcoli, USI } from '../scene/oggetti'
 import { edificio, coloreDi } from '../scene/edifici'
 import { GRUPPI_VIE } from '../scene/contesto'
 import { Icona } from './Icona'
+import type { NomeIcona } from './icone'
 import { Accesso, Utenti, ModificaPoi, chiama, puoModificare } from './Pubblico'
 import { CorreggiVia } from './CorreggiVia'
 import { ModificaEvento } from './Eventi'
@@ -355,40 +356,32 @@ function Catalogo() {
 function Aiuto() {
   const s = useS()
   const mod = s.inModifica && puoModificare(s.utente)
-  const voce = (titolo: string, testo: string) => <li><b>{tr(titolo)}</b>: {tr(testo)}</li>
+  // una riga per pulsante, con la stessa icona che si vede sulla mappa
+  const voci: [NomeIcona, string][] = [
+    ['pan_tool', 'Un dito sposta, due dita ingrandiscono, ruotano e inclinano'],
+    ['search', 'Cerca vie, luoghi, negozi e servizi'],
+    ['directions', 'Percorso a piedi con tempo, scale e salita'],
+    ['home', 'Casa: salva dove alloggi e torna lì'],
+    ['my_location', 'La tua posizione col GPS'],
+    ['zoom_out_map', 'Rimetti la vista se ti perdi'],
+    ['layers', 'Foto 3D o mappa semplice, colori delle vie'],
+    ['streetview', 'Street View: foto a 360° di Google'],
+    ['share', 'Condividi un punto o un percorso'],
+  ]
   return (
-    <div className="campi testo">
-      <h3>{tr('Come si usa')}</h3>
-      <ul>
-        {voce('Muoversi', 'un dito sposta la mappa, due dita avvicinano e ruotano, due dita in su o in giù inclinano. Se ti perdi, il pulsante con le frecce rimette la vista.')}
-        {voce('Cercare', 'scrivi nella barra in alto una via, un luogo, un negozio o un servizio. Tocca un risultato per vederlo sulla mappa.')}
-        {voce('Servizi', 'i bottoni sotto la barra mostrano bagni, fermate, biglietti, parcheggi, traghetti e farmacie.')}
-        {voce('Percorso', 'scegli due o più tappe dalla ricerca, dalla mappa, dalla tua posizione o da Casa; trascinale per cambiare ordine. Vedi il tempo a piedi, le scale, la salita e le alternative.')}
-        {voce('Casa', 'il pulsante con la casetta ricorda dove alloggi e ti riporta lì.')}
-        {voce('Dove sono', 'il pulsante col mirino mostra la tua posizione col GPS del telefono.')}
-        {voce('Livelli', 'foto 3D o mappa semplice, 3D più chiaro, colori delle vie, qualità.')}
-        {voce('Street View', 'in un punto o lungo il percorso, le foto a 360° di Google.')}
-        {voce('Condividi', 'ogni punto e ogni percorso ha un link da mandare su WhatsApp.')}
-      </ul>
-      {mod && <>
-        <h3>Per chi modifica</h3>
+    <div className="campi guida">
+      <ul className="guida-voci">{voci.map(([n, x]) => <li key={n}><Icona n={n} /><span>{tr(x)}</span></li>)}</ul>
+      {mod && <details><summary>Per chi modifica</summary>
         <ul>
-          <li><b>Disegnare</b>: scegli uno strumento e tocca la mappa. Doppio clic, Invio o «Fine» chiudono. Esc annulla.</li>
-          <li><b>Modificare</b>: tocca un oggetto, cambia i valori nel pannello, trascina l'oggetto o i punti azzurri. Canc lo elimina, Ctrl+Z annulla.</li>
-          <li><b>Edifici</b>: tocca un edificio per correggerne l'altezza o toglierlo in un'opzione.</li>
-          <li><b>Opzioni</b>: in «Progetti» copi l'opzione aperta per confrontare varianti.</li>
-          <li><b>Vie</b>: correggi il tracciato sul satellite, anche più punti insieme.</li>
-          <li><b>Eventi</b>: compaiono sulla mappa solo mentre sono in corso.</li>
-          <li><b>QR</b>: dal percorso, «Crea QR da stampare»: chi lo inquadra vede solo quel percorso.</li>
+          <li>Disegnare: scegli uno strumento e tocca la mappa; doppio clic, Invio o «Fine» chiudono, Esc annulla.</li>
+          <li>Modificare: tocca un oggetto e cambia i valori; Canc lo elimina, Ctrl+Z annulla.</li>
+          <li>Vie: correggi il tracciato sul satellite, anche più punti insieme. Eventi: si vedono solo mentre sono in corso.</li>
+          <li>QR: dal percorso, «Crea QR da stampare».</li>
         </ul>
-      </>}
-      <h3>{tr('Da dove vengono i dati')}</h3>
-      <ul>
-        <li>{tr('Foto 3D')}: Google Map Tiles API, {tr('solo da guardare')}.</li>
-        <li>{tr('Terreno')}: TINITALY 1.1, INGV, 10 m (CC BY 4.0); {tr('vie')}: LiDAR 2 m, PST-A, {tr('Ministero dell\'Ambiente')}.</li>
-        <li>{tr('Vie, luoghi e confine')}: © OpenStreetMap contributors (ODbL).</li>
-        <li>{tr('Satellite e mappa semplice')}: Esri.</li>
-      </ul>
+      </details>}
+      <details><summary>{tr('Fonti dei dati')}</summary>
+        <p className="nota">Google Map Tiles ({tr('solo da guardare')}) · TINITALY 1.1 INGV (CC BY 4.0) · LiDAR 2 m PST-A · © OpenStreetMap (ODbL) · Esri</p>
+      </details>
       <p className="nota">{tr('Tempi e quote sono indicativi: in paese ci sono molte scale, calcola qualche minuto in più.')}</p>
     </div>
   )
