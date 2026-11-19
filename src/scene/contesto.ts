@@ -157,13 +157,9 @@ export function puntiVia(c: LL[], z: number[], google: boolean, alza = 1.5): C.C
 let fatteCon: boolean | null = null
 const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
-function altezzaVie() {
-  // conta l'altezza sopra il terreno, non sul mare: sopra Montepertuso (350 m) guardando dall'alto prima sparivano scale e sentieri
-  const c = viewer.camera.positionCartographic
-  const h = c.height - GEOIDE - quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude))
-  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 3000 : h < 1400)
-}
-let altezzaAgganciata = false
+// Ogni via si mostra secondo la SUA distanza dalla camera (attributo per istanza, lo calcola la GPU), non secondo l'altezza
+// della camera: quella cambiava di colpo inclinando (sopra il mare 0 m, sopra la montagna 1000 m) e le vie lampeggiavano.
+const DISTANZA_MAX: Record<string, number> = { statale: 1e7, strade: 9000, servizio: 4500, pedonali: 4500, scale: 4500, sentieri: 4500 }
 /** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono
  * in trasparenza invece di sparire. Le linee «dipinte» sulla mesh di Google sembravano gelato sciolto dove non combaciavano.
  * Una primitiva per gruppo di colore, così il colore si cambia al volo. */
@@ -181,7 +177,7 @@ function disegnaVie(google: boolean) {
     const g = gruppoDi(s.k)
     const z = quoteDi(s)
     const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+    l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
@@ -200,8 +196,6 @@ function disegnaVie(google: boolean) {
       appearance: new C.PolylineMaterialAppearance({ material: m, translucent: true }),
     })))
   }
-  altezzaVie()
-  if (!altezzaAgganciata) { altezzaAgganciata = true; viewer.scene.preRender.addEventListener(altezzaVie) }
   if (nomiOn) impostaVoci('via', vociVie)
   if (location.search.includes('prova')) console.info('vie disegnate in', Math.round(performance.now() - t0), 'ms')
 }
