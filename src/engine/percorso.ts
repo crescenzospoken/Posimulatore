@@ -7,7 +7,10 @@ import type { LL } from './geo'
 export type Via = { id: string; k: string; c: LL[]; n?: string; galleria?: 1; ponte?: 1 }
 type Arco = { v: string; t: number; d: number; su: number; giu: number; scale: number; seg: [number, number] }
 export type Rete = { nodi: Map<string, { p: LL; z: number }>; archi: Map<string, Arco[]>; vie: Via[]; quote: number[][] }
-export type Percorso = { pts: [number, number, number][]; minuti: number; ritorno: number; metri: number; salita: number; discesa: number; metriScale: number; gradini: number; nomi: string[] }
+export type Tratto = { nome: string; tipo: 'scale' | 'strada' | 'vicolo' | 'sentiero'; metri: number; su: number; giu: number; gradini: number }
+export type Percorso = { pts: [number, number, number][]; minuti: number; ritorno: number; metri: number; salita: number; discesa: number; metriScale: number; gradini: number; nomi: string[]; tratti: Tratto[]; criterio?: Criterio }
+/** veloce = il più breve in tempo; scale = evita le scale (passeggini, valigie, ginocchia); salita = meno dislivello in salita */
+export type Criterio = 'veloce' | 'scale' | 'salita'
 
 const KX = 111320 * Math.cos((40.63 * Math.PI) / 180), KY = 110950
 const chiave = (p: LL) => p[0] + ',' + p[1]
@@ -84,7 +87,12 @@ class Heap { a: [number, string][] = []
   pop() { const a = this.a, top = a[0], last = a.pop()!; if (a.length) { a[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < a.length && a[l][0] < a[m][0]) m = l; if (r < a.length && a[r][0] < a[m][0]) m = r; if (m === i) break; [a[m], a[i]] = [a[i], a[m]]; i = m } } return top }
   get size() { return this.a.length } }
 
-function dijkstra(r: Rete, a: string, b: string) {
+const PESO: Record<Criterio, (e: Arco) => number> = {
+  veloce: e => e.t,
+  scale: e => e.t * (e.scale ? 6 : 1),
+  salita: e => e.t + e.su * 40,
+}
+function dijkstra(r: Rete, a: string, b: string, peso: (e: Arco) => number = PESO.veloce) {
   const D = new Map<string, number>([[a, 0]]), P = new Map<string, [string, Arco]>(), h = new Heap()
   h.push([0, a])
   while (h.size) {
@@ -92,7 +100,7 @@ function dijkstra(r: Rete, a: string, b: string) {
     if (u === b) break
     if (t > (D.get(u) ?? Infinity)) continue
     for (const e of r.archi.get(u) ?? []) {
-      const n = t + e.t
+      const n = t + peso(e)
       if (n < (D.get(e.v) ?? Infinity)) { D.set(e.v, n); P.set(e.v, [u, e]); h.push([n, e.v]) }
     }
   }
@@ -102,12 +110,35 @@ function dijkstra(r: Rete, a: string, b: string) {
   return { nodi, archi }
 }
 
-export function cammino(r: Rete, da: LL, a: LL): Percorso | null {
+const tipoVia = (k: string): Tratto['tipo'] => k === 'steps' ? 'scale' : k === 'path' || k === 'track' ? 'sentiero' : k === 'footway' || k === 'pedestrian' ? 'vicolo' : 'strada'
+export function cammino(r: Rete, da: LL, a: LL, criterio: Criterio = 'veloce'): Percorso | null {
   const na = nodoVicino(r, da), nb = nodoVicino(r, a)
   if (!na || !nb) return null
-  const x = dijkstra(r, na, nb)
+  const x = dijkstra(r, na, nb, PESO[criterio])
   if (!x) return null
-  const y = dijkstra(r, nb, na)
+  const y = dijkstra(r, nb, na, PESO[criterio])
+  // indicazioni: tratti consecutivi con lo stesso nome e tipo si uniscono
+  const tratti: Tratto[] = []
+  for (const e of x.archi) {
+    const v = r.vie[e.seg[0]], tipo = tipoVia(v.k), nome = v.n ?? ''
+    const ult = tratti.at(-1)
+    if (ult && ult.nome === nome && ult.tipo === tipo) { ult.metri += e.d; ult.su += e.su; ult.giu += e.giu; if (e.scale) ult.gradini += (e.su + e.giu) / 0.16 }
+    else tratti.push({ nome, tipo, metri: e.d, su: e.su, giu: e.giu, gradini: e.scale ? (e.su + e.giu) / 0.16 : 0 })
+  }
+  // pezzetti senza nome sotto 80 m (raccordi, rampe) si attaccano al tratto prima; poi si uniscono i tratti con lo stesso nome.
+  // Se un tratto ha gradini, si chiama «scale».
+  const puliti: Tratto[] = []
+  const unisci = (u: Tratto, t: Tratto) => { u.metri += t.metri; u.su += t.su; u.giu += t.giu; u.gradini += t.gradini; if (t.gradini > u.gradini / 2 && t.tipo === 'scale') u.tipo = 'scale' }
+  for (const t of tratti) {
+    const u = puliti.at(-1)
+    // un pezzo di scale senza nome non diventa parte della strada prima (la statale con 90 gradini non ha senso)
+    const piccolo = (x: Tratto) => !x.nome && x.metri < 80 && x.gradini <= 15
+    if (u && (piccolo(t) || (t.nome && t.nome === u.nome))) unisci(u, t)
+    else if (u && piccolo(u) && t.nome) { u.nome = t.nome; unisci(u, t) }
+    else if (u && !u.nome && !t.nome && u.tipo === t.tipo) unisci(u, t)
+    else puliti.push({ ...t })
+  }
+  puliti.forEach(t => { t.gradini = Math.round(t.gradini); if (t.gradini > 15) t.tipo = 'scale' })
   let t = 0, d = 0, su = 0, giu = 0, sc = 0, scSu = 0
   const nomi: string[] = []
   for (const e of x.archi) {
@@ -119,8 +150,44 @@ export function cammino(r: Rete, da: LL, a: LL): Percorso | null {
   return {
     pts, minuti: t / 60, ritorno: y ? y.archi.reduce((s, e) => s + e.t, 0) / 60 : NaN, metri: d, salita: su, discesa: giu, metriScale: sc,
     // alzata media dei gradini a Positano stimata in 16 cm (da verificare col censimento)
-    gradini: Math.round(scSu / 0.16), nomi: [...new Set(nomi)],
+    gradini: Math.round(scSu / 0.16), nomi: [...new Set(nomi)], tratti: puliti, criterio,
   }
+}
+
+/** Il percorso più veloce e, se cambiano davvero, le alternative con meno scale e con meno salita. */
+export function alternative(r: Rete, da: LL, a: LL): Percorso[] {
+  const v = cammino(r, da, a, 'veloce')
+  if (!v) return []
+  const out = [v]
+  for (const c of ['scale', 'salita'] as const) {
+    const x = cammino(r, da, a, c)
+    if (!x) continue
+    const diverso = out.every(o => Math.abs(o.gradini - x.gradini) > 40 || Math.abs(o.salita - x.salita) > 15 || Math.abs(o.metri - x.metri) > 120)
+    const meglio = c === 'scale' ? x.gradini < v.gradini - 40 : x.salita < v.salita - 15
+    if (diverso && meglio) out.push(x)
+  }
+  return out
+}
+
+/** Stime grossolane per confrontare i mezzi (da tarare): bus SITA sulla statale e auto, con le attese e il parcheggio di Positano. */
+export type Mezzo = { k: 'piedi' | 'bus' | 'auto'; minuti: number; nota: string }
+export function confrontoMezzi(p: Percorso, fermate: LL[], da: LL, a: LL): Mezzo[] {
+  const out: Mezzo[] = [{ k: 'piedi', minuti: p.minuti, nota: `${Math.round(p.metri)} m, ${p.gradini > 20 ? 'circa ' + Math.round(p.gradini / 10) * 10 + ' gradini' : 'quasi senza scale'}` }]
+  const dist = (x: LL, y: LL) => Math.hypot((x[0] - y[0]) * KX, (x[1] - y[1]) * KY)
+  const vicina = (q: LL) => fermate.reduce((m, f) => Math.min(m, dist(q, f)), Infinity)
+  const piediA = vicina(da), piediB = vicina(a), linea = dist(da, a) * 1.6
+  // bus: a piedi fino alla fermata (in salita su Positano conta il doppio), attesa media 15 min, 15 km/h sulla statale
+  if (piediA < 450 && piediB < 450 && linea > 700) {
+    const m = (piediA + piediB) * 2 / VP / 60 + 15 + linea / (15000 / 60)
+    out.push({ k: 'bus', minuti: m, nota: 'Bus sulla statale, attesa media 15 min, biglietto a bordo o in tabaccheria' })
+  }
+  // auto: 18 km/h sulla statale e sulle strade del paese, più 15 minuti per parcheggiare (d'estate molto di più); solo oltre 2 km
+  if (linea > 2000) out.push({ k: 'auto', minuti: linea / (18000 / 60) + 15, nota: 'Più il parcheggio: d\'estate lunghe attese e tariffe alte' })
+  // a Positano a piedi conviene finché non costa più di 10 minuti in più del mezzo più veloce (niente attese, niente traffico)
+  out.sort((x, y) => x.minuti - y.minuti)
+  const piedi = out.find(x => x.k === 'piedi')!
+  if (piedi.minuti - out[0].minuti < 10) { out.splice(out.indexOf(piedi), 1); out.unshift(piedi) }
+  return out
 }
 
 export const minutiTesto = (m: number) => !isFinite(m) ? '–' : m < 60 ? `${Math.max(1, Math.round(m))} min` : `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')} min`

@@ -6,7 +6,7 @@ import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './sc
 import { caricaContesto, mostraContesto, cerca, reteVie } from './scene/contesto'
 import { pos } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
-import { cammino, tappaDaLink } from './engine/percorso'
+import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso } from './ui/Percorso'
 import { Servizi, SchedaPoi, SchedaCasa, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
@@ -121,7 +121,11 @@ export default function App() {
   const inPercorso = st0(s.strumento.k)
   const { da, a } = s.percorso
   const calcRef = useRef<ReturnType<typeof cammino>>(null)
-  const calc = useMemo(() => (pronto && inPercorso && da && a ? cammino(reteVie(), da.p, a.p) : null), [pronto, inPercorso, da?.p[0], da?.p[1], a?.p[0], a?.p[1]])
+  // il più veloce più le alternative (meno scale, meno salita); se ne sceglie una dalla scheda
+  const [scelta, setScelta] = useState(0)
+  const opzioni = useMemo(() => (pronto && inPercorso && da && a ? alternative(reteVie(), da.p, a.p) : []), [pronto, inPercorso, da?.p[0], da?.p[1], a?.p[0], a?.p[1]])
+  useEffect(() => setScelta(0), [opzioni])
+  const calc = opzioni[Math.min(scelta, opzioni.length - 1)] ?? null
   useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? da : null, inPercorso ? a : null) }, [pronto, inPercorso, calc, da?.nome, a?.nome, s.livelli.google, s.googleGiro])
   useEffect(() => { calcRef.current = calc; if (calc) inquadraPercorso(calc) }, [calc])
   // il punto Casa sulla mappa (toccandolo: percorso da Casa)
@@ -239,7 +243,7 @@ export default function App() {
       )}
 
       {st.k === 'cammina' && <Pad />}
-      {st.k === 'percorso' && <SchedaPercorso calc={calc} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
+      {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
       {pronto && !mod && !s.ospite && (s.scegliCasa || (!s.casaChiesta && !s.selPoi && st.k === 'naviga' && !s.pannello)) && <SchedaCasa />}

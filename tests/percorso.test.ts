@@ -42,3 +42,14 @@ describe('percorsi a piedi', () => {
     expect(tappaDaLink('abc')).toBeNull()
   })
 })
+
+describe('alternative e indicazioni', () => {
+  it('Montepertuso -> Collegiata: tratti con nomi, e un\'alternativa con meno scale', async () => {
+    const { alternative } = await import('../src/engine/percorso')
+    const alt = alternative(rete, L.montepertuso, L.collegiata)
+    expect(alt.length).toBeGreaterThanOrEqual(1)
+    expect(alt[0].tratti.length).toBeGreaterThan(2)
+    expect(alt[0].tratti.reduce((s, t) => s + t.metri, 0)).toBeCloseTo(alt[0].metri, 0)
+    for (const x of alt.slice(1)) expect(x.gradini < alt[0].gradini || x.salita < alt[0].salita).toBe(true)
+  })
+})
