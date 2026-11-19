@@ -9,6 +9,7 @@ import { pos } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso, BarraTappe } from './ui/Percorso'
+import { caricaMiei } from './ui/account'
 import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
 import { caricaEventi, disegnaEventi } from './scene/eventi'
@@ -65,12 +66,12 @@ export default function App() {
     let stop: (() => void) | undefined
     ;(async () => {
       try {
-        try { const c = await (await fetch('/config')).json(); if (c.ionToken || c.googleKey) useS.setState(st => ({ ionTokenSito: c.ionToken ?? '', googleKey: c.googleKey ?? '', livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
+        try { const c = await (await fetch('/config')).json(); if (c.googleClientId) useS.setState({ googleClientId: c.googleClientId }); if (c.ionToken || c.googleKey) useS.setState(st => ({ ionTokenSito: c.ionToken ?? '', googleKey: c.googleKey ?? '', livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
         await creaViewer(el.current!)
         avviaSovrapposti(el.current!)
         impostaOrto(useS.getState().livelli.orto)
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
-        chiama<Utente | null>('io').then(u => useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })), () => {})
+        chiama<Utente | null>('io').then(u => { useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })); if (u) caricaMiei() }, () => {})
         chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
         await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
         // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo

@@ -1,6 +1,7 @@
 // API di Posimulatore: registrazione e accesso, punti di interesse, impostazioni per tutti, utenti.
 // Ruoli: 'attesa' (registrato, non ancora abilitato), 'editor' (modifica e punti di interesse), 'admin' (anche utenti e impostazioni).
 import type { Env } from './index'
+import { verificaGoogle } from './google'
 
 type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 const GIORNI = 30
@@ -69,6 +70,33 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
     if (!u || !uguali(h, u.hash)) return errore('Email o password sbagliate', 401)
     const t = await nuovaSessione(env, email)
     return json({ email: u.email, nome: u.nome, ruolo: u.ruolo }, 200, { 'Set-Cookie': cookieSessione(t, GIORNI * 86400) })
+  }
+  if (via[0] === 'google' && m === 'POST') {
+    if (!env.GOOGLE_CLIENT_ID) return errore('Accesso con Google non attivo', 404)
+    const b = await corpo<{ credential?: string }>(req)
+    const g = b?.credential ? await verificaGoogle(b.credential, env.GOOGLE_CLIENT_ID).catch(() => null) : null
+    if (!g) return errore('Accesso con Google non riuscito, riprova', 401)
+    let u = await env.DB.prepare('SELECT email, nome, ruolo FROM utenti WHERE email = ?').bind(g.email).first<Utente>()
+    if (!u) {
+      // account nuovo senza password: hash vuoto, quindi con email e password non si entra mai
+      const ruolo = env.ADMIN_EMAIL && g.email === env.ADMIN_EMAIL.trim().toLowerCase() ? 'admin' : 'attesa'
+      await env.DB.prepare('INSERT INTO utenti (email, nome, hash, sale, ruolo, creato) VALUES (?, ?, ?, ?, ?, ?)').bind(g.email, g.nome, '', '', ruolo, new Date().toISOString()).run()
+      u = { email: g.email, nome: g.nome, ruolo }
+    }
+    const t = await nuovaSessione(env, u.email)
+    return json(u, 200, { 'Set-Cookie': cookieSessione(t, GIORNI * 86400) })
+  }
+  // Casa e luoghi salvati di chi ha fatto l'accesso (piccolo JSON, solo dati nostri)
+  if (via[0] === 'miei') {
+    if (!io) return errore('Accedi per salvare', 401)
+    if (m === 'GET') { const r = await env.DB.prepare('SELECT dati FROM utenti WHERE email = ?').bind(io.email).first<{ dati: string | null }>(); return json(r?.dati ? JSON.parse(r.dati) : {}) }
+    if (m === 'PUT') {
+      const b = await corpo<{ casa?: unknown; preferiti?: unknown }>(req)
+      const testo = JSON.stringify({ casa: b?.casa ?? null, preferiti: Array.isArray(b?.preferiti) ? b!.preferiti.slice(0, 200) : [] })
+      if (testo.length > 40000) return errore('Troppi luoghi salvati')
+      await env.DB.prepare('UPDATE utenti SET dati = ? WHERE email = ?').bind(testo, io.email).run()
+      return json({ ok: true })
+    }
   }
   if (via[0] === 'esci' && m === 'POST') {
     const t = cookie(req, 'ps')

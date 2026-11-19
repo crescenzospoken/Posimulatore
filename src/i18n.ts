@@ -157,6 +157,12 @@ const EN: Record<string, string> = {
   'Foto 3D o mappa semplice, colori delle vie': '3D photos or simple map, street colours',
   'Street View: foto a 360° di Google': 'Street View: Google 360° photos', 'Condividi un punto o un percorso': 'Share a place or a route',
   'Tempi e quote sono indicativi: in paese ci sono molte scale, calcola qualche minuto in più.': 'Times and heights are estimates: Positano has many steps, allow a few extra minutes.',
+  // accesso con Google e luoghi salvati
+  'Casa e luoghi salvati restano nel tuo account, su ogni telefono.': 'Home and saved places stay in your account, on every phone.',
+  'Registrazione fatta': 'Account created', 'Bentornato': 'Welcome back',
+  "Con l'accesso Casa e luoghi salvati ti seguono su ogni telefono. La mappa resta aperta a tutti.": 'Sign in to keep Home and saved places on every phone. The map stays open to everyone.',
+  'Email e password (per chi modifica)': 'Email and password (for editors)', 'Google non risponde, riprova più tardi': 'Google is not responding, try again later',
+  'I tuoi luoghi': 'Your places', 'Togli dai salvati': 'Remove from saved', 'Salvato': 'Saved', 'Salva': 'Save',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */
