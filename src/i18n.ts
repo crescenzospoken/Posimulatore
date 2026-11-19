@@ -163,6 +163,10 @@ const EN: Record<string, string> = {
   "Con l'accesso Casa e luoghi salvati ti seguono su ogni telefono. La mappa resta aperta a tutti.": 'Sign in to keep Home and saved places on every phone. The map stays open to everyone.',
   'Email e password (per chi modifica)': 'Email and password (for editors)', 'Google non risponde, riprova più tardi': 'Google is not responding, try again later',
   'I tuoi luoghi': 'Your places', 'Togli dai salvati': 'Remove from saved', 'Salvato': 'Saved', 'Salva': 'Save',
+  // «Portami qui» dalla posizione
+  'Cerco dove sei…': 'Finding where you are…', 'Posizione non disponibile: parto da Casa': 'Location not available: starting from Home',
+  'Sei fuori Positano: parto da Casa': 'You are outside Positano: starting from Home',
+  'GPS spento o non permesso: parto da Casa': 'GPS off or not allowed: starting from Home', 'GPS spento o non permesso: scegli la partenza sulla mappa': 'GPS off or not allowed: pick the start on the map',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */
