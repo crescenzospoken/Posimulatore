@@ -95,6 +95,7 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
               ))}
             </div>
           )}
+          <button className="quiet" onClick={() => s.set({ vista360: { modo: 'percorso', pts: calc.pts.map(p => [p[0], p[1]] as [number, number]), titolo: r.a?.nome } })}><Icona n="streetview" />{tr('Guarda il percorso')}</button>
           <div className="cifre">
             <span><Icona n="schedule" /><b>{minutiTesto(calc.minuti)}</b><small>{tr('ritorno')} {minutiTesto(calc.ritorno)}</small></span>
             <span><Icona n="route" /><b>{m(calc.metri)} m</b><small>{tr('a piedi')}</small></span>

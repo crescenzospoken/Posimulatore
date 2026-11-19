@@ -61,6 +61,8 @@ type Stato = {
   pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | 'evento' | null
   /** evento scelto (scheda o modifica); nuovoEvento = posizione toccata per crearne uno */
   selEvento: string | null
+  /** Street View aperto: su un punto, lungo il percorso o in Cammina */
+  vista360: import('./ui/StreetView').Vista360 | null
   nuovoEvento: LL | null
   /** via in correzione (id OSM) e la sua bozza: punti, quota delle arcate, controllata */
   selVia: string | null
@@ -166,6 +168,7 @@ export const useS = create<Stato>((set, get) => ({
   ospite: false,
   selVia: null,
   selEvento: null,
+  vista360: null,
   nuovoEvento: null,
   viaBozza: null,
   viaVSel: null,
