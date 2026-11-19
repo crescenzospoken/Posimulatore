@@ -317,7 +317,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .segno-poi .icona { width: 28px; height: 28px; color: #fff; }
 .segno-poi .icona svg { width: 17px; height: 17px; }
 .segno-poi.scelto .icona svg { width: 22px; height: 22px; }
-.ospite .cima, .ospite .fab { display: none; }
+.ospite .fab, .ospite .cima > :not(.barra-tappe) { display: none; }
 
 @media (max-width: 760px) {
   .cima { top: 8px; left: 8px; right: 8px; gap: 8px; }
@@ -400,3 +400,28 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .tappa-corpo .risultati { position: static; margin-top: 6px !important; list-style: none; margin: 0; padding: 6px; border-radius: 16px; max-height: 40vh; overflow: auto; z-index: 6; }
 .risultati .titoletto { list-style: none; }
 .risultati button span { text-align: left; }
+/* tappe del percorso in alto, al posto della ricerca */
+.barra-tappe { width: min(440px, 100%); border-radius: 24px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; max-height: 60vh; overflow: auto; }
+.tappe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; touch-action: none; }
+.tappe li { display: flex; align-items: center; gap: 8px; padding: 4px 4px 4px 2px; border-radius: 14px; background: rgba(255, 255, 255, 0.55); }
+.tappe li.presa { background: var(--accento-soft); box-shadow: 0 2px 8px rgba(10, 24, 40, 0.2); }
+.tappe .nome { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.tappe .maniglia { cursor: grab; color: var(--tenue); display: inline-flex; padding: 4px; touch-action: none; }
+.tappe .maniglia .icona-m { width: 22px; height: 22px; }
+.barra-tappe .lettera { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; background: #0b6bcb; flex: none; }
+.barra-tappe .lettera.a { background: #188038; }
+.barra-tappe .lettera.b { background: #c5221f; }
+.barra-tappe .lettera.piccola { background: rgba(60, 64, 67, 0.25); }
+.riga-aggiungi { display: flex; align-items: center; gap: 8px; max-width: none; padding: 2px; }
+.riga-aggiungi input { flex: 1; border: 0; background: rgba(255, 255, 255, 0.7); font-size: 16px; }
+.barra-tappe .risultati { position: static; list-style: none; margin: 0; padding: 4px; border-radius: 16px; max-height: 32vh; overflow: auto; }
+.barra-tappe .riga-bottoni { gap: 2px; }
+.barra-tappe .riga-bottoni .chiudi { margin-left: auto; }
+.barra-tappe .nota { margin: 0 6px 4px; }
+@media (max-width: 760px) { .barra-tappe { width: 100%; max-height: 48vh; } }
+.barra-tappe .riga-aggiungi { order: 0; flex-basis: auto; }
+.barra-tappe.riassunto { flex-direction: row; align-items: center; gap: 8px; padding: 10px 14px; border: 0; text-align: left; height: auto; }
+.barra-tappe.riassunto .nome { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.barra-tappe.riassunto .freccia { color: var(--tenue); }
+.barra-tappe.riassunto small { color: var(--tenue); white-space: nowrap; }
+.barra-tappe.riassunto .icona-m { color: var(--accento); }

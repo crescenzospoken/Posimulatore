@@ -113,6 +113,7 @@ const EN: Record<string, string> = {
   'Tocca la mappa per scegliere la partenza.': 'Tap the map to choose the start.',
   'Tocca la mappa per scegliere l\'arrivo.': 'Tap the map to choose the destination.',
   'Carico Street View…': 'Loading Street View…', 'Qui Google non ha foto a 360°: prova un po\' più avanti': 'No 360° photos here: try a little further on', 'Street View non raggiungibile': 'Street View not available', 'Indietro': 'Back', 'Avanti': 'Forward', 'Guarda il percorso': 'Preview the route',
+  'Trascina per spostare': 'Drag to reorder', 'Togli la tappa': 'Remove stop', 'Da dove parti?': 'Where from?', 'Dove vuoi andare?': 'Where to?', 'Aggiungi una tappa': 'Add a stop', 'Sulla mappa': 'On the map', 'Tocca la mappa per aggiungere una tappa.': 'Tap the map to add a stop.', 'Cambia le tappe': 'Change stops',
   'Da': 'From', 'A': 'To', 'In corso': 'Happening now', 'Programma': 'Programme', 'eventi in corso': 'events now',
   'Più veloce': 'Fastest', 'Meno scale': 'Fewer stairs', 'Meno salita': 'Less climbing',
   'A piedi': 'On foot', 'Bus': 'Bus', 'Auto': 'Car', 'consigliato': 'recommended',

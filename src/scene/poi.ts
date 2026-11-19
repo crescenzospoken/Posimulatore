@@ -35,6 +35,8 @@ export function disegnaPoi(cat: Set<string>, sel: string | null, conNascosti: bo
       clic: () => {
         const s = useS.getState()
         if (s.strumento.k === 'poi') useS.setState({ selPoi: id, pannello: 'poi', poiPos: null })
+        // durante un percorso, toccare un punto lo aggiunge come tappa
+        else if (s.strumento.k === 'percorso' && !s.ospite) useS.setState({ tappe: [...s.tappe, { p: p.p, nome: p.n ?? categoria(p.c).nome }], aggiungiDaMappa: false })
         else useS.setState({ selPoi: id, sel: null, selEdificio: null, pannello: null })
       },
     })

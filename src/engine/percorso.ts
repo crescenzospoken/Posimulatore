@@ -154,13 +154,28 @@ export function cammino(r: Rete, da: LL, a: LL, criterio: Criterio = 'veloce'): 
   }
 }
 
-/** Il percorso più veloce e, se cambiano davvero, le alternative con meno scale e con meno salita. */
-export function alternative(r: Rete, da: LL, a: LL): Percorso[] {
-  const v = cammino(r, da, a, 'veloce')
+/** Percorso con più tappe: i tratti fra una tappa e la successiva, uniti. */
+export function camminoTappe(r: Rete, tappe: LL[], criterio: Criterio = 'veloce'): Percorso | null {
+  if (tappe.length < 2) return null
+  const pezzi: Percorso[] = []
+  for (let i = 1; i < tappe.length; i++) { const x = cammino(r, tappe[i - 1], tappe[i], criterio); if (!x) return null; pezzi.push(x) }
+  if (pezzi.length === 1) return pezzi[0]
+  const somma = (k: 'minuti' | 'ritorno' | 'metri' | 'salita' | 'discesa' | 'metriScale' | 'gradini') => pezzi.reduce((t, p) => t + p[k], 0)
+  return {
+    pts: pezzi.flatMap((p, i) => (i ? p.pts.slice(1) : p.pts)), minuti: somma('minuti'), ritorno: somma('ritorno'), metri: somma('metri'),
+    salita: somma('salita'), discesa: somma('discesa'), metriScale: somma('metriScale'), gradini: somma('gradini'),
+    nomi: [...new Set(pezzi.flatMap(p => p.nomi))], tratti: pezzi.flatMap(p => p.tratti), criterio,
+  }
+}
+
+/** Il percorso più veloce fra le tappe e, se cambiano davvero, le alternative con meno scale e con meno salita. */
+export function alternative(r: Rete, da: LL, a: LL, ...altre: LL[]): Percorso[] {
+  const tappe = [da, a, ...altre]
+  const v = camminoTappe(r, tappe, 'veloce')
   if (!v) return []
   const out = [v]
   for (const c of ['scale', 'salita'] as const) {
-    const x = cammino(r, da, a, c)
+    const x = camminoTappe(r, tappe, c)
     if (!x) continue
     const diverso = out.every(o => Math.abs(o.gradini - x.gradini) > 40 || Math.abs(o.salita - x.salita) > 15 || Math.abs(o.metri - x.metri) > 120)
     const meglio = c === 'scale' ? x.gradini < v.gradini - 40 : x.salita < v.salita - 15
