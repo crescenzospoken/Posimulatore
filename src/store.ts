@@ -4,6 +4,7 @@ import type { LL } from './engine/geo'
 import { type Obj, type Opzione, type Progetto, type Tipo, type Vista, uid } from './engine/model'
 import type { Tappa } from './engine/percorso'
 import { CATEGORIE } from './engine/poi'
+import { impostaLingua, linguaIniziale, type Lingua } from './i18n'
 
 export type Strumento =
   | { k: 'naviga' }
@@ -81,6 +82,7 @@ type Stato = {
   /** punto «Casa» del visitatore (dove alloggia): partenza di base dei percorsi; scegliCasa = il prossimo clic sulla mappa lo fissa */
   casa: Tappa | null
   scegliCasa: boolean
+  lingua: Lingua
   /** il visitatore ha già visto (o chiuso) la richiesta del punto Casa */
   casaChiesta: boolean
   /** aperto da un link o da un QR: interfaccia ridotta al solo percorso */
@@ -111,12 +113,15 @@ type Stato = {
   dici: (t: string) => void
 }
 const KEY = 'posimulatore.v5'
-type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean; casa?: Tappa | null; casaChiesta?: boolean }
+type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean; casa?: Tappa | null; casaChiesta?: boolean; lingua?: Lingua }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
 const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, rev: 3, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
+// ?lang= nel link vince sulla scelta salvata; poi quella salvata, poi la lingua del telefono
+const linguaAttualeIniziale: Lingua = new URLSearchParams(location.search).get('lang') ? linguaIniziale() : iniziale?.lingua ?? linguaIniziale()
+impostaLingua(linguaAttualeIniziale)
 /** Progetto vuoto di partenza (la piazza d'esempio a Chiesa Nuova è stata tolta su richiesta, 18/11). */
 function vuoto(): Progetto {
   const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }
@@ -129,7 +134,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta, lingua: s.lingua })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -158,6 +163,7 @@ export const useS = create<Stato>((set, get) => ({
   selVia: null,
   viaBozza: null,
   viaVSel: null,
+  lingua: linguaAttualeIniziale,
   casa: iniziale?.casa ?? null,
   scegliCasa: false,
   casaChiesta: iniziale?.casaChiesta ?? false,
@@ -221,7 +227,7 @@ export const useS = create<Stato>((set, get) => ({
     set({ progetti: s.progetti.map(p => p.id !== s.pid ? p : { ...p, opzioni: p.opzioni.map(x => (x.id === o.id ? o : x)) }), futuro: s.futuro.slice(0, -1), passato: [...s.passato, ora] })
     salva(get())
   },
-  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p || 'casa' in p || 'casaChiesta' in p) salva(get()) },
+  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p || 'casa' in p || 'casaChiesta' in p || 'lingua' in p) salva(get()); if (p.lingua) impostaLingua(p.lingua) },
   setLivelli(p) { set({ livelli: { ...get().livelli, ...p, ...('google' in p ? { googleScelto: p.google } : {}) } }); salva(get()) },
   nuovoProgetto(nome) {
     const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }

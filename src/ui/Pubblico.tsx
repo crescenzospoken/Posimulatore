@@ -1,3 +1,4 @@
+import { t, linguaAttuale } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useS, type Utente } from '../store'
 import { Icona } from './Icona'
@@ -26,11 +27,11 @@ export function Servizi() {
   const cambia = (k: string) => s.set({ poiCat: on.has(k) ? s.poiCat.filter(x => x !== k) : [...s.poiCat, k] })
   const lista = tutte ? CATEGORIE : CATEGORIE.filter(c => c.base || on.has(c.k))
   return (
-    <div className="servizi" role="toolbar" aria-label="Punti di interesse">
+    <div className="servizi" role="toolbar" aria-label={t('Punti di interesse')}>
       {lista.map(c => (
-        <button key={c.k} className={'chip' + (on.has(c.k) ? ' acceso' : '')} aria-pressed={on.has(c.k)} onClick={() => cambia(c.k)}><span className="chip-icona" style={{ color: c.col }}><Icona n={c.s as NomeIcona} /></span>{c.nome}</button>
+        <button key={c.k} className={'chip' + (on.has(c.k) ? ' acceso' : '')} aria-pressed={on.has(c.k)} onClick={() => cambia(c.k)}><span className="chip-icona" style={{ color: c.col }}><Icona n={c.s as NomeIcona} /></span>{t(c.nome)}</button>
       ))}
-      <button className="chip quiet" onClick={() => setTutte(!tutte)}>{tutte ? 'Meno' : 'Altri…'}</button>
+      <button className="chip quiet" onClick={() => setTutte(!tutte)}>{tutte ? t('Meno') : t('Altri…')}</button>
     </div>
   )
 }
@@ -50,21 +51,21 @@ export function SchedaPoi() {
   return (
     <section className="scheda-poi" aria-label={p.n ?? c.nome}>
       <div className="pannello-testa">
-        <h2><span className="icona-tonda" style={{ background: c.col }}><Icona n={c.s as NomeIcona} /></span>{p.n ?? c.nome}</h2>
-        <button className="tondo quiet" onClick={() => s.set({ selPoi: null })} aria-label="Chiudi"><Icona n="close" /></button>
+        <h2><span className="icona-tonda" style={{ background: c.col }}><Icona n={c.s as NomeIcona} /></span>{p.n ?? t(c.nome)}</h2>
+        <button className="tondo quiet" onClick={() => s.set({ selPoi: null })} aria-label={t('Chiudi')}><Icona n="close" /></button>
       </div>
-      <p className="nota">{c.nome}{p.nascosto ? ' · nascosto ai visitatori' : ''}</p>
+      <p className="nota">{t(c.nome)}{p.nascosto ? ' · ' + t('nascosto ai visitatori') : ''}</p>
       {p.note && <p>{p.note}</p>}
-      {x.opening_hours && <p>Orari: {orariLeggibili(x.opening_hours)}</p>}
-      {x.fee && <p>{x.fee === 'yes' ? 'A pagamento' : x.fee === 'no' ? 'Gratuito' : x.fee}</p>}
-      {x.wheelchair === 'yes' && <p>Accessibile in sedia a rotelle</p>}
+      {x.opening_hours && <p>{t('Orari')}: {linguaAttuale() === 'it' ? orariLeggibili(x.opening_hours) : x.opening_hours}</p>}
+      {x.fee && <p>{x.fee === 'yes' ? t('A pagamento') : x.fee === 'no' ? t('Gratuito') : x.fee}</p>}
+      {x.wheelchair === 'yes' && <p>{t('Accessibile in sedia a rotelle')}</p>}
       {x.phone && <p><a href={'tel:' + x.phone.replace(/\s/g, '')}>{x.phone}</a></p>}
       <div className="riga-bottoni">
-        <button className="primary" onClick={portami}><Icona n="directions" />Portami qui</button>
-        <button className="quiet" onClick={() => condividi(p.n ?? c.nome, linkPunto({ id: p.id, p: p.p, nome: p.n }, true), s.dici)}><Icona n="share" />Condividi</button>
-        {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>Modifica</button>}
+        <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
+        <button className="quiet" onClick={() => condividi(p.n ?? c.nome, linkPunto({ id: p.id, p: p.p, nome: p.n }, true), s.dici)}><Icona n="share" />{t('Condividi')}</button>
+        {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>{t('Modifica')}</button>}
       </div>
-      <p className="nota">{p.fonte === 'osm' ? 'Dati © OpenStreetMap' : 'Aggiunto dal Comune'}</p>
+      <p className="nota">{p.fonte === 'osm' ? t('Dati © OpenStreetMap') : t('Aggiunto dal Comune')}</p>
     </section>
   )
 }
@@ -121,12 +122,12 @@ export function Accesso() {
     const u = s.utente
     return (
       <div className="campi">
-        <p>Hai fatto l'accesso come <b>{u.nome}</b> ({u.email}).</p>
+        <p>{t('Hai fatto l\'accesso come')} <b>{u.nome}</b> ({u.email}).</p>
         <RigaCasa />
-        {u.ruolo === 'attesa' && <p className="nota">Il tuo account aspetta di essere abilitato dall'amministratore. Intanto puoi usare la mappa come tutti.</p>}
+        {u.ruolo === 'attesa' && <p className="nota">{t('Il tuo account aspetta di essere abilitato dall\'amministratore. Intanto puoi usare la mappa come tutti.')}</p>}
         {puoModificare(u) && <label className="riga"><span>Modalità modifica<small>Progetti, disegno, edifici, punti di interesse</small></span><input type="checkbox" checked={s.inModifica} onChange={e => s.set({ inModifica: e.target.checked })} /></label>}
         {u.ruolo === 'admin' && <button onClick={() => s.set({ pannello: 'utenti' })}>Utenti e permessi</button>}
-        <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } s.set({ utente: null, inModifica: false, pannello: null }); s.dici('Sei uscito') }}>Esci</button>
+        <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Sei uscito')) }}>{t('Esci')}</button>
       </div>
     )
   }
@@ -141,14 +142,14 @@ export function Accesso() {
   return (
     <form className="campi" onSubmit={invia}>
       <RigaCasa />
-      <p className="nota">La mappa è aperta a tutti. L'accesso serve a chi progetta e aggiorna i punti di interesse.</p>
-      {modo === 'registrati' && <label>Nome e cognome<input value={d.nome} autoComplete="name" onChange={e => setD({ ...d, nome: e.target.value })} required /></label>}
-      <label>Email<input type="email" value={d.email} autoComplete="email" onChange={e => setD({ ...d, email: e.target.value })} required /></label>
-      <label>Password<input type="password" value={d.password} autoComplete={modo === 'accedi' ? 'current-password' : 'new-password'} minLength={modo === 'registrati' ? 8 : undefined} onChange={e => setD({ ...d, password: e.target.value })} required />{modo === 'registrati' && <small>Almeno 8 caratteri</small>}</label>
+      <p className="nota">{t('La mappa è aperta a tutti. L\'accesso serve a chi progetta e aggiorna i punti di interesse.')}</p>
+      {modo === 'registrati' && <label>{t('Nome e cognome')}<input value={d.nome} autoComplete="name" onChange={e => setD({ ...d, nome: e.target.value })} required /></label>}
+      <label>{t('Email')}<input type="email" value={d.email} autoComplete="email" onChange={e => setD({ ...d, email: e.target.value })} required /></label>
+      <label>{t('Password')}<input type="password" value={d.password} autoComplete={modo === 'accedi' ? 'current-password' : 'new-password'} minLength={modo === 'registrati' ? 8 : undefined} onChange={e => setD({ ...d, password: e.target.value })} required />{modo === 'registrati' && <small>{t('Almeno 8 caratteri')}</small>}</label>
       {err && <p className="errore-campo" role="alert">{err}</p>}
       <button className="primary" disabled={lavoro}>{modo === 'accedi' ? 'Accedi' : 'Registrati'}</button>
       <button type="button" className="quiet" onClick={() => { setModo(modo === 'accedi' ? 'registrati' : 'accedi'); setErr(null) }}>{modo === 'accedi' ? 'Non hai un account? Registrati' : 'Hai già un account? Accedi'}</button>
-      {modo === 'registrati' && <p className="nota">Dopo la registrazione l'amministratore abilita il tuo account alla modifica.</p>}
+      {modo === 'registrati' && <p className="nota">{t('Dopo la registrazione l\'amministratore abilita il tuo account alla modifica.')}</p>}
     </form>
   )
 }
@@ -192,29 +193,29 @@ export function SchedaCasa() {
   const ris = q ? cerca(q) : []
   const fissa = (t: { p: [number, number]; nome?: string }) => s.set({ casa: { p: t.p, nome: t.nome || 'Casa' }, casaChiesta: true, scegliCasa: false })
   const posizione = () => {
-    if (!navigator.geolocation) { s.dici('Questo dispositivo non dà la posizione'); return }
+    if (!navigator.geolocation) { s.dici(t('Questo dispositivo non dà la posizione')); return }
     navigator.geolocation.getCurrentPosition(
-      g => { const p: [number, number] = [g.coords.longitude, g.coords.latitude]; if (!dentroPositano(p)) { s.dici('Sei fuori Positano: tocca la mappa o cerca un indirizzo'); return } fissa({ p, nome: 'Casa' }) },
+      g => { const p: [number, number] = [g.coords.longitude, g.coords.latitude]; if (!dentroPositano(p)) { s.dici(t('Sei fuori Positano: tocca la mappa o cerca un indirizzo')); return } fissa({ p, nome: 'Casa' }) },
       e => s.dici(e.code === e.PERMISSION_DENIED ? 'Posizione non permessa: tocca la mappa o cerca un indirizzo' : 'Posizione non disponibile adesso'),
       { enableHighAccuracy: true, timeout: 10000 },
     )
   }
   if (s.scegliCasa) return (
-    <div className="guida-strumento vetro"><b>Casa</b><span>Tocca la mappa dove alloggi</span><button className="quiet" onClick={() => s.set({ scegliCasa: false })}>Annulla</button></div>
+    <div className="guida-strumento vetro"><b>{t('Casa')}</b><span>{t('Tocca la mappa dove alloggi')}</span><button className="quiet" onClick={() => s.set({ scegliCasa: false })}>{t('Annulla')}</button></div>
   )
   return (
-    <section className="scheda-poi scheda-casa" aria-label="Il tuo punto Casa">
+    <section className="scheda-poi scheda-casa" aria-label={t('Il tuo punto Casa')}>
       <div className="pannello-testa">
-        <h2><span className="icona-tonda" style={{ background: '#0b6bcb' }}><Icona n="home" /></span>Dove alloggi?</h2>
-        <button className="tondo quiet" onClick={() => s.set({ casaChiesta: true })} aria-label="Più tardi"><Icona n="close" /></button>
+        <h2><span className="icona-tonda" style={{ background: '#0b6bcb' }}><Icona n="home" /></span>{t('Dove alloggi?')}</h2>
+        <button className="tondo quiet" onClick={() => s.set({ casaChiesta: true })} aria-label={t('Più tardi')}><Icona n="close" /></button>
       </div>
-      <p className="nota">Scegli il tuo punto Casa: i percorsi partiranno da lì e lo ritrovi con un tocco.</p>
+      <p className="nota">{t('Scegli il tuo punto Casa: i percorsi partiranno da lì e lo ritrovi con un tocco.')}</p>
       <div className="riga-bottoni">
-        <button className="primary" onClick={posizione}><Icona n="my_location" />Sono qui</button>
-        <button onClick={() => s.set({ scegliCasa: true })}><Icona n="location_on" />Tocca la mappa</button>
+        <button className="primary" onClick={posizione}><Icona n="my_location" />{t('Sono qui')}</button>
+        <button onClick={() => s.set({ scegliCasa: true })}><Icona n="location_on" />{t('Tocca la mappa')}</button>
       </div>
       <div className="cerca" style={{ marginTop: 10 }}>
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cerca hotel, via o luogo" aria-label="Cerca il tuo alloggio" />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Cerca hotel, via o luogo')} aria-label={t('Cerca il tuo alloggio')} />
         {ris.length > 0 && <ul className="risultati vetro">{ris.map(x => <li key={x.nome + x.tipo}><button onClick={() => fissa({ p: x.p, nome: x.nome })}><Icona n="location_on" /><span>{x.nome}</span><small>{x.tipo}</small></button></li>)}</ul>}
       </div>
     </section>
@@ -246,16 +247,16 @@ export function SchedaGoogle() {
     <section className="scheda-poi" aria-label={g.nome}>
       <div className="pannello-testa">
         <h2><span className="icona-tonda" style={{ background: '#c5221f' }}><Icona n="location_on" /></span>{g.nome}</h2>
-        <button className="tondo quiet" onClick={() => s.set({ selGoogle: null })} aria-label="Chiudi"><Icona n="close" /></button>
+        <button className="tondo quiet" onClick={() => s.set({ selGoogle: null })} aria-label={t('Chiudi')}><Icona n="close" /></button>
       </div>
       {g.tipo && <p className="nota">{g.tipo}</p>}
       {g.indirizzo && <p>{g.indirizzo}</p>}
       <div className="riga-bottoni">
-        <button className="primary" onClick={portami}><Icona n="directions" />Portami qui</button>
-        {g.url && <a className="bottone" href={g.url} target="_blank" rel="noopener"><Icona n="open_in_new" />Orari e recensioni</a>}
-        <button className="quiet" onClick={() => condividi(g.nome, linkPunto({ p: g.p, nome: g.nome }, false), s.dici)}><Icona n="share" />Condividi</button>
+        <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
+        {g.url && <a className="bottone" href={g.url} target="_blank" rel="noopener"><Icona n="open_in_new" />{t('Orari e recensioni')}</a>}
+        <button className="quiet" onClick={() => condividi(g.nome, linkPunto({ p: g.p, nome: g.nome }, false), s.dici)}><Icona n="share" />{t('Condividi')}</button>
       </div>
-      <p className="nota attribuzione-google">Dati di Google</p>
+      <p className="nota attribuzione-google">{t('Dati di Google')}</p>
     </section>
   )
 }
@@ -263,7 +264,7 @@ export function SchedaGoogle() {
 /** Condivide un punto: menu di condivisione del telefono, altrimenti copia il link. */
 export async function condividi(titolo: string, url: string, dici: (t: string) => void) {
   try { if (navigator.share) { await navigator.share({ title: titolo, url }); return } } catch { return }
-  try { await navigator.clipboard.writeText(url); dici('Link copiato') } catch { dici('Copia non riuscita') }
+  try { await navigator.clipboard.writeText(url); dici(t('Link copiato')) } catch { dici(t('Copia non riuscita')) }
 }
 export const linkPunto = (x: { id?: string; p: [number, number]; nome?: string }, nostro: boolean) => {
   const u = new URL(location.origin + '/')
