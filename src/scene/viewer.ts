@@ -18,6 +18,7 @@ export const VAI: { nome: string; lon: number; lat: number; h: number; heading: 
   { nome: 'Li Galli', lon: 14.4330, lat: 40.5740, h: 250, heading: 0, pitch: -25 },
 ]
 let pavimento = true
+const CENTRO: [number, number] = [14.4855, 40.624], RAGGIO = 9000, ALTEZZA_MAX = 5000
 /** Il pavimento della camera si spegne mentre si cammina (lì la quota la decide la camminata). */
 export const pavimentoAttivo = (on: boolean) => { pavimento = on }
 /** Tutta Positano dal mare; sul telefono (schermo stretto) un po' più alta per starci tutta. */
@@ -46,7 +47,7 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   s.fog.enabled = true
   s.fog.density = 0.00012
   s.screenSpaceCameraController.minimumZoomDistance = 2
-  s.screenSpaceCameraController.maximumZoomDistance = 60000
+  s.screenSpaceCameraController.maximumZoomDistance = 6000
   s.postProcessStages.fxaa.enabled = true
   impostaQualita(qualitaIniziale())
   // il terreno e le immagini che arrivano chiedono un nuovo disegno
@@ -56,9 +57,19 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   // Il controllo di collisione di Cesium con il 3D costerebbe un'interrogazione della scena a ogni fotogramma; qui basta la nostra griglia.
   const g = new C.Cartographic()
   s.preRender.addEventListener(() => {
-    if (!pavimento) return
     const c = C.Cartographic.fromCartesian(viewer.camera.positionWC, undefined, g)
     if (!c) return
+    // recinto: la visuale resta entro 9 km (Li Galli compresi) da Positano e sotto i 5 km di quota (con la vista quasi verticale bastava un
+    // pizzico o un Maiusc-clic per finire lontanissimo e perdersi)
+    const lo = C.Math.toDegrees(c.longitude), la = C.Math.toDegrees(c.latitude)
+    const dx = (lo - CENTRO[0]) * 84560, dy = (la - CENTRO[1]) * 111030, d = Math.hypot(dx, dy)
+    if (d > RAGGIO || c.height > ALTEZZA_MAX + GEOIDE) {
+      const k = d > RAGGIO ? RAGGIO / d : 1
+      const su = C.Cartesian3.fromDegrees(CENTRO[0] + (dx * k) / 84560, CENTRO[1] + (dy * k) / 111030, Math.min(c.height, ALTEZZA_MAX + GEOIDE))
+      viewer.camera.setView({ destination: su, orientation: { heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: 0 } })
+      return
+    }
+    if (!pavimento) return
     const min = quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude)) + GEOIDE + 4
     if (c.height < min) {
       const su = C.Cartesian3.fromRadians(c.longitude, c.latitude, min)

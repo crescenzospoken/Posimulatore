@@ -5,9 +5,13 @@ import type { LL } from '../engine/geo'
 import { GEOIDE, quota as quotaTerreno } from './terreno'
 import { creaRete, quoteVia, type Rete } from '../engine/percorso'
 
-export type Strada = { id: string; k: string; w: number; c: LL[]; n?: string; o?: 1; ponte?: 1; galleria?: 1 }
+export type Strada = { id: string; k: string; w: number; c: LL[]; n?: string; o?: 1; ponte?: 1; galleria?: 1; dz?: number; controllata?: boolean }
+/** Correzione a mano di una via (D1, /api/vie): punti spostati sul satellite, quota in più sulle arcate. */
+export type Correzione = { id: string; c: LL[]; dz: number; controllata: number; nascosta: number }
 export type Luogo = { n: string; k: string; p: LL; z: number }
 let strade: Strada[] = [], luoghi: Luogo[] = []
+let originali = new Map<string, Strada>()
+let correzioni = new Map<string, Correzione>()
 const dn = new C.CustomDataSource('contesto-nomi')
 const dc = new C.CustomDataSource('contesto-confine')
 /** Gruppi di vie per colore; i colori si cambiano dai Livelli. */
@@ -24,19 +28,40 @@ const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUP
 let vie: C.PrimitiveCollection | undefined
 let nomiOn = false
 let vociVie: Voce[] = []
-const mat = new Map<string, C.Material>()
+const mat = new Map<string, C.Material>(), matDietro = new Map<string, C.Material>()
+let coloriAttuali: Record<string, string> = {}
 let quoteLidar = new Map<string, number>(), superficie = new Map<string, number>()
 let rete: Rete | undefined
 /** Rete dei percorsi a piedi, con le quote LiDAR (si costruisce alla prima richiesta). */
 export const reteVie = () => (rete ??= creaRete(strade, zVertice, sVertice))
-const zVertice = (p: LL) => quoteLidar.get(p[0] + ',' + p[1]) ?? quotaTerreno(p[0], p[1])
+export const elencoVie = () => strade
+export const viaOriginale = (id: string) => originali.get(id)
+export const correzioneVia = (id: string) => correzioni.get(id)
+/** Quota di un vertice: LiDAR se è un vertice OSM; se è stato spostato a mano, il punto LiDAR più vicino entro 12 m
+ * (le strade sono tutte campionate); altrimenti il terreno a 10 m, che alla Sponda sbaglia anche di 15 m. */
+const zVertice = (p: LL) => quoteLidar.get(p[0] + ',' + p[1]) ?? lidarVicino(p) ?? quotaTerreno(p[0], p[1])
+let griglia: Map<string, number[][]> | undefined
+const cella = (lo: number, la: number) => Math.floor(lo / 0.0002) + ',' + Math.floor(la / 0.0002)
+function lidarVicino(p: LL): number | undefined {
+  if (!griglia) { griglia = new Map(); for (const [k, z] of quoteLidar) { const [lo, la] = k.split(',').map(Number); const c = cella(lo, la); (griglia.get(c) ?? griglia.set(c, []).get(c)!).push([lo, la, z]) } }
+  const cx = Math.floor(p[0] / 0.0002), cy = Math.floor(p[1] / 0.0002)
+  let best: number | undefined, bd = 12 * 12
+  for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const q of griglia.get(cx + i + ',' + (cy + j)) ?? []) {
+    const d = ((q[0] - p[0]) * 84560) ** 2 + ((q[1] - p[1]) * 111030) ** 2
+    if (d < bd) { bd = d; best = q[2] }
+  }
+  return best
+}
+/** Quote di una via per disegnarla: LiDAR (o terreno sui punti spostati) più l'eventuale quota delle arcate. */
+const quoteDi = (v: Strada) => { const z = quoteVia(v, zVertice, sVertice); return v.dz ? z.map(x => x + v.dz!) : z }
 const sVertice = (p: LL) => superficie.get(p[0] + ',' + p[1])
 // solo frazioni, località, spiagge e cime: bar, farmacie e fermate ora sono punti di interesse (si accavallavano)
 const NOMI = new Set(['village', 'hamlet', 'suburb', 'locality', 'beach', 'peak', 'island', 'islet'])
 
 export async function caricaContesto() {
   const [st, lu, cf, qv] = await Promise.all(['strade', 'luoghi', 'confine', 'quote-vie'].map(async n => (await fetch(`/data/${n}.json`)).json()))
-  strade = st; luoghi = lu
+  originali = new Map((st as Strada[]).map(x => [x.id, x])); luoghi = lu
+  await ricaricaCorrezioni(false)
   const confine: LL[][] = cf
   quoteLidar = new Map((qv.punti as number[][]).map(p => [p[0] + ',' + p[1], p[2]]))
   superficie = new Map((qv.punti as number[][]).filter(p => p[3] !== undefined && p[3] !== null).map(p => [p[0] + ',' + p[1], p[3]]))
@@ -62,12 +87,40 @@ export async function caricaContesto() {
     dc.entities.add({ polyline: { positions: C.Cartesian3.fromDegreesArray(r.flat()), width: 3, clampToGround: true, material: new C.PolylineDashMaterialProperty({ color: C.Color.fromCssColorString('#ff5a5a'), dashLength: 24 }) } })
   await Promise.all([viewer.dataSources.add(dn), viewer.dataSources.add(dc)])
 }
+/** Applica le correzioni a mano alle vie di OpenStreetMap; poi rete e disegno si rifanno. */
+export async function ricaricaCorrezioni(ridisegna = true) {
+  try { const r = await fetch('/api/vie'); if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) correzioni = new Map((await r.json() as Correzione[]).map(x => [x.id, x])) } catch { /* sviluppo senza Worker */ }
+  strade = []
+  for (const o of originali.values()) {
+    const k = correzioni.get(o.id)
+    if (k?.nascosta) continue
+    strade.push(k ? { ...o, c: k.c, dz: k.dz, controllata: !!k.controllata } : o)
+  }
+  rete = undefined
+  if (ridisegna) { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }
+}
+/** Mentre si corregge una via: la si ridisegna subito con i punti nuovi (senza salvare). */
+export function anteprimaVia(id: string, c: LL[] | null, dz = 0) {
+  const i = strade.findIndex(x => x.id === id)
+  const base = correzioni.get(id) ? { ...originali.get(id)!, c: correzioni.get(id)!.c, dz: correzioni.get(id)!.dz } : originali.get(id)
+  if (!base) return
+  const nuova = c ? { ...base, c, dz } : base
+  if (i >= 0) strade[i] = nuova; else strade.push(nuova)
+  rete = undefined
+  const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g)
+}
 export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boolean, google: boolean, colori: Record<string, string> = {}) {
   dn.show = nomi && !google; dc.show = confine
   if (conStrade) disegnaVie(google)
   if (vie) vie.show = conStrade
   if (nomiOn !== (conStrade && nomi)) { nomiOn = conStrade && nomi; impostaVoci('via', nomiOn ? vociVie : []) }
-  for (const g of GRUPPI_VIE) { const m = mat.get(g.k); if (m) m.uniforms.color = C.Color.fromCssColorString(colori[g.k] ?? g.col).withAlpha(0.9) }
+  for (const g of GRUPPI_VIE) {
+    const c = C.Color.fromCssColorString(colori[g.k] ?? g.col)
+    const m = mat.get(g.k), f = matDietro.get(g.k)
+    if (m) m.uniforms.color = c.withAlpha(0.95)
+    if (f) f.uniforms.color = c.withAlpha(0.35)
+  }
+  coloriAttuali = colori
   viewer.scene.requestRender()
 }
 
@@ -90,46 +143,48 @@ export function puntiVia(c: LL[], z: number[], google: boolean, alza = 1.5): C.C
   return C.Cartesian3.fromDegreesArrayHeights(out)
 }
 let fatteCon: boolean | null = null
-const primPerGruppo = new Map<string, C.GroundPolylinePrimitive>()
+const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
 function altezzaVie() {
   const h = viewer.camera.positionCartographic.height
   for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 2500 : h < 800)
 }
 let altezzaAgganciata = false
-/** Vie «dipinte» sulla superficie visibile (Google 3D o il nostro terreno), come su Google Earth: niente linee sospese
- * che si sovrappongono male o spariscono sotto la mesh. Una primitiva per gruppo, così il colore si cambia al volo. */
+/** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono
+ * in trasparenza invece di sparire. Le linee «dipinte» sulla mesh di Google sembravano gelato sciolto dove non combaciavano.
+ * Una primitiva per gruppo di colore, così il colore si cambia al volo. */
 function disegnaVie(google: boolean) {
   if (fatteCon === google) return
   const t0 = performance.now()
   fatteCon = google
   if (vie) viewer.scene.primitives.remove(vie)
   vie = viewer.scene.primitives.add(new C.PrimitiveCollection())
+  primPerGruppo.clear()
   vociVie = []
-  const r = reteVie()
   const perGruppo = new Map<string, C.GeometryInstance[]>()
-  strade.forEach((s, i) => {
+  strade.forEach(s => {
+    if (s.c.length < 2) return
     const g = gruppoDi(s.k)
-    if (s.c.length > 1) {
-      const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-      l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.GroundPolylineGeometry({ positions: C.Cartesian3.fromDegreesArray(s.c.flat()), width: g.w }) }))
-    }
+    const z = quoteDi(s)
+    const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
+    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 1.2), width: g.w, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
     // nome della via a metà, come su Google Maps: si legge solo da vicino
-    if (s.n && s.c.length > 1) {
-      const z = r.quote[i] ?? quoteVia(s, zVertice, sVertice)
+    if (s.n) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
-      const lo = (p[0] + q[0]) / 2, la = (p[1] + q[1]) / 2, zz = google ? (z[k] + z[k + 1]) / 2 : quotaTerreno(lo, la)
+      const lo = (p[0] + q[0]) / 2, la = (p[1] + q[1]) / 2, zz = (z[k] + z[k + 1]) / 2
       vociVie.push({ id: 'via:' + s.id, tipo: 'via', pos: C.Cartesian3.fromDegrees(lo, la, zz + 3 + GEOIDE), testo: s.n, maxDist: s.k === 'primary' ? 900 : 420 })
     }
   })
   for (const g of GRUPPI_VIE) {
     const inst = perGruppo.get(g.k)
     if (!inst?.length) continue
-    let m = mat.get(g.k)
-    if (!m) { m = C.Material.fromType('Color', { color: C.Color.fromCssColorString(g.col).withAlpha(0.9) }); mat.set(g.k, m) }
-    primPerGruppo.set(g.k, vie.add(new C.GroundPolylinePrimitive({
-      geometryInstances: inst, appearance: new C.PolylineMaterialAppearance({ material: m }),
-      classificationType: google ? C.ClassificationType.CESIUM_3D_TILE : C.ClassificationType.TERRAIN, asynchronous: true,
+    const c = C.Color.fromCssColorString(coloriAttuali[g.k] ?? g.col)
+    let m = mat.get(g.k), f = matDietro.get(g.k)
+    if (!m) { m = C.Material.fromType('Color', { color: c.withAlpha(0.95) }); mat.set(g.k, m) }
+    if (!f) { f = C.Material.fromType('Color', { color: c.withAlpha(0.35) }); matDietro.set(g.k, f) }
+    primPerGruppo.set(g.k, vie.add(new C.Primitive({
+      geometryInstances: inst, asynchronous: true,
+      appearance: new C.PolylineMaterialAppearance({ material: m }), depthFailAppearance: new C.PolylineMaterialAppearance({ material: f }),
     })))
   }
   altezzaVie()

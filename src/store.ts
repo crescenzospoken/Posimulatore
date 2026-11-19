@@ -12,6 +12,7 @@ export type Strumento =
   | { k: 'cammina' }
   | { k: 'percorso' }
   | { k: 'poi' }
+  | { k: 'vie' }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
 export type Livelli = {
@@ -55,7 +56,11 @@ type Stato = {
   /** passo delle modifiche in metri (0 = libero) */
   passo: number
   info: { p: LL; z: number } | null
-  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | null
+  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | null
+  /** via in correzione (id OSM) e la sua bozza: punti, quota delle arcate, controllata */
+  selVia: string | null
+  viaBozza: { c: LL[]; dz: number; controllata: boolean } | null
+  viaVSel: number | null
   /** chi ha fatto l'accesso (null = visitatore); solo editor e admin vedono gli strumenti di modifica */
   utente: Utente | null
   /** l'editor ha acceso la modalità modifica (progetti, disegno, edifici) */
@@ -148,6 +153,9 @@ export const useS = create<Stato>((set, get) => ({
   pannello: null,
   percorso: { da: iniziale?.partenza ?? null, a: null, scegli: null },
   ospite: false,
+  selVia: null,
+  viaBozza: null,
+  viaVSel: null,
   casa: iniziale?.casa ?? null,
   scegliCasa: false,
   casaChiesta: iniziale?.casaChiesta ?? false,

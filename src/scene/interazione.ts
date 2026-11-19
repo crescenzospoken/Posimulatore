@@ -78,6 +78,12 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
       useS.setState({ percorso: { ...r, [quale]: { p: q.p }, scegli: r[altro] ? null : altro } })
       return
     }
+    if (t.k === 'vie') {
+      // correzione delle vie: si sceglie una via toccandola (le maniglie si trascinano da sole)
+      const id = idDi(viewer.scene.pick(e.position))
+      if (id?.startsWith('st:')) useS.setState({ selVia: id.slice(3), viaBozza: null, viaVSel: null, pannello: 'via' })
+      return
+    }
     if (t.k === 'poi') {
       // punto di interesse: tocca un simbolo per correggerlo, o la mappa per aggiungerne uno lì (o spostare quello aperto)
       const id = idDi(viewer.scene.pick(e.position))

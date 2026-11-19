@@ -21,3 +21,5 @@
 - Vie: `GroundPolylinePrimitive` drappeggiate su Google (`CESIUM_3D_TILE`) o sul terreno, una per gruppo di colore; scale e vicoli si nascondono sopra 800 m di quota della camera, strade sopra 2,5 km.
 - Modo «Mappa» (Livelli): Google spento, terreno 3D con Esri Light Gray + rilievo. Vista totale `VAI[0]` (`vistaTotale`), pulsante «Rimetti la vista» (percorso, posizione, tutta Positano). Punto Casa del visitatore (`casa` nello store, scheda «Dove alloggi?» al primo avvio).
 - Percorsi: `alternative()` (veloce, meno scale, meno salita), `tratti` per le indicazioni, `confrontoMezzi()` (bus e auto stimati, a piedi preferito se non costa più di 10 min).
+- Correzione vie a mano (strumento «Vie», editor): maniglie HTML in `src/scene/correggiVia.ts`, pannello `src/ui/CorreggiVia.tsx`, D1 `vie` (`migrations/0002_vie.sql`, API `/api/vie`). Durante la correzione la base è il satellite Esri, mai Google 3D. Le vie si disegnano come linee nette alla quota LiDAR (punto LiDAR più vicino entro 12 m per i vertici spostati) più `dz`, visibili in trasparenza dietro il 3D (`depthFailAppearance`).
+- Recinto della camera in `viewer.ts`: entro 9 km da Positano, sotto 5 km di quota.

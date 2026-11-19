@@ -117,6 +117,18 @@ export default function App() {
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto && mod) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto, mod])
   useEffect(() => { if (pronto) disegnaPoi(new Set(s.ospite ? [] : s.poiCat), s.selPoi, mod) }, [pronto, s.poiCat, s.selPoi, mod, s.googleGiro, s.ospite])
   useEffect(() => { if (pronto && !mod && s.strumento.k !== 'naviga' && s.strumento.k !== 'percorso') s.set({ strumento: { k: 'naviga' }, bozza: [] }) }, [pronto, mod])
+  // correzione delle vie: si lavora sul satellite Esri (Google 3D non si può ricalcare); all'uscita torna com'era
+  const primaDiVie = useRef<{ google: boolean; orto: typeof s.livelli.orto } | null>(null)
+  useEffect(() => {
+    if (!pronto) return
+    if (s.strumento.k === 'vie' && !primaDiVie.current) {
+      primaDiVie.current = { google: s.livelli.google, orto: s.livelli.orto }
+      s.setLivelli({ google: false, orto: 'esri', strade: true })
+    } else if (s.strumento.k !== 'vie' && primaDiVie.current) {
+      const p = primaDiVie.current; primaDiVie.current = null
+      s.setLivelli({ google: p.google, orto: p.orto }); s.set({ selVia: null, viaBozza: null, viaVSel: null })
+    }
+  }, [pronto, s.strumento.k])
   useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
   useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
@@ -234,6 +246,7 @@ export default function App() {
         <button className={s.pannello === 'catalogo' ? 'acceso' : ''} onClick={() => { s.set({ pannello: s.pannello === 'catalogo' ? null : 'catalogo' }); setAperto(null) }} data-tip="Auto, bus, gazebo, palchi, tende, arredi"><Icona n="category" />Catalogo</button>
         <button className={st.k === 'cammina' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'cammina' ? { k: 'naviga' } : { k: 'cammina' }, bozza: [] }); setAperto(null) }} data-tip="Cammina ad altezza d'uomo dal punto al centro dello schermo"><Icona n="directions_walk" />Cammina</button>
         <button className={st.k === 'poi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'poi' ? { k: 'naviga' } : { k: 'poi' }, sel: null, selPoi: null, pannello: st.k === 'poi' ? null : 'poi', spostaPoi: false }); setAperto(null) }} data-tip="Aggiungi o correggi bagni, fermate, parcheggi e altri punti: li vedono tutti"><Icona n="add_location_alt" />Punti</button>
+        <button className={st.k === 'vie' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'vie' ? { k: 'naviga' } : { k: 'vie' }, sel: null, selPoi: null, selVia: null, viaBozza: null, pannello: st.k === 'vie' ? null : 'via' }); setAperto(null) }} data-tip="Correggi le vie a mano sul satellite: le vedono tutti e migliorano i percorsi"><Icona n="edit_road" />Vie</button>
       </nav>}
 
       {(st.k === 'disegna' || st.k === 'misura') && (

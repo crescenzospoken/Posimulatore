@@ -97,6 +97,28 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
     }
   }
 
+  // vie corrette a mano: tutti leggono, gli editor scrivono
+  if (via[0] === 'vie') {
+    if (m === 'GET') {
+      const r = await env.DB.prepare('SELECT id, c, dz, controllata, nascosta, aggiornato FROM vie').all<{ c: string }>()
+      return json(r.results.map(x => ({ ...x, c: JSON.parse(x.c) })), 200, { 'Cache-Control': 'public, max-age=30' })
+    }
+    if (!puoModificare) return errore('Serve un account abilitato alla modifica', 403)
+    const id = via[1]
+    if (!id || !/^w\d+$/.test(id)) return errore('Via non valida')
+    if (m === 'DELETE') { await env.DB.prepare('DELETE FROM vie WHERE id = ?').bind(id).run(); return json({ ok: true }) }
+    if (m === 'PUT') {
+      const b = await corpo<{ c?: unknown; dz?: number; controllata?: boolean; nascosta?: boolean }>(req)
+      const c = b?.c
+      if (!Array.isArray(c) || c.length < 2 || c.length > 2000 || !c.every(p => Array.isArray(p) && p.length === 2 && Math.abs(Number(p[0]) - 14.48) < 0.1 && Math.abs(Number(p[1]) - 40.62) < 0.08)) return errore('Punti non validi')
+      const dz = Math.max(-20, Math.min(30, Number(b?.dz) || 0))
+      const pulito = JSON.stringify(c.map(p => [Math.round(Number(p[0]) * 1e7) / 1e7, Math.round(Number(p[1]) * 1e7) / 1e7]))
+      await env.DB.prepare('INSERT INTO vie (id, c, dz, controllata, nascosta, autore, aggiornato) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET c = excluded.c, dz = excluded.dz, controllata = excluded.controllata, nascosta = excluded.nascosta, autore = excluded.autore, aggiornato = excluded.aggiornato')
+        .bind(id, pulito, dz, b?.controllata === false ? 0 : 1, b?.nascosta ? 1 : 0, io!.email, new Date().toISOString()).run()
+      return json({ ok: true })
+    }
+  }
+
   // impostazioni per tutti (colori di base delle vie): tutti leggono, l'amministratore scrive
   if (via[0] === 'impostazioni') {
     if (m === 'GET') {

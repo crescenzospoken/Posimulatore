@@ -375,3 +375,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 @media (max-width: 760px) { .cifre { grid-template-columns: repeat(2, 1fr); } }
 .risultati .cerca-fuori { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--accento); text-decoration: none; font-size: 14px; }
 .risultati .cerca-fuori:hover { background: rgba(11, 107, 203, 0.08); }
+.maniglie { z-index: 2; }
+.maniglia-via { pointer-events: auto; position: absolute; left: 0; top: 0; margin: -13px 0 0 -13px; width: 26px; height: 26px; padding: 0; border-radius: 50%;
+  justify-content: center; font-size: 11px; font-weight: 700; background: #fff; color: #0b3d5c; border: 2px solid var(--accento); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); touch-action: none; cursor: grab; }
+.maniglia-via.scelto { background: var(--accento); color: #fff; width: 32px; height: 32px; margin: -16px 0 0 -16px; }
