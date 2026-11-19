@@ -31,6 +31,8 @@ export type Livelli = {
   /** mostra gli oggetti di progetto (piazze, segnaletica, arredi) */
   progetto: boolean
   qualita: 'leggera' | 'normale' | 'alta'
+  /** quanto schiarire il 3D di Google (0-0,9) per far risaltare vie e punti */
+  attenua: number
   /** colori delle vie per gruppo (statale, strade, scale...): vuoto = colori di base */
   coloriVie: Record<string, string>
   /** versione delle impostazioni di base, per cambiarle una volta a chi le aveva già salvate */
@@ -125,7 +127,7 @@ type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
-const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, rev: 3, ora: 12.5, giorno: '2026-06-21' }
+const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, attenua: 0, rev: 3, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
 // ?lang= nel link vince sulla scelta salvata; poi quella salvata, poi la lingua del telefono
 const linguaAttualeIniziale: Lingua = new URLSearchParams(location.search).get('lang') ? linguaIniziale() : iniziale?.lingua ?? linguaIniziale()

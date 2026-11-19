@@ -35,6 +35,8 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
     selectionIndicator: false, scene3DOnly: true, shadows: false,
     msaaSamples: 1,
     requestRenderMode: true,
+    // altrimenti Cesium disegna a 1 pixel per pixel CSS anche su schermi da 3x: tutto sgranato sul telefono
+    useBrowserRecommendedResolution: false,
     maximumRenderTimeChange: Infinity,
   })
   const s = viewer.scene
@@ -151,16 +153,18 @@ export const telefono = () => matchMedia('(max-width: 760px), (pointer: coarse)'
 export const qualitaIniziale = (): Qualita => (telefono() ? 'leggera' : 'normale')
 let qAttuale: Qualita = 'normale'
 /** Errore a schermo di Google (più alto = meno dettaglio, più veloce) e risoluzione del disegno per ogni livello. */
+// res = pixel veri per ogni pixel CSS (il telefono ne ha 3): prima si disegnava a 0,8 pixel CSS, cioè sgranato
 const Q: Record<Qualita, { sse: number; res: number; cacheMB: number }> = {
-  leggera: { sse: 24, res: 0.8, cacheMB: 160 },
-  normale: { sse: 14, res: 1, cacheMB: 384 },
-  alta: { sse: 6, res: 1.5, cacheMB: 768 },
+  leggera: { sse: 18, res: 1.5, cacheMB: 192 },
+  normale: { sse: 12, res: 2, cacheMB: 384 },
+  alta: { sse: 6, res: 3, cacheMB: 768 },
 }
 export function impostaQualita(q: Qualita) {
   qAttuale = q
   const v = Q[q]
-  // la risoluzione alta ha senso solo su schermi densi
-  viewer.resolutionScale = q === 'alta' ? Math.min(window.devicePixelRatio || 1, v.res) : v.res
+  // si disegna a v.res pixel per pixel CSS, mai oltre lo schermo (useBrowserRecommendedResolution è spento)
+  const dpr = window.devicePixelRatio || 1
+  viewer.resolutionScale = Math.min(dpr, v.res) / dpr
   viewer.scene.postProcessStages.fxaa.enabled = q !== 'leggera'
   // sul leggero 30 fotogrammi al secondo costanti: meglio di 40-60 a strappi (e il telefono scalda meno)
   viewer.targetFrameRate = q === 'leggera' ? 30 : (undefined as unknown as number)
@@ -170,6 +174,19 @@ export function impostaQualita(q: Qualita) {
 }
 let onGoogle: (() => void) | undefined, onGoogleKo: (() => void) | undefined
 let googlePronto = false
+const attenuatore = new C.CustomShader({
+  uniforms: { u_attenua: { type: C.UniformType.FLOAT, value: 0 } },
+  lightingModel: C.LightingModel.UNLIT,
+  fragmentShaderText: `
+    void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
+      vec3 c = material.diffuse;
+      float g = dot(c, vec3(0.299, 0.587, 0.114));
+      vec3 chiaro = mix(vec3(g), vec3(1.0), 0.55);
+      material.diffuse = mix(c, chiaro, u_attenua);
+    }`,
+})
+/** 0 = foto vere, 1 = quasi bianco e grigio come un plastico. */
+export function attenua3D(x: number) { attenuatore.setUniform('u_attenua', Math.max(0, Math.min(1, x))); viewer?.scene.requestRender() }
 let fonteGoogle: 'google' | 'ion' | '' = ''
 /** Da dove arriva il 3D: Google diretto o Cesium ion (per le prove). */
 export const fonte3D = () => fonteGoogle
@@ -208,6 +225,8 @@ export async function impostaGoogle(on: boolean, token: string, chiave = ''): Pr
       }
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY
+      // «Attenua il 3D»: schiarisce e desatura le foto di Google, così vie e punti si leggono meglio (il 3D resta solido)
+      google.customShader = attenuatore
       google.allTilesLoaded.addEventListener(() => onGoogle?.())
       // il satellite resta sotto finché Google non ha la prima vista: prima, se Google tardava o falliva, restava tutto blu
       google.initialTilesLoaded.addEventListener(() => { googlePronto = true; if (google?.show) { viewer.scene.globe.show = false; viewer.scene.requestRender() } })
@@ -302,7 +321,9 @@ function offsetRoma(d: Date) {
 /** Scarica la vista come immagine al doppio della risoluzione, con i crediti scritti dentro. */
 export function foto(nome: string) {
   const prima = viewer.resolutionScale
-  viewer.resolutionScale = Math.min(3, Math.max(2, prima * 2))
+  // foto a 2-3 pixel per pixel CSS, qualunque sia lo schermo
+  const dpr = window.devicePixelRatio || 1
+  viewer.resolutionScale = Math.min(3, Math.max(2, prima * dpr * 2)) / dpr
   viewer.resize()
   viewer.render()
   const src = viewer.canvas
