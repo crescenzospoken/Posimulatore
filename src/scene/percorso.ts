@@ -12,7 +12,7 @@ let linea: C.Entity | undefined
 const zSuolo = (p: [number, number]) => quotaGoogle(p[0], p[1]) ?? quotaTerreno(p[0], p[1])
 
 /** Disegna il percorso: linea blu alla quota vera della strada, visibile anche dietro gli edifici (più chiara). */
-export function disegnaPercorso(r: Percorso | null, da: Tappa | null, a: Tappa | null) {
+export function disegnaPercorso(r: Percorso | null, tappe: Tappa[]) {
   if (linea) viewer.entities.remove(linea)
   linea = undefined
   if (r && r.pts.length > 1) {
@@ -25,11 +25,15 @@ export function disegnaPercorso(r: Percorso | null, da: Tappa | null, a: Tappa |
       },
     })
   }
-  // A e B in HTML sopra la scena, come i punti di interesse (nitidi sul telefono)
-  impostaVoci('tappa', ([['A', da, '#188038'], ['B', a, '#c5221f']] as const).flatMap(([lettera, t, col]) => t ? [{
-    id: 'tappa:' + lettera, tipo: 'tappa' as const, pos: pos(t.p[0], t.p[1], zSuolo(t.p) + 3), testo: tr(lettera === 'A' ? 'Da' : 'A') + ' ' + (t.nome ?? tr('punto scelto')),
-    icona: lettera === 'A' ? 'my_location' : 'location_on', col, scelto: true, maxDist: 1e9,
-  }] : []))
+  // tappe in HTML sopra la scena (nitide sul telefono): A verde, ultima rossa, intermedie blu con la loro lettera
+  impostaVoci('tappa', tappe.map((t, i) => {
+    const ultima = i === tappe.length - 1 && i > 0, prima = i === 0
+    return {
+      id: 'tappa:' + i, tipo: 'tappa' as const, pos: pos(t.p[0], t.p[1], zSuolo(t.p) + 3),
+      testo: String.fromCharCode(65 + i) + ' · ' + (t.nome ?? tr('punto scelto')),
+      icona: prima ? 'my_location' : ultima ? 'location_on' : 'route', col: prima ? '#188038' : ultima ? '#c5221f' : '#0b6bcb', scelto: true, maxDist: 1e9,
+    }
+  }))
   viewer.scene.requestRender()
 }
 

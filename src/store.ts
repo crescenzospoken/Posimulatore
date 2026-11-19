@@ -84,7 +84,9 @@ type Stato = {
   /** colori di base delle vie per tutti, scelti dall'amministratore */
   coloriBase: Record<string, string>
   /** percorso a piedi da A a B; scegli = quale dei due prende il prossimo clic sulla mappa */
-  percorso: { da: Tappa | null; a: Tappa | null; scegli: 'da' | 'a' | null }
+  /** tappe del percorso, in ordine (2 o più = percorso); aggiungiDaMappa = il prossimo tocco sulla mappa aggiunge una tappa */
+  tappe: Tappa[]
+  aggiungiDaMappa: boolean
   /** punto «Casa» del visitatore (dove alloggia): partenza di base dei percorsi; scegliCasa = il prossimo clic sulla mappa lo fissa */
   casa: Tappa | null
   scegliCasa: boolean
@@ -140,7 +142,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta, lingua: s.lingua })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.tappe[0] ?? leggi()?.partenza, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta, lingua: s.lingua })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -164,7 +166,8 @@ export const useS = create<Stato>((set, get) => ({
   passo: 0.1,
   info: null,
   pannello: null,
-  percorso: { da: iniziale?.partenza ?? null, a: null, scegli: null },
+  tappe: [],
+  aggiungiDaMappa: false,
   ospite: false,
   selVia: null,
   selEvento: null,

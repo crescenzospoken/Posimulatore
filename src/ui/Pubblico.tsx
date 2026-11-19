@@ -1,3 +1,4 @@
+import { portamiA } from './tappe'
 import { useRicerca } from './ricerca'
 import { t, linguaAttuale } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
@@ -8,7 +9,7 @@ import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
 import { poiDa, ricaricaPoi } from '../scene/poi'
 import { elencoEventi, inCorso } from '../scene/eventi'
 import { centraSu } from '../scene/gps'
-import { ultimaPosizione, dentroPositano } from '../scene/gps'
+import { dentroPositano } from '../scene/gps'
 
 /** Chiamata alle API: JSON, intestazione propria (le scritture la richiedono) e messaggio d'errore leggibile. */
 export async function chiama<T = unknown>(via: string, metodo = 'GET', corpo?: unknown): Promise<T> {
@@ -47,11 +48,7 @@ export function SchedaPoi() {
   const p = s.selPoi ? poiDa(s.selPoi) : undefined
   if (!p) return null
   const c = categoria(p.c)
-  const portami = () => {
-    const io = ultimaPosizione()
-    const da = io && dentroPositano(io.p) ? { p: io.p, nome: 'La mia posizione' } : s.casa ?? s.percorso.da
-    s.set({ strumento: { k: 'percorso' }, percorso: { da, a: { p: p.p, nome: p.n ?? c.nome }, scegli: da ? null : 'da' }, selPoi: null, pannello: null })
-  }
+  const portami = () => portamiA({ p: p.p, nome: p.n ?? c.nome })
   const x = p.x ?? {}
   return (
     <section className="scheda-poi" aria-label={p.n ?? c.nome}>
@@ -249,11 +246,7 @@ export function SchedaGoogle() {
   const s = useS()
   const g = s.selGoogle
   if (!g) return null
-  const portami = () => {
-    const io = ultimaPosizione()
-    const da = io && dentroPositano(io.p) ? { p: io.p, nome: 'La mia posizione' } : s.casa ?? s.percorso.da
-    s.set({ strumento: { k: 'percorso' }, percorso: { da, a: { p: g.p, nome: g.nome }, scegli: da ? null : 'da' }, selGoogle: null, pannello: null })
-  }
+  const portami = () => portamiA({ p: g.p, nome: g.nome })
   return (
     <section className="scheda-poi" aria-label={g.nome}>
       <div className="pannello-testa">

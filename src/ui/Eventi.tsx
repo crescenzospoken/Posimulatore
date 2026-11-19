@@ -1,10 +1,10 @@
+import { portamiA } from './tappe'
 import { useEffect, useState } from 'react'
 import { useS } from '../store'
 import { t, linguaAttuale } from '../i18n'
 import { Icona } from './Icona'
 import { chiama, condividi, linkPunto } from './Pubblico'
 import { caricaEventi, elencoEventi, eventoDa, inCorso, type Evento } from '../scene/eventi'
-import { ultimaPosizione, dentroPositano } from '../scene/gps'
 
 const quando = (e: Evento) => {
   const l = linguaAttuale() === 'en' ? 'en-GB' : 'it-IT'
@@ -21,11 +21,7 @@ export function SchedaEvento() {
   if (!e) return null
   const en = s.lingua === 'en'
   const titolo = (en && e.titolo_en) || e.titolo, descr = (en && e.descr_en) || e.descr
-  const portami = () => {
-    const io = ultimaPosizione()
-    const da = io && dentroPositano(io.p) ? { p: io.p, nome: t('La mia posizione') } : s.casa ?? s.percorso.da
-    s.set({ strumento: { k: 'percorso' }, percorso: { da, a: { p: [e.lon, e.lat], nome: titolo }, scegli: da ? null : 'da' }, selEvento: null, pannello: null })
-  }
+  const portami = () => portamiA({ p: [e.lon, e.lat], nome: titolo })
   return (
     <section className="scheda-poi" aria-label={titolo}>
       <div className="pannello-testa">
