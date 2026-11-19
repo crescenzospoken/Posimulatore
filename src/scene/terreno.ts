@@ -20,7 +20,18 @@ export const dettaglioBox = () => det && { w: det.w, e: det.e, s: det.s, n: det.
 
 export async function caricaTerreno(base = '/data/') {
   const meta = await (await fetch(base + 'terreno.json')).json()
+  // compresso (differenze + gzip, scripts/comprimi-terreno.py): 0,9 MB invece di 4; i browser vecchi prendono il .bin
   const load = async (k: 'dettaglio' | 'contesto') => {
+    if (typeof DecompressionStream !== 'undefined') {
+      try {
+        const r = await fetch(`${base}terreno-${k}.d16.gz`)
+        if (r.ok && r.body) {
+          const a = new Uint16Array(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).arrayBuffer())
+          for (let i = 1; i < a.length; i++) a[i] = (a[i] + a[i - 1]) & 0xffff
+          return { ...meta[k], a } as Griglia
+        }
+      } catch { /* si ripiega sul file intero */ }
+    }
     const buf = await (await fetch(`${base}terreno-${k}.bin`)).arrayBuffer()
     return { ...meta[k], a: new Uint16Array(buf) } as Griglia
   }

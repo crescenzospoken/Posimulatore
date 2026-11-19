@@ -40,6 +40,7 @@ export default function App() {
   const setCur = (cur: Punto | null) => { const b = barra.current; if (b) b.textContent = cur ? `${cur.p[1].toFixed(5)}, ${cur.p[0].toFixed(5)} · ${cur.z.toFixed(1).replace('.', ',')} m s.l.m.` : 'Positano' }
   const [aperto, setAperto] = useState<string | null>(null)
   const [gps, setGps] = useState(false)
+  const edificiChiesti = useRef(false)
   /** Rimette la vista: sul percorso se ce n'è uno, sulla tua posizione se il GPS è acceso, altrimenti tutta Positano. */
   const rimettiVista = () => {
     const st = useS.getState(), io = ultimaPosizione()
@@ -74,8 +75,6 @@ export default function App() {
         chiama<Utente | null>('io').then(u => { useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })); if (u) caricaMiei() }, () => {})
         chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
         await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
-        // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo
-        setTimeout(() => caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))), 4000)
         disegnaCupole(viewer)
         let tG: ReturnType<typeof setTimeout> | undefined
         // Google finisce di caricare dopo ogni movimento: ricalcolare tutti gli oggetti ogni volta bloccava la pagina.
@@ -142,6 +141,9 @@ export default function App() {
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto && mod) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto, mod])
   useEffect(() => { if (pronto) disegnaEventi(mod, s.selEvento, s.lingua === 'en') }, [pronto, mod, s.selEvento, s.lingua, s.googleGiro])
   useEffect(() => { if (pronto) disegnaPoi(new Set(s.ospite ? [] : s.poiCat), s.selPoi, mod) }, [pronto, s.poiCat, s.selPoi, mod, s.googleGiro, s.ospite])
+  // gli edifici OSM (1 MB) servono solo se accesi o a chi progetta (cosa c'è sotto una piazza): il turista non li scarica
+  const vuoleEdifici = s.livelli.edifici || s.inModifica
+  useEffect(() => { if (pronto && vuoleEdifici && !edificiChiesti.current) { edificiChiesti.current = true; caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))) } }, [pronto, vuoleEdifici])
   useEffect(() => { if (pronto && !mod && s.strumento.k !== 'naviga' && s.strumento.k !== 'percorso') s.set({ strumento: { k: 'naviga' }, bozza: [] }) }, [pronto, mod])
   // correzione delle vie: si lavora sul satellite Esri (Google 3D non si può ricalcare); all'uscita torna com'era
   const primaDiVie = useRef<{ google: boolean; orto: typeof s.livelli.orto } | null>(null)

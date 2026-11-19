@@ -383,6 +383,7 @@ function Aiuto() {
         <p className="nota">Google Map Tiles ({tr('solo da guardare')}) · TINITALY 1.1 INGV (CC BY 4.0) · LiDAR 2 m PST-A · © OpenStreetMap (ODbL) · Esri</p>
       </details>
       <p className="nota">{tr('Tempi e quote sono indicativi: in paese ci sono molte scale, calcola qualche minuto in più.')}</p>
+      <p className="nota"><a href={'/privacy?lang=' + s.lingua} target="_blank" rel="noopener">{tr('Informativa sulla privacy')}</a></p>
     </div>
   )
 }
