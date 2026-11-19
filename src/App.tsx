@@ -4,7 +4,7 @@ import { Cartesian3 } from 'cesium'
 import { useS, type Utente } from './store'
 import { impostaQualita, impostaNitidezza, quandoGoogle, quandoGoogleKo, googleAcceso, creaViewer, vistaTotale, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
-import { caricaContesto, mostraContesto, cerca, reteVie } from './scene/contesto'
+import { caricaContesto, mostraContesto, reteVie } from './scene/contesto'
 import { pos } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
@@ -16,8 +16,7 @@ import { SchedaEvento } from './ui/Eventi'
 import { StreetView } from './ui/StreetView'
 import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
 import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps, ultimaPosizione } from './scene/gps'
-import { categoria } from './engine/poi'
-import { cercaGoogle, type LuogoGoogle } from './engine/luoghiGoogle'
+import { useRicerca } from './ui/ricerca'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
@@ -30,17 +29,6 @@ import type { Obj } from './engine/model'
 import { trasla } from './engine/modifica'
 
 const st0 = (k: string) => k === 'percorso'
-/** Cerca fra punti di interesse (per nome o categoria), vie e luoghi. */
-function cercaTutto(q: string) {
-  const t = q.trim().toLowerCase()
-  if (t.length < 2) return []
-  // nome, categoria, tipo di negozio o cucina, via: si trovano tutti i punti, anche delle categorie spente
-  const testo = (p: ReturnType<typeof elencoPoi>[number]) => [p.n, categoria(p.c).nome, p.note, ...Object.values(p.x ?? {})].join(' ').toLowerCase()
-  const poi = elencoPoi().filter(p => !p.nascosto && testo(p).includes(t))
-    .sort((a, b) => Number((b.n ?? '').toLowerCase().startsWith(t)) - Number((a.n ?? '').toLowerCase().startsWith(t)))
-    .slice(0, 8).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
-  return [...poi, ...cerca(q).map(r => ({ ...r, poi: undefined as string | undefined }))].slice(0, 12)
-}
 export default function App() {
   const el = useRef<HTMLDivElement>(null)
   const [pronto, setPronto] = useState(false)
@@ -201,16 +189,8 @@ export default function App() {
     return () => window.removeEventListener('keydown', k)
   }, [])
 
-  const risultati = q ? cercaTutto(q) : []
-  // luoghi di Google (negozi, attività, tutto quello che c'è): mezzo secondo dopo l'ultima lettera, solo in memoria
-  const [google, setGoogle] = useState<LuogoGoogle[]>([])
-  useEffect(() => {
-    const t = q.trim()
-    // solo sopra il 3D di Google: i luoghi di Google non si possono mostrare su altre mappe (modo Mappa, satellite Esri)
-    if (t.length < 3 || !s.googleKey || !s.livelli.google) { setGoogle([]); return }
-    const id = setTimeout(() => { cercaGoogle(t, s.googleKey, s.lingua).then(r => { const nostri = new Set(risultati.map(x => x.nome.toLowerCase())); setGoogle(r.filter(g => !nostri.has(g.nome.toLowerCase()))) }) }, 500)
-    return () => clearTimeout(id)
-  }, [q, s.googleKey, s.livelli.google, s.lingua])
+  // punti nostri e di OpenStreetMap subito, luoghi di Google poco dopo (stessa ricerca delle tappe e di Casa)
+  const { nostri: risultati, google } = useRicerca(q)
   const st = s.strumento
   return (
     <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>

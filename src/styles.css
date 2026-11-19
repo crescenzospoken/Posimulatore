@@ -397,3 +397,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
   .street-view { top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 52vh; border-radius: 0 0 24px 24px; }
   .in-modifica .street-view { height: 46vh; }
 }
+.tappa-corpo .risultati { position: static; margin-top: 6px !important; list-style: none; margin: 0; padding: 6px; border-radius: 16px; max-height: 40vh; overflow: auto; z-index: 6; }
+.risultati .titoletto { list-style: none; }
+.risultati button span { text-align: left; }
