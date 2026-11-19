@@ -344,3 +344,32 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .segno-poi.lontano { margin: -10px 0 0 -10px; }
 .segno-poi.tappa .testo { background: var(--vetro-forte); padding: 3px 8px; border-radius: 999px; text-shadow: none; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
 .ospite .crediti { background: var(--vetro-forte); }
+.scheda-casa .cerca { position: relative; max-width: none; }
+.scheda-casa .cerca input { width: 100%; }
+.scheda-casa .risultati { position: absolute; left: 0; right: 0; top: calc(100% + 6px); list-style: none; margin: 0; padding: 6px; border-radius: 16px; max-height: 40vh; overflow: auto; z-index: 5; }
+.riga-casa { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(11, 107, 203, 0.07); }
+.riga-casa > span:not(.icona-m) { flex: 1; }
+.riga-casa .icona-m { color: var(--accento); }
+.segmenti { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(60, 64, 67, 0.08); }
+.segmenti button { justify-content: center; border: 0; background: transparent; padding: 9px 10px; }
+.segmenti button.acceso { background: #fff; color: var(--accento); box-shadow: 0 1px 4px rgba(10, 24, 40, 0.18); }
+.alternative { display: flex; gap: 6px; overflow-x: auto; margin: 4px 0 10px; scrollbar-width: none; }
+.alternative button { flex: none; flex-direction: column; align-items: flex-start; gap: 2px; border-radius: 14px; padding: 8px 12px; background: rgba(255, 255, 255, 0.7); }
+.alternative button b { font-size: 16px; }
+.alternative button small { color: var(--tenue); font-size: 12px; }
+.alternative button.acceso { background: var(--accento-soft); border-color: #a8cdf5; }
+.cifre { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 4px; }
+.cifre > span { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 8px; border-radius: 14px; background: rgba(255, 255, 255, 0.6); min-width: 0; }
+.cifre .icona-m { color: var(--accento); width: 20px; height: 20px; }
+.cifre b { font-size: 15px; white-space: nowrap; }
+.cifre small { color: var(--tenue); font-size: 11px; line-height: 1.2; }
+.mezzi, .indicazioni { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.mezzi li, .indicazioni li { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-radius: 12px; }
+.mezzi li.migliore { background: rgba(24, 128, 56, 0.09); }
+.mezzi li em { margin-left: auto; font-style: normal; font-size: 12px; font-weight: 600; color: var(--ok); }
+.mezzi li > span, .indicazioni li > span { display: flex; flex-direction: column; min-width: 0; }
+.mezzi small, .indicazioni small { color: var(--tenue); font-size: 12px; }
+.mezzi .icona-m, .indicazioni .icona-m { color: var(--tenue); width: 22px; height: 22px; }
+.indicazioni li { position: relative; padding-left: 10px; }
+.indicazioni li + li::before { content: ''; position: absolute; left: 20px; top: -6px; height: 8px; border-left: 2px dotted rgba(60, 64, 67, 0.35); }
+@media (max-width: 760px) { .cifre { grid-template-columns: repeat(2, 1fr); } }

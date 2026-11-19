@@ -1,9 +1,11 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import QRCode from 'qrcode'
 import { Icona } from './Icona'
+import type { NomeIcona } from './icone'
+import { elencoPoi } from '../scene/poi'
 import { useS } from '../store'
 import { cerca } from '../scene/contesto'
-import { minutiTesto, tappaInLink, type Percorso, type Tappa } from '../engine/percorso'
+import { confrontoMezzi, minutiTesto, tappaInLink, type Percorso, type Tappa } from '../engine/percorso'
 
 const m = (x: number) => Math.round(x).toLocaleString('it-IT')
 const nomeDi = (t: Tappa | null) => t?.nome || (t ? `Punto ${t.p[1].toFixed(5)}, ${t.p[0].toFixed(5)}` : '')
@@ -16,7 +18,12 @@ export function linkPercorso(da: Tappa | null, a: Tappa | null) {
 }
 
 /** Scheda del percorso a piedi da A a B. Dal link (ospite) mostra solo il percorso. */
-export function SchedaPercorso({ calc, esci }: { calc: Percorso | null; esci: () => void }) {
+const NOME_CRITERIO: Record<string, string> = { veloce: 'Più veloce', scale: 'Meno scale', salita: 'Meno salita' }
+const ICONA_MEZZO: Record<string, NomeIcona> = { piedi: 'directions_walk', bus: 'directions_bus', auto: 'directions_car' }
+const NOME_MEZZO: Record<string, string> = { piedi: 'A piedi', bus: 'Bus', auto: 'Auto' }
+const fermate = () => elencoPoi().filter(p => p.c === 'fermate' && !p.nascosto).map(p => p.p)
+
+export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: Percorso | null; opzioni: Percorso[]; scelta: number; scegli: (i: number) => void; esci: () => void }) {
   const s = useS()
   const r = s.percorso
   const set = (p: Partial<typeof r>) => s.set({ percorso: { ...r, ...p } })
@@ -78,10 +85,38 @@ export function SchedaPercorso({ calc, esci }: { calc: Percorso | null; esci: ()
       {r.scegli && <p className="nota">Tocca la mappa per scegliere {r.scegli === 'da' ? 'la partenza' : 'l\'arrivo'}.</p>}
       {r.da && r.a && (calc ? (
         <div className="esito">
-          <p className="tempo"><b>{minutiTesto(calc.minuti)}</b> a piedi <span>· ritorno {minutiTesto(calc.ritorno)}</span></p>
-          <p>{m(calc.metri)} m · in salita {m(calc.salita)} m · in discesa {m(calc.discesa)} m{calc.gradini > 20 ? ` · circa ${m(Math.round(calc.gradini / 10) * 10)} gradini` : ''}</p>
-          {calc.nomi.length > 0 && <p className="nota">Passa da {calc.nomi.slice(0, 5).join(', ')}{calc.nomi.length > 5 ? '…' : ''}</p>}
-          <p className="nota">Passo tranquillo, con salite e scale (regola DIN 33466 sulle quote LiDAR). Stima da verificare.</p>
+          {opzioni.length > 1 && (
+            <div className="alternative" role="tablist" aria-label="Percorsi alternativi">
+              {opzioni.map((o, i) => (
+                <button key={i} role="tab" aria-selected={i === scelta} className={i === scelta ? 'acceso' : ''} onClick={() => scegli(i)}>
+                  <b>{minutiTesto(o.minuti)}</b><small>{NOME_CRITERIO[o.criterio ?? 'veloce']}{o.gradini > 20 ? ` · ${m(Math.round(o.gradini / 10) * 10)} gradini` : ' · senza scale'}</small>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="cifre">
+            <span><Icona n="schedule" /><b>{minutiTesto(calc.minuti)}</b><small>ritorno {minutiTesto(calc.ritorno)}</small></span>
+            <span><Icona n="route" /><b>{m(calc.metri)} m</b><small>a piedi</small></span>
+            <span><Icona n="stairs" /><b>{calc.gradini > 20 ? '~' + m(Math.round(calc.gradini / 10) * 10) : '0'}</b><small>gradini</small></span>
+            <span><Icona n="trending_up" /><b>{m(calc.salita)} m</b><small>salita · {m(calc.discesa)} m discesa</small></span>
+          </div>
+          {(() => { const mz = r.da && r.a ? confrontoMezzi(calc, fermate(), r.da.p, r.a.p) : []; return mz.length > 1 && (
+            <>
+              <h3>Come conviene</h3>
+              <ul className="mezzi">{mz.map((x, i) => <li key={x.k} className={i === 0 ? 'migliore' : ''}><Icona n={ICONA_MEZZO[x.k]} /><span><b>{NOME_MEZZO[x.k]} · {minutiTesto(x.minuti)}</b><small>{x.nota}</small></span>{i === 0 && <em>consigliato</em>}</li>)}</ul>
+            </>
+          ) })()}
+          {calc.tratti.length > 0 && (
+            <>
+              <h3>Indicazioni</h3>
+              <ol className="indicazioni">{calc.tratti.filter(t => t.metri >= 15).map((t, i) => (
+                <li key={i}><Icona n={t.tipo === 'scale' ? 'stairs' : t.tipo === 'sentiero' ? 'directions_walk' : 'route'} />
+                  <span><b>{t.nome || (t.tipo === 'scale' ? 'Scale' : t.tipo === 'vicolo' ? 'Vicolo' : t.tipo === 'sentiero' ? 'Sentiero' : 'Strada')}</b>
+                  <small>{m(t.metri)} m{t.gradini > 15 ? ` · ~${m(Math.round(t.gradini / 10) * 10)} gradini` : ''}{t.su > 4 ? ` · sale ${m(t.su)} m` : ''}{t.giu > 4 ? ` · scende ${m(t.giu)} m` : ''}</small></span></li>
+              ))}</ol>
+            </>
+          )}
+          <p className="nota">Stime nostre: passo tranquillo con salite e scale (regola DIN 33466 sulle quote LiDAR), gradini stimati in 16 cm l'uno. Bus e auto sono indicativi. Col censimento delle scale diventeranno misure vere.</p>
         </div>
       ) : <p className="nota">Nessun percorso trovato: scegli punti vicino a una via o a una scala.</p>)}
       {!s.ospite && r.a && (

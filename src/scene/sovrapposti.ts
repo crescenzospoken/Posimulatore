@@ -19,8 +19,9 @@ export function avviaSovrapposti(contenitore: HTMLElement) {
   viewer.scene.postRender.addEventListener(aggiorna)
 }
 /** Sostituisce tutte le voci di un tipo (le vie si impostano una volta, i punti quando cambiano filtri o dati). */
-export function impostaVoci(tipo: Voce['tipo'], nuove: Voce[]) {
-  voci = [...voci.filter(v => v.tipo !== tipo), ...nuove]
+export function impostaVoci(gruppo: string, nuove: Voce[]) {
+  // il gruppo è il prefisso dell'id (poi:, via:, tappa:, casa)
+  voci = [...voci.filter(v => !v.id.startsWith(gruppo)), ...nuove]
   for (const [id, el] of elementi) if (!voci.some(v => v.id === id)) { el.remove(); elementi.delete(id) }
   viewer.scene.requestRender()
 }

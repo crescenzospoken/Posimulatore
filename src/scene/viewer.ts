@@ -7,7 +7,7 @@ import type { Vista } from '../engine/model'
 ;(window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = '/cesium/'
 export let viewer: C.Viewer
 export const VAI: { nome: string; lon: number; lat: number; h: number; heading: number; pitch: number }[] = [
-  { nome: 'Tutta Positano', lon: 14.4835, lat: 40.6085, h: 1500, heading: 0, pitch: -32 },
+  { nome: 'Tutta Positano', lon: 14.4858, lat: 40.6192, h: 900, heading: 6, pitch: -42 },
   { nome: 'Bivio di Chiesa Nuova', lon: 14.48335, lat: 40.62935, h: 222, heading: 262, pitch: -38 },
   { nome: 'Spiaggia Grande e Collegiata', lon: 14.4852, lat: 40.6248, h: 160, heading: 0, pitch: -25 },
   { nome: 'La Sponda', lon: 14.4905, lat: 40.6250, h: 200, heading: -10, pitch: -35 },
@@ -20,6 +20,8 @@ export const VAI: { nome: string; lon: number; lat: number; h: number; heading: 
 let pavimento = true
 /** Il pavimento della camera si spegne mentre si cammina (lì la quota la decide la camminata). */
 export const pavimentoAttivo = (on: boolean) => { pavimento = on }
+/** Tutta Positano dal mare; sul telefono (schermo stretto) un po' più alta per starci tutta. */
+export const vistaTotale = (durata = 1.6) => { const v = VAI[0]; vai(telefono() ? { ...v, h: v.h * 1.6, lat: v.lat - 0.004 } : v, durata) }
 export const pos = (lon: number, lat: number, z: number) => C.Cartesian3.fromDegrees(lon, lat, z + GEOIDE)
 
 export async function creaViewer(el: HTMLElement, onReady?: () => void) {
@@ -86,7 +88,7 @@ export function vistaCorrente(): Vista {
 }
 
 // ---------- ortofoto e mappe ----------
-let strato: C.ImageryLayer | undefined
+let strato: C.ImageryLayer | undefined, rilievo: C.ImageryLayer | undefined
 let ortoAttuale = ''
 export function impostaOrto(k: Livelli['orto']) {
   if (k === ortoAttuale) return
@@ -107,10 +109,25 @@ export function impostaOrto(k: Livelli['orto']) {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       maximumLevel: 19, credit: new C.Credit('Immagini: Esri, Maxar, Earthstar Geographics'),
     })
+  } else if (k === 'mappa') {
+    // mappa semplice grigio chiaro (Esri Light Gray Canvas, stesso server del satellite): sopra, le nostre vie colorate si leggono bene
+    prov = new C.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 16, credit: new C.Credit('Mappa: Esri, HERE, Garmin, © OpenStreetMap contributors'),
+    })
   } else {
     prov = new C.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/', maximumLevel: 19, credit: '© OpenStreetMap contributors' } as C.OpenStreetMapImageryProvider.ConstructorOptions)
   }
   strato = viewer.imageryLayers.addImageryProvider(prov, 0)
+  // sulla mappa semplice un'ombreggiatura leggera del rilievo e il mare azzurro, così si legge il 3D
+  if (rilievo) { viewer.imageryLayers.remove(rilievo, true); rilievo = undefined }
+  if (k === 'mappa') {
+    rilievo = viewer.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', maximumLevel: 16, credit: new C.Credit('Rilievo: Esri'),
+    }))
+    rilievo.alpha = 0.28
+  }
+  viewer.scene.globe.baseColor = C.Color.fromCssColorString(k === 'mappa' ? '#aadaff' : '#1d4f73')
   // sotto l'ortofoto, fuori dall'Italia o mentre carica: satellite a bassa risoluzione
   viewer.scene.requestRender()
 }
