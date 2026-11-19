@@ -69,6 +69,8 @@ type Stato = {
   poiCat: string[]
   /** punto di interesse scelto (scheda aperta) o in modifica */
   selPoi: string | null
+  /** luogo di Google scelto dalla ricerca: solo in memoria, mai salvato (regole di Google) */
+  selGoogle: import('./engine/luoghiGoogle').LuogoGoogle | null
   /** nuova posizione scelta sulla mappa per il punto aperto (quando si sposta) */
   poiPos: LL | null
   spostaPoi: boolean
@@ -163,6 +165,7 @@ export const useS = create<Stato>((set, get) => ({
   inModifica: iniziale?.inModifica ?? false,
   poiCat: iniziale?.poiCat ?? CATEGORIE.filter(c => c.base).map(c => c.k),
   selPoi: null,
+  selGoogle: null,
   poiPos: null,
   spostaPoi: false,
   coloriBase: {},

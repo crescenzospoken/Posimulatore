@@ -7,3 +7,6 @@ if (new URLSearchParams(location.search).has('prova')) {
   import('./store').then(m => ((window as unknown as Record<string, unknown>).__S = m.useS))
   import('./scene/viewer').then(m => ((window as unknown as Record<string, unknown>).__V = m))
 }
+
+// app installabile e offline (solo sul sito vero, non in sviluppo)
+if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.startsWith('claude-')) navigator.serviceWorker.register('/sw.js').catch(() => {})

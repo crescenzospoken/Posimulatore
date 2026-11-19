@@ -8,11 +8,12 @@ import { pos } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso } from './ui/Percorso'
-import { Servizi, SchedaPoi, SchedaCasa, chiama, puoModificare } from './ui/Pubblico'
+import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
 import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
 import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps, ultimaPosizione } from './scene/gps'
 import { categoria } from './engine/poi'
+import { cercaGoogle, type LuogoGoogle } from './engine/luoghiGoogle'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
@@ -97,10 +98,17 @@ export default function App() {
         stop = avviaInterazione(setCur, finisci)
         // link o QR con il percorso: ?da=lon,lat,Nome&a=lon,lat,Nome
         const u = new URLSearchParams(location.search), da = tappaDaLink(u.get('da')), a = tappaDaLink(u.get('a'))
+        // link di un punto: ?poi=id (nostro) o ?punto=lon,lat,Nome
+        const lp = u.get('poi'), pp = tappaDaLink(u.get('punto'))
+        const condiviso = lp ? elencoPoi().find(x => x.id === lp) : undefined
+        if (condiviso) useS.setState(st => ({ selPoi: condiviso.id, casaChiesta: true, poiCat: st.poiCat.includes(condiviso.c) ? st.poiCat : [...st.poiCat, condiviso.c] }))
+        else if (pp) useS.setState({ selGoogle: { id: 'link', nome: pp.nome ?? 'Punto condiviso', p: pp.p }, casaChiesta: true })
+        const centro = condiviso?.p ?? pp?.p
         if (a || da) useS.setState(st => ({ percorso: { da: da ?? st.percorso.da, a, scegli: da && a ? null : da ? 'a' : 'da' }, strumento: { k: 'percorso' }, ospite: Boolean(a), pannello: null }))
         // all'apertura la vista di tutta Positano; chi progetta riparte dalla vista salvata nel progetto
         const st0x = useS.getState(), v = st0x.inModifica && puoModificare(st0x.utente) && st0x.progetto().vista
-        if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
+        if (centro) centraSu(centro)
+        else if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
       } catch (e) {
@@ -143,6 +151,11 @@ export default function App() {
   const calc = opzioni[Math.min(scelta, opzioni.length - 1)] ?? null
   useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? da : null, inPercorso ? a : null) }, [pronto, inPercorso, calc, da?.nome, a?.nome, s.livelli.google, s.googleGiro])
   useEffect(() => { calcRef.current = calc; if (calc) inquadraPercorso(calc) }, [calc])
+  useEffect(() => {
+    if (!pronto) return
+    const g = s.selGoogle
+    impostaVoci('gpl', g ? [{ id: 'gpl', tipo: 'tappa', pos: pos(g.p[0], g.p[1], quota(g.p[0], g.p[1]) + 3), testo: g.nome, icona: 'location_on', col: '#c5221f', scelto: true, maxDist: 1e9 }] : [])
+  }, [pronto, s.selGoogle?.id, s.googleGiro])
   // il punto Casa sulla mappa (toccandolo: percorso da Casa)
   useEffect(() => {
     if (!pronto) return
@@ -183,6 +196,15 @@ export default function App() {
   }, [])
 
   const risultati = q ? cercaTutto(q) : []
+  // luoghi di Google (negozi, attività, tutto quello che c'è): mezzo secondo dopo l'ultima lettera, solo in memoria
+  const [google, setGoogle] = useState<LuogoGoogle[]>([])
+  useEffect(() => {
+    const t = q.trim()
+    // solo sopra il 3D di Google: i luoghi di Google non si possono mostrare su altre mappe (modo Mappa, satellite Esri)
+    if (t.length < 3 || !s.googleKey || !s.livelli.google) { setGoogle([]); return }
+    const id = setTimeout(() => { cercaGoogle(t, s.googleKey).then(r => { const nostri = new Set(risultati.map(x => x.nome.toLowerCase())); setGoogle(r.filter(g => !nostri.has(g.nome.toLowerCase()))) }) }, 500)
+    return () => clearTimeout(id)
+  }, [q, s.googleKey, s.livelli.google])
   const st = s.strumento
   return (
     <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>
@@ -201,7 +223,9 @@ export default function App() {
           {(risultati.length > 0 || cercaAperta) && <ul className="risultati vetro">
             {q.trim() ? risultati.map(r => (
               <li key={r.nome + r.tipo + (r.poi ?? '')}><button onMouseDown={e => e.preventDefault()} onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); if (r.poi) { const c = elencoPoi().find(x => x.id === r.poi)!.c; s.set({ selPoi: r.poi, poiCat: s.poiCat.includes(c) ? s.poiCat : [...s.poiCat, c] }) } }}><Icona n={r.poi ? 'location_on' : r.tipo === 'strada' ? 'route' : 'map'} /><span>{r.nome}</span><small>{r.tipo}</small></button></li>
-            )).concat(q.trim().length > 1 ? [<li key="gmaps"><a className="cerca-fuori" href={'https://www.google.com/maps/search/' + encodeURIComponent(q.trim() + ' Positano')} target="_blank" rel="noopener"><Icona n="open_in_new" /><span>Non c'è? Cerca «{q.trim()}» su Google Maps</span></a></li>] : []) : <>
+            )).concat(google.length ? [<li key="gt" className="titoletto">Da Google Maps</li>, ...google.map(g => (
+              <li key={'g' + g.id}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai({ lon: g.p[0], lat: g.p[1] - 0.0012, h: quota(g.p[0], g.p[1]) + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); s.set({ selGoogle: g, selPoi: null, pannello: null }) }}><Icona n="location_on" /><span>{g.nome}</span><small>{g.tipo ?? g.indirizzo}</small></button></li>
+            )), <li key="ga" className="attribuzione-google">Risultati di Google</li>] : []) : <>
               {s.casa && <li><button onMouseDown={e => e.preventDefault()} onClick={() => { centraSu(s.casa!.p); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="home" /><span>Casa{s.casa.nome && s.casa.nome !== 'Casa' ? ' · ' + s.casa.nome : ''}</span></button></li>}
               <li className="titoletto">Vai a</li>
               {VAI.map(v => <li key={v.nome}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai(v); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="near_me" /><span>{v.nome}</span></button></li>)}
@@ -263,6 +287,7 @@ export default function App() {
       {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
+      {s.selGoogle && !s.selPoi && !s.pannello && st.k !== 'percorso' && <SchedaGoogle />}
       {pronto && !mod && !s.ospite && (s.scegliCasa || (!s.casaChiesta && !s.selPoi && st.k === 'naviga' && !s.pannello)) && <SchedaCasa />}
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 

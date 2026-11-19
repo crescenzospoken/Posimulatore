@@ -61,6 +61,7 @@ export function SchedaPoi() {
       {x.phone && <p><a href={'tel:' + x.phone.replace(/\s/g, '')}>{x.phone}</a></p>}
       <div className="riga-bottoni">
         <button className="primary" onClick={portami}><Icona n="directions" />Portami qui</button>
+        <button className="quiet" onClick={() => condividi(p.n ?? c.nome, linkPunto({ id: p.id, p: p.p, nome: p.n }, true), s.dici)}><Icona n="share" />Condividi</button>
         {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>Modifica</button>}
       </div>
       <p className="nota">{p.fonte === 'osm' ? 'Dati © OpenStreetMap' : 'Aggiunto dal Comune'}</p>
@@ -229,4 +230,44 @@ function RigaCasa() {
       <button type="button" className="quiet" onClick={() => s.set({ casaChiesta: false, casa: null, pannello: null })}>{s.casa ? 'Cambia' : 'Scegli'}</button>
     </div>
   )
+}
+
+/** Scheda di un luogo di Google trovato con la ricerca: nome, tipo, indirizzo, «Portami qui», «Apri in Google Maps». Niente si salva. */
+export function SchedaGoogle() {
+  const s = useS()
+  const g = s.selGoogle
+  if (!g) return null
+  const portami = () => {
+    const io = ultimaPosizione()
+    const da = io && dentroPositano(io.p) ? { p: io.p, nome: 'La mia posizione' } : s.casa ?? s.percorso.da
+    s.set({ strumento: { k: 'percorso' }, percorso: { da, a: { p: g.p, nome: g.nome }, scegli: da ? null : 'da' }, selGoogle: null, pannello: null })
+  }
+  return (
+    <section className="scheda-poi" aria-label={g.nome}>
+      <div className="pannello-testa">
+        <h2><span className="icona-tonda" style={{ background: '#c5221f' }}><Icona n="location_on" /></span>{g.nome}</h2>
+        <button className="tondo quiet" onClick={() => s.set({ selGoogle: null })} aria-label="Chiudi"><Icona n="close" /></button>
+      </div>
+      {g.tipo && <p className="nota">{g.tipo}</p>}
+      {g.indirizzo && <p>{g.indirizzo}</p>}
+      <div className="riga-bottoni">
+        <button className="primary" onClick={portami}><Icona n="directions" />Portami qui</button>
+        {g.url && <a className="bottone" href={g.url} target="_blank" rel="noopener"><Icona n="open_in_new" />Orari e recensioni</a>}
+        <button className="quiet" onClick={() => condividi(g.nome, linkPunto({ p: g.p, nome: g.nome }, false), s.dici)}><Icona n="share" />Condividi</button>
+      </div>
+      <p className="nota attribuzione-google">Dati di Google</p>
+    </section>
+  )
+}
+
+/** Condivide un punto: menu di condivisione del telefono, altrimenti copia il link. */
+export async function condividi(titolo: string, url: string, dici: (t: string) => void) {
+  try { if (navigator.share) { await navigator.share({ title: titolo, url }); return } } catch { return }
+  try { await navigator.clipboard.writeText(url); dici('Link copiato') } catch { dici('Copia non riuscita') }
+}
+export const linkPunto = (x: { id?: string; p: [number, number]; nome?: string }, nostro: boolean) => {
+  const u = new URL(location.origin + '/')
+  if (nostro && x.id) u.searchParams.set('poi', x.id)
+  else u.searchParams.set('punto', `${x.p[0].toFixed(6)},${x.p[1].toFixed(6)}${x.nome ? ',' + x.nome : ''}`)
+  return u.toString()
 }
