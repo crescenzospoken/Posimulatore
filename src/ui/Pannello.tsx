@@ -212,10 +212,16 @@ function Livelli() {
   )
   return (
     <div className="campi">
+      {/* due modi: la foto 3D di Google, o una mappa semplice sul terreno in 3D dove le vie colorate si leggono meglio */}
+      <div className="segmenti" role="radiogroup" aria-label="Tipo di mappa">
+        <button role="radio" aria-checked={l.google} className={l.google ? 'acceso' : ''} onClick={() => s.setLivelli({ google: true, orto: 'esri' })}><Icona n="photo_camera" />Foto 3D</button>
+        <button role="radio" aria-checked={!l.google && l.orto === 'mappa'} className={!l.google && l.orto === 'mappa' ? 'acceso' : ''} onClick={() => s.setLivelli({ google: false, orto: 'mappa', strade: true })}><Icona n="map" />Mappa</button>
+      </div>
       <label>Immagine del suolo
         <select value={l.orto} onChange={e => s.setLivelli({ orto: e.target.value as typeof l.orto })}>
           <option value="esri">Satellite (Esri World Imagery)</option>
           <option value="pcn2012">Ortofoto 2012 (Geoportale Nazionale, a volte non risponde)</option>
+          <option value="mappa">Mappa semplice grigio chiaro (Esri)</option>
           <option value="osm">Mappa OpenStreetMap</option>
         </select>
       </label>

@@ -350,3 +350,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .riga-casa { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(11, 107, 203, 0.07); }
 .riga-casa > span:not(.icona-m) { flex: 1; }
 .riga-casa .icona-m { color: var(--accento); }
+.segmenti { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(60, 64, 67, 0.08); }
+.segmenti button { justify-content: center; border: 0; background: transparent; padding: 9px 10px; }
+.segmenti button.acceso { background: #fff; color: var(--accento); box-shadow: 0 1px 4px rgba(10, 24, 40, 0.18); }

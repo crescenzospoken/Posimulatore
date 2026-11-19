@@ -31,7 +31,8 @@ let rete: Rete | undefined
 export const reteVie = () => (rete ??= creaRete(strade, zVertice, sVertice))
 const zVertice = (p: LL) => quoteLidar.get(p[0] + ',' + p[1]) ?? quotaTerreno(p[0], p[1])
 const sVertice = (p: LL) => superficie.get(p[0] + ',' + p[1])
-const NOMI = new Set(['village', 'hamlet', 'suburb', 'locality', 'beach', 'place_of_worship', 'peak', 'viewpoint', 'parking', 'platform', 'stop_position', 'island', 'islet', 'square', 'town_hall', 'school', 'pharmacy'])
+// solo frazioni, località, spiagge e cime: bar, farmacie e fermate ora sono punti di interesse (si accavallavano)
+const NOMI = new Set(['village', 'hamlet', 'suburb', 'locality', 'beach', 'peak', 'island', 'islet'])
 
 export async function caricaContesto() {
   const [st, lu, cf, qv] = await Promise.all(['strade', 'luoghi', 'confine', 'quote-vie'].map(async n => (await fetch(`/data/${n}.json`)).json()))

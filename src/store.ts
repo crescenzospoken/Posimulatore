@@ -15,7 +15,7 @@ export type Strumento =
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
 export type Livelli = {
-  orto: 'pcn2012' | 'esri' | 'osm'
+  orto: 'pcn2012' | 'esri' | 'osm' | 'mappa'
   edifici: boolean
   stile: 'plastico' | 'facciate'
   strade: boolean

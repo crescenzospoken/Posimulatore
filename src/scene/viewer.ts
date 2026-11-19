@@ -88,7 +88,7 @@ export function vistaCorrente(): Vista {
 }
 
 // ---------- ortofoto e mappe ----------
-let strato: C.ImageryLayer | undefined
+let strato: C.ImageryLayer | undefined, rilievo: C.ImageryLayer | undefined
 let ortoAttuale = ''
 export function impostaOrto(k: Livelli['orto']) {
   if (k === ortoAttuale) return
@@ -109,10 +109,25 @@ export function impostaOrto(k: Livelli['orto']) {
       url: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
       maximumLevel: 19, credit: new C.Credit('Immagini: Esri, Maxar, Earthstar Geographics'),
     })
+  } else if (k === 'mappa') {
+    // mappa semplice grigio chiaro (Esri Light Gray Canvas, stesso server del satellite): sopra, le nostre vie colorate si leggono bene
+    prov = new C.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      maximumLevel: 16, credit: new C.Credit('Mappa: Esri, HERE, Garmin, © OpenStreetMap contributors'),
+    })
   } else {
     prov = new C.OpenStreetMapImageryProvider({ url: 'https://tile.openstreetmap.org/', maximumLevel: 19, credit: '© OpenStreetMap contributors' } as C.OpenStreetMapImageryProvider.ConstructorOptions)
   }
   strato = viewer.imageryLayers.addImageryProvider(prov, 0)
+  // sulla mappa semplice un'ombreggiatura leggera del rilievo e il mare azzurro, così si legge il 3D
+  if (rilievo) { viewer.imageryLayers.remove(rilievo, true); rilievo = undefined }
+  if (k === 'mappa') {
+    rilievo = viewer.imageryLayers.addImageryProvider(new C.UrlTemplateImageryProvider({
+      url: 'https://server.arcgisonline.com/ArcGIS/rest/services/Elevation/World_Hillshade/MapServer/tile/{z}/{y}/{x}', maximumLevel: 16, credit: new C.Credit('Rilievo: Esri'),
+    }))
+    rilievo.alpha = 0.28
+  }
+  viewer.scene.globe.baseColor = C.Color.fromCssColorString(k === 'mappa' ? '#aadaff' : '#1d4f73')
   // sotto l'ortofoto, fuori dall'Italia o mentre carica: satellite a bassa risoluzione
   viewer.scene.requestRender()
 }
