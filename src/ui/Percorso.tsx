@@ -1,3 +1,4 @@
+import { useRicerca } from './ricerca'
 import { t as tr, linguaAttuale } from '../i18n'
 import { useEffect, useState, type ReactNode } from 'react'
 import QRCode from 'qrcode'
@@ -5,7 +6,6 @@ import { Icona } from './Icona'
 import type { NomeIcona } from './icone'
 import { elencoPoi } from '../scene/poi'
 import { useS } from '../store'
-import { cerca } from '../scene/contesto'
 import { confrontoMezzi, minutiTesto, tappaInLink, type Percorso, type Tappa } from '../engine/percorso'
 
 const m = (x: number) => Math.round(x).toLocaleString(linguaAttuale() === 'en' ? 'en-GB' : 'it-IT')
@@ -135,7 +135,7 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
 
 function RigaTappa({ titolo, t, scegli, onScegli, onCambia, extra, ospite }: { titolo: string; t: Tappa | null; scegli: boolean; onScegli: () => void; onCambia: (t: Tappa) => void; extra?: ReactNode; ospite: boolean }) {
   const [q, setQ] = useState('')
-  const ris = q ? cerca(q) : []
+  const { nostri: ris, google } = useRicerca(q)
   return (
     <div className="tappa">
       <span className="lettera" aria-label={tr(titolo === 'Da' ? 'Partenza' : 'Arrivo')}>{titolo === 'Da' ? 'A' : 'B'}</span>
@@ -144,7 +144,12 @@ function RigaTappa({ titolo, t, scegli, onScegli, onCambia, extra, ospite }: { t
         {t && ospite && <b>{nomeDi(t)}</b>}
         <div className="cerca">
           <input value={q} onChange={e => setQ(e.target.value)} placeholder={tr(t ? 'Cambia: cerca via o luogo' : 'Cerca via o luogo')} aria-label={`Cerca ${titolo === 'Da' ? 'la partenza' : 'l\'arrivo'}`} />
-          {ris.length > 0 && <ul className="risultati">{ris.map(x => <li key={x.nome + x.tipo}><button onClick={() => { onCambia({ p: x.p, nome: x.nome }); setQ('') }}>{x.nome} <small>{x.tipo}</small></button></li>)}</ul>}
+          {(ris.length > 0 || google.length > 0) && <ul className="risultati vetro">
+            {ris.map(x => <li key={x.nome + x.tipo + (x.poi ?? '')}><button onClick={() => { onCambia({ p: x.p, nome: x.nome }); setQ('') }}><Icona n={x.poi ? 'location_on' : x.tipo === 'strada' ? 'route' : 'map'} /><span>{x.nome}</span><small>{tr(x.tipo)}</small></button></li>)}
+            {google.length > 0 && <li className="titoletto">{tr('Da Google Maps')}</li>}
+            {google.map(g => <li key={'g' + g.id}><button onClick={() => { onCambia({ p: g.p, nome: g.nome }); setQ('') }}><Icona n="location_on" /><span>{g.nome}</span><small>{g.tipo ?? g.indirizzo}</small></button></li>)}
+            {google.length > 0 && <li className="attribuzione-google">{tr('Risultati di Google')}</li>}
+          </ul>}
         </div>
         <div className="riga-bottoni">
           <button className={'quiet' + (scegli ? ' acceso' : '')} onClick={onScegli} aria-pressed={scegli}>{tr('Scegli sulla mappa')}</button>

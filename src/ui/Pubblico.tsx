@@ -1,3 +1,4 @@
+import { useRicerca } from './ricerca'
 import { t, linguaAttuale } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useS, type Utente } from '../store'
@@ -5,7 +6,6 @@ import { Icona } from './Icona'
 import type { NomeIcona } from './icone'
 import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
 import { poiDa, ricaricaPoi } from '../scene/poi'
-import { cerca } from '../scene/contesto'
 import { elencoEventi, inCorso } from '../scene/eventi'
 import { centraSu } from '../scene/gps'
 import { ultimaPosizione, dentroPositano } from '../scene/gps'
@@ -196,7 +196,7 @@ export function Utenti() {
 export function SchedaCasa() {
   const s = useS()
   const [q, setQ] = useState('')
-  const ris = q ? cerca(q) : []
+  const { nostri: ris, google } = useRicerca(q)
   const fissa = (t: { p: [number, number]; nome?: string }) => s.set({ casa: { p: t.p, nome: t.nome || 'Casa' }, casaChiesta: true, scegliCasa: false })
   const posizione = () => {
     if (!navigator.geolocation) { s.dici(t('Questo dispositivo non dà la posizione')); return }
@@ -222,7 +222,12 @@ export function SchedaCasa() {
       </div>
       <div className="cerca" style={{ marginTop: 10 }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('Cerca hotel, via o luogo')} aria-label={t('Cerca il tuo alloggio')} />
-        {ris.length > 0 && <ul className="risultati vetro">{ris.map(x => <li key={x.nome + x.tipo}><button onClick={() => fissa({ p: x.p, nome: x.nome })}><Icona n="location_on" /><span>{x.nome}</span><small>{x.tipo}</small></button></li>)}</ul>}
+        {(ris.length > 0 || google.length > 0) && <ul className="risultati vetro">
+          {ris.map(x => <li key={x.nome + x.tipo + (x.poi ?? '')}><button onClick={() => fissa({ p: x.p, nome: x.nome })}><Icona n="location_on" /><span>{x.nome}</span><small>{t(x.tipo)}</small></button></li>)}
+          {google.length > 0 && <li className="titoletto">{t('Da Google Maps')}</li>}
+          {google.map(g => <li key={'g' + g.id}><button onClick={() => fissa({ p: g.p, nome: g.nome })}><Icona n="hotel" /><span>{g.nome}</span><small>{g.tipo ?? g.indirizzo}</small></button></li>)}
+          {google.length > 0 && <li className="attribuzione-google">{t('Risultati di Google')}</li>}
+        </ul>}
       </div>
     </section>
   )
