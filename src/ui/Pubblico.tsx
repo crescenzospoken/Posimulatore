@@ -43,7 +43,7 @@ export function SchedaPoi() {
   const c = categoria(p.c)
   const portami = () => {
     const io = ultimaPosizione()
-    const da = io && dentroPositano(io.p) ? { p: io.p, nome: 'La mia posizione' } : s.percorso.da
+    const da = io && dentroPositano(io.p) ? { p: io.p, nome: 'La mia posizione' } : s.casa ?? s.percorso.da
     s.set({ strumento: { k: 'percorso' }, percorso: { da, a: { p: p.p, nome: p.n ?? c.nome }, scegli: da ? null : 'da' }, selPoi: null, pannello: null })
   }
   const x = p.x ?? {}

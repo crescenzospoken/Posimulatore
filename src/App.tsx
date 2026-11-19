@@ -29,8 +29,11 @@ const st0 = (k: string) => k === 'percorso'
 function cercaTutto(q: string) {
   const t = q.trim().toLowerCase()
   if (t.length < 2) return []
-  const poi = elencoPoi().filter(p => !p.nascosto && ((p.n ?? '').toLowerCase().includes(t) || categoria(p.c).nome.toLowerCase().includes(t)))
-    .slice(0, 6).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
+  // nome, categoria, tipo di negozio o cucina, via: si trovano tutti i punti, anche delle categorie spente
+  const testo = (p: ReturnType<typeof elencoPoi>[number]) => [p.n, categoria(p.c).nome, p.note, ...Object.values(p.x ?? {})].join(' ').toLowerCase()
+  const poi = elencoPoi().filter(p => !p.nascosto && testo(p).includes(t))
+    .sort((a, b) => Number((b.n ?? '').toLowerCase().startsWith(t)) - Number((a.n ?? '').toLowerCase().startsWith(t)))
+    .slice(0, 8).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
   return [...poi, ...cerca(q).map(r => ({ ...r, poi: undefined as string | undefined }))].slice(0, 12)
 }
 export default function App() {
@@ -183,10 +186,10 @@ export default function App() {
           <button className={'avatar' + (s.utente ? ' con-utente' : '')} onClick={() => s.set({ pannello: s.pannello === 'accesso' ? null : 'accesso' })} aria-label={s.utente ? 'Il tuo account' : 'Accedi'} data-tip={s.utente ? s.utente.nome : 'Accedi per progettare e aggiornare la mappa'}>
             {s.utente ? s.utente.nome.trim()[0]?.toUpperCase() : <Icona n="person" />}
           </button>
-          {(risultati.length > 0 || (cercaAperta && !q)) && <ul className="risultati vetro">
-            {risultati.length > 0 ? risultati.map(r => (
+          {(risultati.length > 0 || cercaAperta) && <ul className="risultati vetro">
+            {q.trim() ? risultati.map(r => (
               <li key={r.nome + r.tipo + (r.poi ?? '')}><button onMouseDown={e => e.preventDefault()} onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); if (r.poi) { const c = elencoPoi().find(x => x.id === r.poi)!.c; s.set({ selPoi: r.poi, poiCat: s.poiCat.includes(c) ? s.poiCat : [...s.poiCat, c] }) } }}><Icona n={r.poi ? 'location_on' : r.tipo === 'strada' ? 'route' : 'map'} /><span>{r.nome}</span><small>{r.tipo}</small></button></li>
-            )) : <>
+            )).concat(q.trim().length > 1 ? [<li key="gmaps"><a className="cerca-fuori" href={'https://www.google.com/maps/search/' + encodeURIComponent(q.trim() + ' Positano')} target="_blank" rel="noopener"><Icona n="open_in_new" /><span>Non c'è? Cerca «{q.trim()}» su Google Maps</span></a></li>] : []) : <>
               {s.casa && <li><button onMouseDown={e => e.preventDefault()} onClick={() => { centraSu(s.casa!.p); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="home" /><span>Casa{s.casa.nome && s.casa.nome !== 'Casa' ? ' · ' + s.casa.nome : ''}</span></button></li>}
               <li className="titoletto">Vai a</li>
               {VAI.map(v => <li key={v.nome}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai(v); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="near_me" /><span>{v.nome}</span></button></li>)}
@@ -211,6 +214,7 @@ export default function App() {
         <div className="fab">
           <button className={'fab-piccolo vetro' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label="Guida" data-tip="Guida e fonti dei dati"><Icona n="help" /></button>
           <button className={'fab-piccolo vetro' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} aria-label="Livelli" data-tip="Mappa, Google 3D, colori delle vie, qualità"><Icona n="layers" /></button>
+          <button className="fab-piccolo vetro" onClick={() => { const c = useS.getState().casa; if (c) centraSu(c.p); else s.set({ casaChiesta: false, selPoi: null, pannello: null }) }} aria-label="Casa" data-tip={s.casa ? 'Vai al tuo punto Casa' : 'Scegli il tuo punto Casa'}><Icona n="home" /></button>
           <button className="fab-piccolo vetro" onClick={rimettiVista} aria-label="Rimetti la vista" data-tip="Rimetti la vista: sul percorso, sulla tua posizione o su tutta Positano"><Icona n="zoom_out_map" /></button>
           <button className={'fab-piccolo vetro' + (gps ? ' acceso' : '')} aria-pressed={gps} onClick={dove} aria-label="Dove sono" data-tip="Mostra dove sei (GPS)"><Icona n="my_location" /></button>
           <button className={'fab-grande' + (st.k === 'percorso' ? ' acceso' : '')} onClick={() => s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, da: s.percorso.da ?? s.casa, scegli: (s.percorso.da ?? s.casa) ? (s.percorso.a ? null : 'a') : 'da' }, selPoi: null, pannello: null })} aria-label="Percorso a piedi" data-tip="Da un punto a un altro a piedi, con salite e scale"><Icona n="directions" /><span>Percorso</span></button>

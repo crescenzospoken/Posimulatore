@@ -373,3 +373,5 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .indicazioni li { position: relative; padding-left: 10px; }
 .indicazioni li + li::before { content: ''; position: absolute; left: 20px; top: -6px; height: 8px; border-left: 2px dotted rgba(60, 64, 67, 0.35); }
 @media (max-width: 760px) { .cifre { grid-template-columns: repeat(2, 1fr); } }
+.risultati .cerca-fuori { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--accento); text-decoration: none; font-size: 14px; }
+.risultati .cerca-fuori:hover { background: rgba(11, 107, 203, 0.08); }

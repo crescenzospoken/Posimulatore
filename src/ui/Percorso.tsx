@@ -78,8 +78,8 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
         </div>
       )}
       {cambia && <>
-      <RigaTappa titolo="Da" t={r.da} scegli={r.scegli === 'da'} onScegli={() => set({ scegli: r.scegli === 'da' ? null : 'da' })} onCambia={t => set({ da: t, scegli: r.a ? null : 'a' })} extra={<button className="quiet" onClick={posizione} data-tip="Parti da dove sei adesso"><Icona n="my_location" />Da qui</button>} ospite={s.ospite} />
-      <RigaTappa titolo="A" t={r.a} scegli={r.scegli === 'a'} onScegli={() => set({ scegli: r.scegli === 'a' ? null : 'a' })} onCambia={t => set({ a: t, scegli: r.da ? null : 'da' })} ospite={s.ospite} />
+      <RigaTappa titolo="Da" t={r.da} scegli={r.scegli === 'da'} onScegli={() => set({ scegli: r.scegli === 'da' ? null : 'da' })} onCambia={t => set({ da: t, scegli: r.a ? null : 'a' })} extra={<><button className="quiet" onClick={posizione} data-tip="Parti da dove sei adesso"><Icona n="my_location" />Da qui</button>{s.casa && <button className="quiet" onClick={() => set({ da: s.casa, scegli: r.a ? null : 'a' })}><Icona n="home" />Da Casa</button>}</>} ospite={s.ospite} />
+      <RigaTappa titolo="A" t={r.a} scegli={r.scegli === 'a'} onScegli={() => set({ scegli: r.scegli === 'a' ? null : 'a' })} onCambia={t => set({ a: t, scegli: r.da ? null : 'da' })} extra={s.casa ? <button className="quiet" onClick={() => set({ a: s.casa, scegli: r.da ? null : 'da' })}><Icona n="home" />A Casa</button> : undefined} ospite={s.ospite} />
       {r.da && r.a && <button className="quiet inverti" onClick={() => set({ da: r.a, a: r.da })} data-tip="Scambia partenza e arrivo"><Icona n="swap_vert" />Inverti</button>}
       </>}
       {r.scegli && <p className="nota">Tocca la mappa per scegliere {r.scegli === 'da' ? 'la partenza' : 'l\'arrivo'}.</p>}
