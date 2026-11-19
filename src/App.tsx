@@ -89,6 +89,26 @@ export default function App() {
         }, 1200) })
         quandoGoogleKo(() => useS.getState().dici(t('Google 3D non risponde: per ora vedi il satellite')))
         stop = avviaInterazione(setCur, finisci)
+        // se ci si muove di colpo (pizzico o trascinamento troppo veloce), Positano esce dalla vista o si guarda il cielo,
+        // il pulsante «Rimetti la vista» lampeggia per qualche secondo: chi si è perso sa dove toccare
+        {
+          // ultimo secondo di posizioni: ci si è persi se in un secondo la quota è più che raddoppiata (o dimezzata),
+          // se ci si è spostati di oltre due volte la quota, o se si guarda quasi l'orizzonte
+          const storia: { t: number; p: Cartesian3; h: number }[] = []
+          let spento = 0
+          viewer.scene.postRender.addEventListener(() => {
+            const ora = performance.now(), cam = viewer.camera, h = Math.max(30, cam.positionCartographic.height)
+            if ((cam as unknown as { _currentFlight?: unknown })._currentFlight) { storia.length = 0; return }
+            storia.push({ t: ora, p: Cartesian3.clone(cam.positionWC), h })
+            while (storia.length && ora - storia[0].t > 1000) storia.shift()
+            const a = storia[0]
+            const perso = cam.pitch > -0.12 || h / a.h > 2.2 || a.h / h > 2.2 || Cartesian3.distance(a.p, cam.positionWC) > 2 * Math.max(h, a.h)
+            if (!perso) return
+            const b = document.querySelector('.fab-reset')
+            if (!b) return
+            b.classList.add('lampeggia'); clearTimeout(spento); spento = window.setTimeout(() => b.classList.remove('lampeggia'), 6000)
+          })
+        }
         // link o QR con il percorso: ?da=lon,lat,Nome&a=lon,lat,Nome
         const u = new URLSearchParams(location.search), da = tappaDaLink(u.get('da')), a = tappaDaLink(u.get('a'))
         // link di un punto: ?poi=id (nostro) o ?punto=lon,lat,Nome
@@ -131,7 +151,7 @@ export default function App() {
       s.setLivelli({ google: false, orto: 'esri', strade: true })
     } else if (s.strumento.k !== 'vie' && primaDiVie.current) {
       const p = primaDiVie.current; primaDiVie.current = null
-      s.setLivelli({ google: p.google, orto: p.orto }); s.set({ selVia: null, viaBozza: null, viaVSel: null })
+      s.setLivelli({ google: p.google, orto: p.orto }); s.set({ selVia: null, viaBozza: null, viaSel: [] })
     }
   }, [pronto, s.strumento.k])
   useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
@@ -244,8 +264,8 @@ export default function App() {
         <div className="fab">
           <button className={'fab-piccolo vetro' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label={t('Guida')} data-tip={t('Guida e fonti dei dati')}><Icona n="help" /></button>
           <button className={'fab-piccolo vetro' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} aria-label={t('Livelli')} data-tip={t('Mappa, Google 3D, colori delle vie, qualità')}><Icona n="layers" /></button>
-          <button className="fab-piccolo vetro" onClick={() => { const c = useS.getState().casa; if (c) centraSu(c.p); else s.set({ casaChiesta: false, selPoi: null, pannello: null }) }} aria-label={t('Casa')} data-tip={s.casa ? 'Vai al tuo punto Casa' : 'Scegli il tuo punto Casa'}><Icona n="home" /></button>
-          <button className="fab-piccolo vetro" onClick={rimettiVista} aria-label={t('Rimetti la vista')} data-tip={t('Rimetti la vista: sul percorso, sulla tua posizione o su tutta Positano')}><Icona n="zoom_out_map" /></button>
+          <button className="fab-piccolo vetro" onClick={() => { const c = useS.getState().casa; if (c) centraSu(c.p); s.set({ casaAperta: !s.casaAperta, selPoi: null, selGoogle: null, selEvento: null, pannello: null }) }} aria-label={t('Casa')} data-tip={t(s.casa ? 'Casa' : 'Scegli il tuo punto Casa')}><Icona n="home" /></button>
+          <button className="fab-piccolo vetro fab-reset" onClick={() => { document.querySelector('.fab-reset')?.classList.remove('lampeggia'); rimettiVista() }} aria-label={t('Rimetti la vista')} data-tip={t('Rimetti la vista: sul percorso, sulla tua posizione o su tutta Positano')}><Icona n="zoom_out_map" /></button>
           <button className={'fab-piccolo vetro' + (gps ? ' acceso' : '')} aria-pressed={gps} onClick={dove} aria-label={t('Dove sono')} data-tip={t('Mostra dove sei (GPS)')}><Icona n="my_location" /></button>
           <button className={'fab-grande' + (st.k === 'percorso' ? ' acceso' : '')} onClick={() => { if (st.k === 'percorso') { s.set({ strumento: { k: 'naviga' } }); return } const da = partenzaDiBase(); s.set({ strumento: { k: 'percorso' }, tappe: s.tappe.length ? s.tappe : da ? [da] : [], aggiungiDaMappa: false, selPoi: null, selGoogle: null, pannello: null }) }} aria-label={t('Percorso a piedi')} data-tip={t('Da un punto a un altro a piedi, con salite e scale')}><Icona n="directions" /><span>{t('Percorso')}</span></button>
         </div>
@@ -285,7 +305,7 @@ export default function App() {
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
       {s.selGoogle && !s.selPoi && !s.pannello && st.k !== 'percorso' && <SchedaGoogle />}
       {s.selEvento && !s.pannello && st.k !== 'percorso' && st.k !== 'eventi' && <SchedaEvento />}
-      {pronto && !mod && !s.ospite && (s.scegliCasa || (!s.casaChiesta && !s.selPoi && st.k === 'naviga' && !s.pannello)) && <SchedaCasa />}
+      {pronto && !s.ospite && (s.scegliCasa || s.casaAperta) && <SchedaCasa />}
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 
       <footer className="stato">

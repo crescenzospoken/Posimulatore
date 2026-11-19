@@ -193,8 +193,9 @@ export function Utenti() {
 export function SchedaCasa() {
   const s = useS()
   const [q, setQ] = useState('')
+  const [cambia, setCambia] = useState(false)
   const { nostri: ris, google } = useRicerca(q)
-  const fissa = (t: { p: [number, number]; nome?: string }) => s.set({ casa: { p: t.p, nome: t.nome || 'Casa' }, casaChiesta: true, scegliCasa: false })
+  const fissa = (x: { p: [number, number]; nome?: string }) => { s.set({ casa: { p: x.p, nome: x.nome || 'Casa' }, scegliCasa: false, casaAperta: false}); centraSu(x.p) }
   const posizione = () => {
     if (!navigator.geolocation) { s.dici(t('Questo dispositivo non dà la posizione')); return }
     navigator.geolocation.getCurrentPosition(
@@ -204,15 +205,21 @@ export function SchedaCasa() {
     )
   }
   if (s.scegliCasa) return (
-    <div className="guida-strumento vetro"><b>{t('Casa')}</b><span>{t('Tocca la mappa dove alloggi')}</span><button className="quiet" onClick={() => s.set({ scegliCasa: false })}>{t('Annulla')}</button></div>
+    <div className="guida-strumento vetro"><b>{t('Casa')}</b><span>{t('Tocca la mappa dove vuoi la tua Casa')}</span><button className="quiet" onClick={() => s.set({ scegliCasa: false })}>{t('Annulla')}</button></div>
   )
   return (
     <section className="scheda-poi scheda-casa" aria-label={t('Il tuo punto Casa')}>
       <div className="pannello-testa">
-        <h2><span className="icona-tonda" style={{ background: '#0b6bcb' }}><Icona n="home" /></span>{t('Dove alloggi?')}</h2>
-        <button className="tondo quiet" onClick={() => s.set({ casaChiesta: true })} aria-label={t('Più tardi')}><Icona n="close" /></button>
+        <h2><span className="icona-tonda" style={{ background: '#0b6bcb' }}><Icona n="home" /></span>{s.casa && !cambia ? (s.casa.nome && s.casa.nome !== 'Casa' ? s.casa.nome : t('Casa')) : t('Scegli il tuo punto Casa')}</h2>
+        <button className="tondo quiet" onClick={() => s.set({ casaAperta: false })} aria-label={t('Chiudi')}><Icona n="close" /></button>
       </div>
-      <p className="nota">{t('Scegli il tuo punto Casa: i percorsi partiranno da lì e lo ritrovi con un tocco.')}</p>
+      {s.casa && !cambia ? <>
+        <div className="riga-bottoni">
+          <button className="primary" onClick={() => { s.set({ casaAperta: false }); portamiA(s.casa!) }}><Icona n="directions" />{t('Portami a Casa')}</button>
+          <button onClick={() => setCambia(true)}><Icona n="edit" />{t('Cambia')}</button>
+        </div>
+      </> : <>
+      <p className="nota">{t('I percorsi partono da qui e la ritrovi con un tocco sulla casetta.')}</p>
       <div className="riga-bottoni">
         <button className="primary" onClick={posizione}><Icona n="my_location" />{t('Sono qui')}</button>
         <button onClick={() => s.set({ scegliCasa: true })}><Icona n="location_on" />{t('Tocca la mappa')}</button>
@@ -226,6 +233,7 @@ export function SchedaCasa() {
           {google.length > 0 && <li className="attribuzione-google">{t('Risultati di Google')}</li>}
         </ul>}
       </div>
+      </>}
     </section>
   )
 }
@@ -236,7 +244,7 @@ function RigaCasa() {
   return (
     <div className="riga-casa">
       <Icona n="home" /><span>{s.casa ? <>Casa: <b>{s.casa.nome && s.casa.nome !== 'Casa' ? s.casa.nome : 'punto scelto'}</b></> : 'Nessun punto Casa'}</span>
-      <button type="button" className="quiet" onClick={() => s.set({ casaChiesta: false, casa: null, pannello: null })}>{s.casa ? 'Cambia' : 'Scegli'}</button>
+      <button type="button" className="quiet" onClick={() => s.set({ casaAperta: true, pannello: null })}>{s.casa ? 'Cambia' : 'Scegli'}</button>
     </div>
   )
 }

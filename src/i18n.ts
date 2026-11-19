@@ -115,6 +115,7 @@ const EN: Record<string, string> = {
   'Carico Street View…': 'Loading Street View…', 'Qui Google non ha foto a 360°: prova un po\' più avanti': 'No 360° photos here: try a little further on', 'Street View non raggiungibile': 'Street View not available', 'Indietro': 'Back', 'Avanti': 'Forward', 'Guarda il percorso': 'Preview the route',
   'Trascina per spostare': 'Drag to reorder', 'Togli la tappa': 'Remove stop', 'Da dove parti?': 'Where from?', 'Dove vuoi andare?': 'Where to?', 'Aggiungi una tappa': 'Add a stop', 'Sulla mappa': 'On the map', 'Tocca la mappa per aggiungere una tappa.': 'Tap the map to add a stop.', 'Cambia le tappe': 'Change stops',
   'Attenua il 3D': 'Soften the 3D', 'Schiarisce le foto del 3D: vie, percorsi e punti risaltano di più': 'Lightens the 3D photos so streets, routes and places stand out',
+  'Scegli il tuo punto Casa': 'Choose your Home', 'Portami a Casa': 'Take me Home', 'I percorsi partono da qui e la ritrovi con un tocco sulla casetta.': 'Directions start here, and the house button brings you back.', 'Tocca la mappa dove vuoi la tua Casa': 'Tap the map where your Home is',
   'Da': 'From', 'A': 'To', 'In corso': 'Happening now', 'Programma': 'Programme', 'eventi in corso': 'events now',
   'Più veloce': 'Fastest', 'Meno scale': 'Fewer stairs', 'Meno salita': 'Less climbing',
   'A piedi': 'On foot', 'Bus': 'Bus', 'Auto': 'Car', 'consigliato': 'recommended',

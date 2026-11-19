@@ -29,3 +29,7 @@
 - Street View: `src/ui/StreetView.tsx` (Maps JavaScript `StreetViewPanorama`, stessa chiave, foto solo da guardare). Modi: punto (luoghi, eventi), percorso a passi di 25 m, Cammina (segue la camera ogni 12 m). Pallino arancione sulla mappa dove sta la foto.
 - Regola di Crescenzo (19/11): finché non si va live, ogni PR si unisce e si pubblica subito; quando serve lui, dargli un link per provare.
 - Il pizzico deve ingrandire la mappa, mai la pagina: viewport con `user-scalable=no`, `touch-action` in `styles.css` e blocco dei gesti di Safari in `main.tsx`.
+- Nitidezza: `useBrowserRecommendedResolution: false`; `Q.res` = pixel veri per pixel CSS (leggera 1,5, normale 2, alta 3), `resolutionScale = min(dpr, res)/dpr`. «Attenua il 3D» (Livelli) è un `CustomShader` sul tileset Google che schiarisce e desatura, non lo rende trasparente. Le vie non si vedono attraverso il 3D (niente `depthFailAppearance`), stanno 3,5 m sopra la quota LiDAR.
+- Camera: mai sotto 55 m dal terreno (`ALTEZZA_MIN`, il 3D di Google da vicino è distorto), tranne in Cammina. Se ci si muove di colpo il pulsante «Rimetti la vista» (`.fab-reset`) lampeggia 6 s.
+- Telefono: le schede si chiudono trascinandole in giù (`src/ui/gesti.ts`, clicca il pulsante della testata). Casa si apre solo dal pulsante con la casetta (`casaAperta`).
+- Vie a più punti: «Più punti», «Riquadro», «Tutti», «Intervallo», «Raddrizza», «Liscia», «Togli i N punti»; trascinando un punto scelto si muovono tutti (`viaSel`).

@@ -18,7 +18,7 @@ export const VAI: { nome: string; lon: number; lat: number; h: number; heading: 
   { nome: 'Li Galli', lon: 14.4330, lat: 40.5740, h: 250, heading: 0, pitch: -25 },
 ]
 let pavimento = true
-const CENTRO: [number, number] = [14.4855, 40.624], RAGGIO = 9000, ALTEZZA_MAX = 5000
+const CENTRO: [number, number] = [14.4855, 40.624], RAGGIO = 9000, ALTEZZA_MAX = 5000, ALTEZZA_MIN = 55
 /** Il pavimento della camera si spegne mentre si cammina (lì la quota la decide la camminata). */
 export const pavimentoAttivo = (on: boolean) => { pavimento = on }
 /** Tutta Positano dal mare; sul telefono (schermo stretto) un po' più alta per starci tutta. */
@@ -48,7 +48,8 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   if (s.skyAtmosphere) s.skyAtmosphere.show = true
   s.fog.enabled = true
   s.fog.density = 0.00012
-  s.screenSpaceCameraController.minimumZoomDistance = 2
+  // da vicino il 3D di Google mostra distorsioni: non ci si avvicina a meno di ALTEZZA_MIN (Cammina escluso)
+  s.screenSpaceCameraController.minimumZoomDistance = ALTEZZA_MIN
   s.screenSpaceCameraController.maximumZoomDistance = 6000
   s.postProcessStages.fxaa.enabled = true
   impostaQualita(qualitaIniziale())
@@ -72,7 +73,7 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
       return
     }
     if (!pavimento) return
-    const min = quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude)) + GEOIDE + 4
+    const min = quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude)) + GEOIDE + ALTEZZA_MIN
     if (c.height < min) {
       const su = C.Cartesian3.fromRadians(c.longitude, c.latitude, min)
       viewer.camera.setView({ destination: su, orientation: { heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: 0 } })

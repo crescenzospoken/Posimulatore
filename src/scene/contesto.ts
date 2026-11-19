@@ -145,8 +145,10 @@ let fatteCon: boolean | null = null
 const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
 function altezzaVie() {
-  const h = viewer.camera.positionCartographic.height
-  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 2500 : h < 800)
+  // conta l'altezza sopra il terreno, non sul mare: sopra Montepertuso (350 m) guardando dall'alto prima sparivano scale e sentieri
+  const c = viewer.camera.positionCartographic
+  const h = c.height - GEOIDE - quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude))
+  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 3000 : h < 1400)
 }
 let altezzaAgganciata = false
 /** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono

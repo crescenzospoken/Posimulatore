@@ -69,7 +69,8 @@ type Stato = {
   /** via in correzione (id OSM) e la sua bozza: punti, quota delle arcate, controllata */
   selVia: string | null
   viaBozza: { c: LL[]; dz: number; controllata: boolean } | null
-  viaVSel: number | null
+  /** punti scelti della via in correzione (indici) */
+  viaSel: number[]
   /** chi ha fatto l'accesso (null = visitatore); solo editor e admin vedono gli strumenti di modifica */
   utente: Utente | null
   /** l'editor ha acceso la modalità modifica (progetti, disegno, edifici) */
@@ -95,6 +96,8 @@ type Stato = {
   lingua: Lingua
   /** il visitatore ha già visto (o chiuso) la richiesta del punto Casa */
   casaChiesta: boolean
+  /** scheda Casa aperta (solo dal pulsante con la casetta) */
+  casaAperta: boolean
   /** aperto da un link o da un QR: interfaccia ridotta al solo percorso */
   ospite: boolean
   passato: string[]
@@ -176,10 +179,11 @@ export const useS = create<Stato>((set, get) => ({
   vista360: null,
   nuovoEvento: null,
   viaBozza: null,
-  viaVSel: null,
+  viaSel: [],
   lingua: linguaAttualeIniziale,
   casa: iniziale?.casa ?? null,
   scegliCasa: false,
+  casaAperta: false,
   casaChiesta: iniziale?.casaChiesta ?? false,
   utente: null,
   inModifica: iniziale?.inModifica ?? false,
