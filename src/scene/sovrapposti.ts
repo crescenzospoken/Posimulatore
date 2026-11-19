@@ -5,7 +5,7 @@ import * as C from 'cesium'
 import { viewer } from './viewer'
 import { svgIcona, type NomeIcona } from '../ui/icone'
 
-export type Voce = { id: string; pos: C.Cartesian3; testo: string; tipo: 'poi' | 'via' | 'tappa'; maxDist: number; icona?: string; col?: string; scelto?: boolean; tenue?: boolean; clic?: () => void }
+export type Voce = { id: string; pos: C.Cartesian3; testo: string; tipo: 'poi' | 'via' | 'tappa'; maxDist: number; icona?: string; col?: string; scelto?: boolean; tenue?: boolean; evento?: boolean; clic?: () => void }
 const MAX_POI = 60, MAX_VIE = 24
 let voci: Voce[] = []
 let strato: HTMLDivElement
@@ -44,7 +44,7 @@ function elemento(v: Voce) {
     el.appendChild(i)
     if (v.testo) { const t = document.createElement('span'); t.className = 'testo'; t.textContent = v.testo; el.appendChild(t) }
     el.setAttribute('aria-label', v.testo || 'Punto di interesse')
-    el.classList.toggle('scelto', !!v.scelto); el.classList.toggle('tenue', !!v.tenue)
+    el.classList.toggle('scelto', !!v.scelto); el.classList.toggle('tenue', !!v.tenue); el.classList.toggle('evento', !!v.evento)
   } else el.textContent = v.testo
   return el
 }

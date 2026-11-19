@@ -6,6 +6,8 @@ import type { NomeIcona } from './icone'
 import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
 import { poiDa, ricaricaPoi } from '../scene/poi'
 import { cerca } from '../scene/contesto'
+import { elencoEventi, inCorso } from '../scene/eventi'
+import { centraSu } from '../scene/gps'
 import { ultimaPosizione, dentroPositano } from '../scene/gps'
 
 /** Chiamata alle API: JSON, intestazione propria (le scritture la richiedono) e messaggio d'errore leggibile. */
@@ -26,8 +28,11 @@ export function Servizi() {
   const on = new Set(s.poiCat)
   const cambia = (k: string) => s.set({ poiCat: on.has(k) ? s.poiCat.filter(x => x !== k) : [...s.poiCat, k] })
   const lista = tutte ? CATEGORIE : CATEGORIE.filter(c => c.base || on.has(c.k))
+  // eventi in corso: primo filtro, porta al primo e apre la scheda
+  const ora = elencoEventi().filter(e => inCorso(e))
   return (
     <div className="servizi" role="toolbar" aria-label={t('Punti di interesse')}>
+      {ora.length > 0 && <button className="chip evento-chip" onClick={() => { const e = ora[0]; centraSu([e.lon, e.lat]); s.set({ selEvento: e.id, selPoi: null, selGoogle: null }) }}><span className="chip-icona"><Icona n="celebration" /></span>{ora.length === 1 ? (s.lingua === 'en' && ora[0].titolo_en) || ora[0].titolo : `${ora.length} ${t('eventi in corso')}`}</button>}
       {lista.map(c => (
         <button key={c.k} className={'chip' + (on.has(c.k) ? ' acceso' : '')} aria-pressed={on.has(c.k)} onClick={() => cambia(c.k)}><span className="chip-icona" style={{ color: c.col }}><Icona n={c.s as NomeIcona} /></span>{t(c.nome)}</button>
       ))}

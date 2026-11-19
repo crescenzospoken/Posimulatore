@@ -14,6 +14,7 @@ export type Strumento =
   | { k: 'percorso' }
   | { k: 'poi' }
   | { k: 'vie' }
+  | { k: 'eventi' }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
 export type Livelli = {
@@ -57,7 +58,10 @@ type Stato = {
   /** passo delle modifiche in metri (0 = libero) */
   passo: number
   info: { p: LL; z: number } | null
-  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | null
+  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | 'evento' | null
+  /** evento scelto (scheda o modifica); nuovoEvento = posizione toccata per crearne uno */
+  selEvento: string | null
+  nuovoEvento: LL | null
   /** via in correzione (id OSM) e la sua bozza: punti, quota delle arcate, controllata */
   selVia: string | null
   viaBozza: { c: LL[]; dz: number; controllata: boolean } | null
@@ -161,6 +165,8 @@ export const useS = create<Stato>((set, get) => ({
   percorso: { da: iniziale?.partenza ?? null, a: null, scegli: null },
   ospite: false,
   selVia: null,
+  selEvento: null,
+  nuovoEvento: null,
   viaBozza: null,
   viaVSel: null,
   lingua: linguaAttualeIniziale,

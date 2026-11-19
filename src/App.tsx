@@ -11,6 +11,8 @@ import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso } from './ui/Percorso'
 import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
+import { caricaEventi, disegnaEventi } from './scene/eventi'
+import { SchedaEvento } from './ui/Eventi'
 import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
 import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps, ultimaPosizione } from './scene/gps'
 import { categoria } from './engine/poi'
@@ -80,7 +82,7 @@ export default function App() {
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
         chiama<Utente | null>('io').then(u => useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })), () => {})
         chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
-        await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi()])
+        await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
         // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo
         setTimeout(() => caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))), 4000)
         disegnaCupole(viewer)
@@ -124,6 +126,7 @@ export default function App() {
   const mod = s.inModifica && puoModificare(s.utente)
   // scena <- stato
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto && mod) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto, mod])
+  useEffect(() => { if (pronto) disegnaEventi(mod, s.selEvento, s.lingua === 'en') }, [pronto, mod, s.selEvento, s.lingua, s.googleGiro])
   useEffect(() => { if (pronto) disegnaPoi(new Set(s.ospite ? [] : s.poiCat), s.selPoi, mod) }, [pronto, s.poiCat, s.selPoi, mod, s.googleGiro, s.ospite])
   useEffect(() => { if (pronto && !mod && s.strumento.k !== 'naviga' && s.strumento.k !== 'percorso') s.set({ strumento: { k: 'naviga' }, bozza: [] }) }, [pronto, mod])
   // correzione delle vie: si lavora sul satellite Esri (Google 3D non si può ricalcare); all'uscita torna com'era
@@ -273,6 +276,7 @@ export default function App() {
         <button className={st.k === 'cammina' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'cammina' ? { k: 'naviga' } : { k: 'cammina' }, bozza: [] }); setAperto(null) }} data-tip="Cammina ad altezza d'uomo dal punto al centro dello schermo"><Icona n="directions_walk" />Cammina</button>
         <button className={st.k === 'poi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'poi' ? { k: 'naviga' } : { k: 'poi' }, sel: null, selPoi: null, pannello: st.k === 'poi' ? null : 'poi', spostaPoi: false }); setAperto(null) }} data-tip="Aggiungi o correggi bagni, fermate, parcheggi e altri punti: li vedono tutti"><Icona n="add_location_alt" />Punti</button>
         <button className={st.k === 'vie' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'vie' ? { k: 'naviga' } : { k: 'vie' }, sel: null, selPoi: null, selVia: null, viaBozza: null, pannello: st.k === 'vie' ? null : 'via' }); setAperto(null) }} data-tip="Correggi le vie a mano sul satellite: le vedono tutti e migliorano i percorsi"><Icona n="edit_road" />Vie</button>
+        <button className={st.k === 'eventi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'eventi' ? { k: 'naviga' } : { k: 'eventi' }, sel: null, selPoi: null, selEvento: null, nuovoEvento: null, pannello: st.k === 'eventi' ? null : 'evento' }); setAperto(null) }} data-tip="Concerti, feste, mercati, chiusure: compaiono solo mentre sono in corso"><Icona n="celebration" />Eventi</button>
       </nav>}
 
       {(st.k === 'disegna' || st.k === 'misura') && (
@@ -290,6 +294,7 @@ export default function App() {
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
       {s.selGoogle && !s.selPoi && !s.pannello && st.k !== 'percorso' && <SchedaGoogle />}
+      {s.selEvento && !s.pannello && st.k !== 'percorso' && st.k !== 'eventi' && <SchedaEvento />}
       {pronto && !mod && !s.ospite && (s.scegliCasa || (!s.casaChiesta && !s.selPoi && st.k === 'naviga' && !s.pannello)) && <SchedaCasa />}
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 

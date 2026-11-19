@@ -8,6 +8,7 @@ import { GRUPPI_VIE } from '../scene/contesto'
 import { Icona } from './Icona'
 import { Accesso, Utenti, ModificaPoi, chiama, puoModificare } from './Pubblico'
 import { CorreggiVia } from './CorreggiVia'
+import { ModificaEvento } from './Eventi'
 import { quota } from '../scene/oggetti'
 import { inquadra, quotaGoogle, googleAcceso } from '../scene/viewer'
 import { Frame, add, mul } from '../engine/geo'
@@ -54,7 +55,7 @@ const DEF: Record<string, number | string | boolean> = { livelli: 1, hLiv: 3.2, 
 
 export function Pannello({ chiudi }: { chiudi: () => void }) {
   const s = useS()
-  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse', via: 'Correggi le vie' }[s.pannello!]
+  const titolo = { oggetto: s.sel ? 'Oggetto' : s.selEdificio ? 'Edificio' : 'Punto', livelli: 'Livelli', progetto: 'Progetti', catalogo: 'Catalogo', aiuto: 'Guida', percorso: 'Percorso', accesso: s.utente ? 'Account' : 'Accedi', utenti: 'Utenti e permessi', poi: 'Punto di interesse', via: 'Correggi le vie', evento: 'Evento' }[s.pannello!]
   return (
     <aside className="pannello" aria-label={titolo}>
       <div className="pannello-testa"><h2>{titolo}</h2><button className="tondo quiet" onClick={chiudi} aria-label="Chiudi"><Icona n="close" /></button></div>
@@ -68,6 +69,7 @@ export function Pannello({ chiudi }: { chiudi: () => void }) {
         {s.pannello === 'utenti' && <Utenti />}
         {s.pannello === 'poi' && <ModificaPoi />}
         {s.pannello === 'via' && <CorreggiVia />}
+        {s.pannello === 'evento' && <ModificaEvento />}
       </div>
     </aside>
   )
