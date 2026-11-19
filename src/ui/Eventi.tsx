@@ -37,6 +37,7 @@ export function SchedaEvento() {
       <div className="riga-bottoni">
         <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
         {e.link && <a className="bottone" href={e.link} target="_blank" rel="noopener"><Icona n="open_in_new" />{t('Programma')}</a>}
+        <button className="quiet" onClick={() => s.set({ vista360: { modo: 'punto', p: [e.lon, e.lat], titolo: titolo } })}><Icona n="streetview" />Street View</button>
         <button className="quiet" onClick={() => condividi(titolo, linkPunto({ p: [e.lon, e.lat], nome: titolo }, false), s.dici)}><Icona n="share" />{t('Condividi')}</button>
       </div>
     </section>

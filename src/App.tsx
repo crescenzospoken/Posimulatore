@@ -13,6 +13,7 @@ import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } f
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
 import { caricaEventi, disegnaEventi } from './scene/eventi'
 import { SchedaEvento } from './ui/Eventi'
+import { StreetView } from './ui/StreetView'
 import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
 import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps, ultimaPosizione } from './scene/gps'
 import { categoria } from './engine/poi'
@@ -172,7 +173,8 @@ export default function App() {
     if (!pronto) return
     impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
   }, [pronto, s.livelli.google, s.ionToken, s.ionTokenSito, s.googleKey])
-  useEffect(() => { if (pronto) { if (s.strumento.k === 'cammina') avviaCammina(); else fermaCammina() } }, [pronto, s.strumento.k])
+  // Cammina: si cammina nel 3D e Street View segue, per vedere i luoghi in alta qualità
+  useEffect(() => { if (pronto) { if (s.strumento.k === 'cammina') { avviaCammina(); if (s.googleKey) s.set({ vista360: { modo: 'cammina' } }) } else { fermaCammina(); if (s.vista360?.modo === 'cammina') s.set({ vista360: null }) } } }, [pronto, s.strumento.k])
 
   // tastiera
   useEffect(() => {
@@ -290,6 +292,7 @@ export default function App() {
       )}
 
       {st.k === 'cammina' && <Pad />}
+      {s.vista360 && s.googleKey && <StreetView vista={s.vista360} chiudi={() => s.set({ vista360: null })} />}
       {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}

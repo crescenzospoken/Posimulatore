@@ -112,6 +112,7 @@ const EN: Record<string, string> = {
   'Cambia: cerca via o luogo': 'Change: search street or place',
   'Tocca la mappa per scegliere la partenza.': 'Tap the map to choose the start.',
   'Tocca la mappa per scegliere l\'arrivo.': 'Tap the map to choose the destination.',
+  'Carico Street View…': 'Loading Street View…', 'Qui Google non ha foto a 360°: prova un po\' più avanti': 'No 360° photos here: try a little further on', 'Street View non raggiungibile': 'Street View not available', 'Indietro': 'Back', 'Avanti': 'Forward', 'Guarda il percorso': 'Preview the route',
   'Da': 'From', 'A': 'To', 'In corso': 'Happening now', 'Programma': 'Programme', 'eventi in corso': 'events now',
   'Più veloce': 'Fastest', 'Meno scale': 'Fewer stairs', 'Meno salita': 'Less climbing',
   'A piedi': 'On foot', 'Bus': 'Bus', 'Auto': 'Car', 'consigliato': 'recommended',

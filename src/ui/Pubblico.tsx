@@ -67,6 +67,7 @@ export function SchedaPoi() {
       {x.phone && <p><a href={'tel:' + x.phone.replace(/\s/g, '')}>{x.phone}</a></p>}
       <div className="riga-bottoni">
         <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
+        <button className="quiet" onClick={() => s.set({ vista360: { modo: 'punto', p: p.p, titolo: p.n ?? t(c.nome) } })}><Icona n="streetview" />Street View</button>
         <button className="quiet" onClick={() => condividi(p.n ?? c.nome, linkPunto({ id: p.id, p: p.p, nome: p.n }, true), s.dici)}><Icona n="share" />{t('Condividi')}</button>
         {puoModificare(s.utente) && s.inModifica && <button onClick={() => s.set({ pannello: 'poi' })}>{t('Modifica')}</button>}
       </div>
@@ -259,6 +260,7 @@ export function SchedaGoogle() {
       <div className="riga-bottoni">
         <button className="primary" onClick={portami}><Icona n="directions" />{t('Portami qui')}</button>
         {g.url && <a className="bottone" href={g.url} target="_blank" rel="noopener"><Icona n="open_in_new" />{t('Orari e recensioni')}</a>}
+        <button className="quiet" onClick={() => s.set({ vista360: { modo: 'punto', p: g.p, titolo: g.nome } })}><Icona n="streetview" />Street View</button>
         <button className="quiet" onClick={() => condividi(g.nome, linkPunto({ p: g.p, nome: g.nome }, false), s.dici)}><Icona n="share" />{t('Condividi')}</button>
       </div>
       <p className="nota attribuzione-google">{t('Dati di Google')}</p>
