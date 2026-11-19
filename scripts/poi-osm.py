@@ -34,6 +34,14 @@ def categoria(t):
     for c, regole in CAT:
         for k, vs in regole:
             if t.get(k) in vs: return c
+    # tutto il resto che ha un nome: alloggi, negozi, attività (per la ricerca; sulla mappa si accendono a richiesta)
+    if not t.get('name'): return None
+    if t.get('tourism') in {'hotel', 'guest_house', 'apartment', 'hostel', 'motel', 'chalet', 'camp_site'}: return 'alloggi'
+    if t.get('shop'): return 'negozi'
+    if (t.get('amenity') in {'nightclub', 'theatre', 'cinema', 'arts_centre', 'library', 'post_office', 'townhall', 'school', 'kindergarten', 'car_rental', 'boat_rental', 'bicycle_rental', 'fuel', 'marketplace', 'events_venue', 'dive_centre', 'spa'}
+            or t.get('office') or t.get('craft') or t.get('healthcare') or t.get('club')
+            or t.get('tourism') in {'attraction', 'museum', 'gallery', 'artwork'} or t.get('leisure') in {'beach_resort', 'marina', 'sports_centre', 'fitness_centre'}):
+        return 'attivita'
     return None
 
 def scarica(w, s):
@@ -83,7 +91,7 @@ while s < N:
                 visti.add(i)
                 d = {'id': 'osm:' + i, 'c': c, 'p': [round(p[0], 7), round(p[1], 7)]}
                 if t.get('name'): d['n'] = t['name']
-                extra = {k: t[k] for k in ('opening_hours', 'fee', 'wheelchair', 'phone', 'website', 'operator', 'capacity') if k in t}
+                extra = {k: t[k] for k in ('opening_hours', 'fee', 'wheelchair', 'phone', 'website', 'operator', 'capacity', 'shop', 'tourism', 'amenity', 'cuisine', 'addr:street', 'addr:housenumber') if k in t}
                 if extra: d['x'] = extra
                 out.append(d)
         w += P

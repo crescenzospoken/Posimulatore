@@ -1,3 +1,4 @@
+import { t } from './i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Cartesian3 } from 'cesium'
 import { useS, type Utente } from './store'
@@ -8,11 +9,14 @@ import { pos } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso } from './ui/Percorso'
-import { Servizi, SchedaPoi, SchedaCasa, chiama, puoModificare } from './ui/Pubblico'
+import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
+import { caricaEventi, disegnaEventi } from './scene/eventi'
+import { SchedaEvento } from './ui/Eventi'
 import { caricaPoi, disegnaPoi, rifaiPoi, elencoPoi } from './scene/poi'
 import { avviaGps, centraSu, dentroPositano, gpsAcceso, fermaGps, ultimaPosizione } from './scene/gps'
 import { categoria } from './engine/poi'
+import { cercaGoogle, type LuogoGoogle } from './engine/luoghiGoogle'
 import { avviaOggetti, disegnaOggetti, calcoli, quoteCambiate } from './scene/oggetti'
 import { avviaInterazione, disegnaMisure, quotaBozza, type Punto } from './scene/interazione'
 import { avviaCammina, fermaCammina, tasti } from './scene/cammina'
@@ -29,8 +33,11 @@ const st0 = (k: string) => k === 'percorso'
 function cercaTutto(q: string) {
   const t = q.trim().toLowerCase()
   if (t.length < 2) return []
-  const poi = elencoPoi().filter(p => !p.nascosto && ((p.n ?? '').toLowerCase().includes(t) || categoria(p.c).nome.toLowerCase().includes(t)))
-    .slice(0, 6).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
+  // nome, categoria, tipo di negozio o cucina, via: si trovano tutti i punti, anche delle categorie spente
+  const testo = (p: ReturnType<typeof elencoPoi>[number]) => [p.n, categoria(p.c).nome, p.note, ...Object.values(p.x ?? {})].join(' ').toLowerCase()
+  const poi = elencoPoi().filter(p => !p.nascosto && testo(p).includes(t))
+    .sort((a, b) => Number((b.n ?? '').toLowerCase().startsWith(t)) - Number((a.n ?? '').toLowerCase().startsWith(t)))
+    .slice(0, 8).map(p => ({ nome: p.n ?? categoria(p.c).nome, tipo: categoria(p.c).nome, p: p.p, z: undefined as number | undefined, poi: p.id }))
   return [...poi, ...cerca(q).map(r => ({ ...r, poi: undefined as string | undefined }))].slice(0, 12)
 }
 export default function App() {
@@ -56,7 +63,7 @@ export default function App() {
     avviaGps(p => {
       if (!primo) return
       primo = false
-      if (dentroPositano(p.p)) centraSu(p.p); else useS.getState().dici('Sei fuori Positano: il pallino blu compare quando arrivi')
+      if (dentroPositano(p.p)) centraSu(p.p); else useS.getState().dici(t('Sei fuori Positano: il pallino blu compare quando arrivi'))
     }, t => { setGps(false); useS.getState().dici(t) })
   }
   const [q, setQ] = useState('')
@@ -75,7 +82,7 @@ export default function App() {
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
         chiama<Utente | null>('io').then(u => useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })), () => {})
         chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
-        await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi()])
+        await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
         // gli edifici OSM (1 MB) servono solo se accesi o per controllare cosa c'è sotto una piazza: si caricano dopo
         setTimeout(() => caricaEdifici().then(() => useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))), 4000)
         disegnaCupole(viewer)
@@ -90,14 +97,21 @@ export default function App() {
           ultimaPos = Cartesian3.clone(ora); ultimaVolta = t
           quoteCambiate(); rifaiPoi(); useS.setState(st => ({ googleGiro: st.googleGiro + 1 }))
         }, 1200) })
-        quandoGoogleKo(() => useS.getState().dici('Google 3D non risponde: per ora vedi il satellite'))
+        quandoGoogleKo(() => useS.getState().dici(t('Google 3D non risponde: per ora vedi il satellite')))
         stop = avviaInterazione(setCur, finisci)
         // link o QR con il percorso: ?da=lon,lat,Nome&a=lon,lat,Nome
         const u = new URLSearchParams(location.search), da = tappaDaLink(u.get('da')), a = tappaDaLink(u.get('a'))
+        // link di un punto: ?poi=id (nostro) o ?punto=lon,lat,Nome
+        const lp = u.get('poi'), pp = tappaDaLink(u.get('punto'))
+        const condiviso = lp ? elencoPoi().find(x => x.id === lp) : undefined
+        if (condiviso) useS.setState(st => ({ selPoi: condiviso.id, casaChiesta: true, poiCat: st.poiCat.includes(condiviso.c) ? st.poiCat : [...st.poiCat, condiviso.c] }))
+        else if (pp) useS.setState({ selGoogle: { id: 'link', nome: pp.nome ?? 'Punto condiviso', p: pp.p }, casaChiesta: true })
+        const centro = condiviso?.p ?? pp?.p
         if (a || da) useS.setState(st => ({ percorso: { da: da ?? st.percorso.da, a, scegli: da && a ? null : da ? 'a' : 'da' }, strumento: { k: 'percorso' }, ospite: Boolean(a), pannello: null }))
         // all'apertura la vista di tutta Positano; chi progetta riparte dalla vista salvata nel progetto
         const st0x = useS.getState(), v = st0x.inModifica && puoModificare(st0x.utente) && st0x.progetto().vista
-        if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
+        if (centro) centraSu(centro)
+        else if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
       } catch (e) {
@@ -112,8 +126,21 @@ export default function App() {
   const mod = s.inModifica && puoModificare(s.utente)
   // scena <- stato
   useEffect(() => { if (pronto) disegnaOggetti(op.oggetti, s.sel, s.vSel, s.livelli.progetto && mod) }, [pronto, op, s.sel, s.vSel, s.googleGiro, s.livelli.progetto, mod])
+  useEffect(() => { if (pronto) disegnaEventi(mod, s.selEvento, s.lingua === 'en') }, [pronto, mod, s.selEvento, s.lingua, s.googleGiro])
   useEffect(() => { if (pronto) disegnaPoi(new Set(s.ospite ? [] : s.poiCat), s.selPoi, mod) }, [pronto, s.poiCat, s.selPoi, mod, s.googleGiro, s.ospite])
   useEffect(() => { if (pronto && !mod && s.strumento.k !== 'naviga' && s.strumento.k !== 'percorso') s.set({ strumento: { k: 'naviga' }, bozza: [] }) }, [pronto, mod])
+  // correzione delle vie: si lavora sul satellite Esri (Google 3D non si può ricalcare); all'uscita torna com'era
+  const primaDiVie = useRef<{ google: boolean; orto: typeof s.livelli.orto } | null>(null)
+  useEffect(() => {
+    if (!pronto) return
+    if (s.strumento.k === 'vie' && !primaDiVie.current) {
+      primaDiVie.current = { google: s.livelli.google, orto: s.livelli.orto }
+      s.setLivelli({ google: false, orto: 'esri', strade: true })
+    } else if (s.strumento.k !== 'vie' && primaDiVie.current) {
+      const p = primaDiVie.current; primaDiVie.current = null
+      s.setLivelli({ google: p.google, orto: p.orto }); s.set({ selVia: null, viaBozza: null, viaVSel: null })
+    }
+  }, [pronto, s.strumento.k])
   useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
   useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
@@ -128,6 +155,11 @@ export default function App() {
   const calc = opzioni[Math.min(scelta, opzioni.length - 1)] ?? null
   useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? da : null, inPercorso ? a : null) }, [pronto, inPercorso, calc, da?.nome, a?.nome, s.livelli.google, s.googleGiro])
   useEffect(() => { calcRef.current = calc; if (calc) inquadraPercorso(calc) }, [calc])
+  useEffect(() => {
+    if (!pronto) return
+    const g = s.selGoogle
+    impostaVoci('gpl', g ? [{ id: 'gpl', tipo: 'tappa', pos: pos(g.p[0], g.p[1], quota(g.p[0], g.p[1]) + 3), testo: g.nome, icona: 'location_on', col: '#c5221f', scelto: true, maxDist: 1e9 }] : [])
+  }, [pronto, s.selGoogle?.id, s.googleGiro])
   // il punto Casa sulla mappa (toccandolo: percorso da Casa)
   useEffect(() => {
     if (!pronto) return
@@ -135,7 +167,7 @@ export default function App() {
     impostaVoci('casa', c && !s.ospite ? [{ id: 'casa', tipo: 'tappa', pos: pos(c.p[0], c.p[1], quota(c.p[0], c.p[1]) + 3), testo: c.nome && c.nome !== 'Casa' ? 'Casa · ' + c.nome : 'Casa', icona: 'home', col: '#0b6bcb', scelto: true, maxDist: 1e9,
       clic: () => useS.setState(st => ({ strumento: { k: 'percorso' }, percorso: { ...st.percorso, da: c, scegli: st.percorso.a ? null : 'a' }, selPoi: null, pannello: null })) }] : [])
   }, [pronto, s.casa?.p[0], s.casa?.p[1], s.casa?.nome, s.ospite, s.googleGiro])
-  useEffect(() => { document.title = s.ospite && a?.nome ? `Come arrivare a ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome])
+  useEffect(() => { document.title = s.ospite && a?.nome ? `${t('Come arrivare a')} ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome, s.lingua])
   useEffect(() => {
     if (!pronto) return
     impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
@@ -168,35 +200,47 @@ export default function App() {
   }, [])
 
   const risultati = q ? cercaTutto(q) : []
+  // luoghi di Google (negozi, attività, tutto quello che c'è): mezzo secondo dopo l'ultima lettera, solo in memoria
+  const [google, setGoogle] = useState<LuogoGoogle[]>([])
+  useEffect(() => {
+    const t = q.trim()
+    // solo sopra il 3D di Google: i luoghi di Google non si possono mostrare su altre mappe (modo Mappa, satellite Esri)
+    if (t.length < 3 || !s.googleKey || !s.livelli.google) { setGoogle([]); return }
+    const id = setTimeout(() => { cercaGoogle(t, s.googleKey, s.lingua).then(r => { const nostri = new Set(risultati.map(x => x.nome.toLowerCase())); setGoogle(r.filter(g => !nostri.has(g.nome.toLowerCase()))) }) }, 500)
+    return () => clearTimeout(id)
+  }, [q, s.googleKey, s.livelli.google, s.lingua])
   const st = s.strumento
   return (
     <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>
       <div ref={el} className="scena" />
-      {!pronto && !errore && <div className="caricamento">Preparo Positano in 3D…</div>}
+      {!pronto && !errore && <div className="caricamento">{t('Preparo Positano in 3D…')}</div>}
       {errore && <div className="caricamento errore">Il 3D non parte su questo dispositivo: {errore}</div>}
 
       <header className={'cima' + (cercaAperta ? ' cerca-aperta' : '')}>
         <div className="ricerca vetro">
           <Icona n="search" className="lente" />
-          <input value={q} onChange={e => setQ(e.target.value)} onFocus={() => setCercaAperta(true)} onBlur={() => setTimeout(() => setCercaAperta(false), 150)} placeholder="Cerca a Positano" aria-label="Cerca vie, luoghi e servizi" />
-          {q && <button className="tondo quiet" onClick={() => setQ('')} aria-label="Cancella la ricerca"><Icona n="close" /></button>}
+          <input value={q} onChange={e => setQ(e.target.value)} onFocus={() => setCercaAperta(true)} onBlur={() => setTimeout(() => setCercaAperta(false), 150)} placeholder={t('Cerca a Positano')} aria-label={t('Cerca vie, luoghi e servizi')} />
+          {q && <button className="tondo quiet" onClick={() => setQ('')} aria-label={t('Cancella la ricerca')}><Icona n="close" /></button>}
+          <button className="lingua quiet" onClick={() => s.set({ lingua: s.lingua === 'it' ? 'en' : 'it' })} aria-label={s.lingua === 'it' ? 'English' : 'Italiano'} data-tip={s.lingua === 'it' ? 'English' : 'Italiano'}>{s.lingua === 'it' ? 'EN' : 'IT'}</button>
           <button className={'avatar' + (s.utente ? ' con-utente' : '')} onClick={() => s.set({ pannello: s.pannello === 'accesso' ? null : 'accesso' })} aria-label={s.utente ? 'Il tuo account' : 'Accedi'} data-tip={s.utente ? s.utente.nome : 'Accedi per progettare e aggiornare la mappa'}>
             {s.utente ? s.utente.nome.trim()[0]?.toUpperCase() : <Icona n="person" />}
           </button>
-          {(risultati.length > 0 || (cercaAperta && !q)) && <ul className="risultati vetro">
-            {risultati.length > 0 ? risultati.map(r => (
-              <li key={r.nome + r.tipo + (r.poi ?? '')}><button onMouseDown={e => e.preventDefault()} onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); if (r.poi) { const c = elencoPoi().find(x => x.id === r.poi)!.c; s.set({ selPoi: r.poi, poiCat: s.poiCat.includes(c) ? s.poiCat : [...s.poiCat, c] }) } }}><Icona n={r.poi ? 'location_on' : r.tipo === 'strada' ? 'route' : 'map'} /><span>{r.nome}</span><small>{r.tipo}</small></button></li>
-            )) : <>
+          {(risultati.length > 0 || cercaAperta) && <ul className="risultati vetro">
+            {q.trim() ? risultati.map(r => (
+              <li key={r.nome + r.tipo + (r.poi ?? '')}><button onMouseDown={e => e.preventDefault()} onClick={() => { const z = r.z ?? quota(r.p[0], r.p[1]); vai({ lon: r.p[0], lat: r.p[1] - 0.0012, h: z + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); if (r.poi) { const c = elencoPoi().find(x => x.id === r.poi)!.c; s.set({ selPoi: r.poi, poiCat: s.poiCat.includes(c) ? s.poiCat : [...s.poiCat, c] }) } }}><Icona n={r.poi ? 'location_on' : r.tipo === 'strada' ? 'route' : 'map'} /><span>{r.nome}</span><small>{t(r.tipo)}</small></button></li>
+            )).concat(google.length ? [<li key="gt" className="titoletto">{t('Da Google Maps')}</li>, ...google.map(g => (
+              <li key={'g' + g.id}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai({ lon: g.p[0], lat: g.p[1] - 0.0012, h: quota(g.p[0], g.p[1]) + 110, heading: 0, pitch: -40 }); setQ(''); setCercaAperta(false); s.set({ selGoogle: g, selPoi: null, pannello: null }) }}><Icona n="location_on" /><span>{g.nome}</span><small>{g.tipo ?? g.indirizzo}</small></button></li>
+            )), <li key="ga" className="attribuzione-google">{t('Risultati di Google')}</li>] : []) : <>
               {s.casa && <li><button onMouseDown={e => e.preventDefault()} onClick={() => { centraSu(s.casa!.p); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="home" /><span>Casa{s.casa.nome && s.casa.nome !== 'Casa' ? ' · ' + s.casa.nome : ''}</span></button></li>}
-              <li className="titoletto">Vai a</li>
-              {VAI.map(v => <li key={v.nome}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai(v); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="near_me" /><span>{v.nome}</span></button></li>)}
+              <li className="titoletto">{t('Vai a')}</li>
+              {VAI.map(v => <li key={v.nome}><button onMouseDown={e => e.preventDefault()} onClick={() => { vai(v); setCercaAperta(false); (document.activeElement as HTMLElement)?.blur() }}><Icona n="near_me" /><span>{t(v.nome)}</span></button></li>)}
             </>}
           </ul>}
         </div>
         {mod && (
           <div className="barra-modifica vetro">
             <button className="quiet progetto-nome" onClick={() => s.set({ pannello: 'progetto' })} data-tip="Progetti e opzioni">{s.progetto().nome} · {op.nome}</button>
-            <button className="tondo quiet" disabled={!s.passato.length} onClick={s.annulla} data-tip="Annulla (Ctrl+Z)" aria-label="Annulla"><Icona n="undo" /></button>
+            <button className="tondo quiet" disabled={!s.passato.length} onClick={s.annulla} data-tip="Annulla (Ctrl+Z)" aria-label={t('Annulla')}><Icona n="undo" /></button>
             <button className="tondo quiet" disabled={!s.futuro.length} onClick={s.ripeti} data-tip="Ripeti (Ctrl+Y)" aria-label="Ripeti"><Icona n="redo" /></button>
             <button className="tondo quiet solo-desktop" onClick={() => { s.salvaVista(vistaCorrente()); s.dici('Vista salvata nel progetto') }} data-tip="Salva questa vista come partenza del progetto" aria-label="Salva vista"><Icona n="push_pin" /></button>
             <button className="tondo quiet solo-desktop" onClick={() => foto(s.progetto().nome)} data-tip="Scarica la vista come immagine ad alta risoluzione" aria-label="Foto"><Icona n="photo_camera" /></button>
@@ -209,11 +253,12 @@ export default function App() {
       {/* pulsanti tondi in basso a destra, come sulle mappe del telefono */}
       {!s.ospite && (
         <div className="fab">
-          <button className={'fab-piccolo vetro' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label="Guida" data-tip="Guida e fonti dei dati"><Icona n="help" /></button>
-          <button className={'fab-piccolo vetro' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} aria-label="Livelli" data-tip="Mappa, Google 3D, colori delle vie, qualità"><Icona n="layers" /></button>
-          <button className="fab-piccolo vetro" onClick={rimettiVista} aria-label="Rimetti la vista" data-tip="Rimetti la vista: sul percorso, sulla tua posizione o su tutta Positano"><Icona n="zoom_out_map" /></button>
-          <button className={'fab-piccolo vetro' + (gps ? ' acceso' : '')} aria-pressed={gps} onClick={dove} aria-label="Dove sono" data-tip="Mostra dove sei (GPS)"><Icona n="my_location" /></button>
-          <button className={'fab-grande' + (st.k === 'percorso' ? ' acceso' : '')} onClick={() => s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, da: s.percorso.da ?? s.casa, scegli: (s.percorso.da ?? s.casa) ? (s.percorso.a ? null : 'a') : 'da' }, selPoi: null, pannello: null })} aria-label="Percorso a piedi" data-tip="Da un punto a un altro a piedi, con salite e scale"><Icona n="directions" /><span>Percorso</span></button>
+          <button className={'fab-piccolo vetro' + (s.pannello === 'aiuto' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'aiuto' ? null : 'aiuto' })} aria-label={t('Guida')} data-tip={t('Guida e fonti dei dati')}><Icona n="help" /></button>
+          <button className={'fab-piccolo vetro' + (s.pannello === 'livelli' ? ' acceso' : '')} onClick={() => s.set({ pannello: s.pannello === 'livelli' ? null : 'livelli' })} aria-label={t('Livelli')} data-tip={t('Mappa, Google 3D, colori delle vie, qualità')}><Icona n="layers" /></button>
+          <button className="fab-piccolo vetro" onClick={() => { const c = useS.getState().casa; if (c) centraSu(c.p); else s.set({ casaChiesta: false, selPoi: null, pannello: null }) }} aria-label={t('Casa')} data-tip={s.casa ? 'Vai al tuo punto Casa' : 'Scegli il tuo punto Casa'}><Icona n="home" /></button>
+          <button className="fab-piccolo vetro" onClick={rimettiVista} aria-label={t('Rimetti la vista')} data-tip={t('Rimetti la vista: sul percorso, sulla tua posizione o su tutta Positano')}><Icona n="zoom_out_map" /></button>
+          <button className={'fab-piccolo vetro' + (gps ? ' acceso' : '')} aria-pressed={gps} onClick={dove} aria-label={t('Dove sono')} data-tip={t('Mostra dove sei (GPS)')}><Icona n="my_location" /></button>
+          <button className={'fab-grande' + (st.k === 'percorso' ? ' acceso' : '')} onClick={() => s.set({ strumento: st.k === 'percorso' ? { k: 'naviga' } : { k: 'percorso' }, percorso: { ...s.percorso, da: s.percorso.da ?? s.casa, scegli: (s.percorso.da ?? s.casa) ? (s.percorso.a ? null : 'a') : 'da' }, selPoi: null, pannello: null })} aria-label={t('Percorso a piedi')} data-tip={t('Da un punto a un altro a piedi, con salite e scale')}><Icona n="directions" /><span>{t('Percorso')}</span></button>
         </div>
       )}
 
@@ -230,6 +275,8 @@ export default function App() {
         <button className={s.pannello === 'catalogo' ? 'acceso' : ''} onClick={() => { s.set({ pannello: s.pannello === 'catalogo' ? null : 'catalogo' }); setAperto(null) }} data-tip="Auto, bus, gazebo, palchi, tende, arredi"><Icona n="category" />Catalogo</button>
         <button className={st.k === 'cammina' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'cammina' ? { k: 'naviga' } : { k: 'cammina' }, bozza: [] }); setAperto(null) }} data-tip="Cammina ad altezza d'uomo dal punto al centro dello schermo"><Icona n="directions_walk" />Cammina</button>
         <button className={st.k === 'poi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'poi' ? { k: 'naviga' } : { k: 'poi' }, sel: null, selPoi: null, pannello: st.k === 'poi' ? null : 'poi', spostaPoi: false }); setAperto(null) }} data-tip="Aggiungi o correggi bagni, fermate, parcheggi e altri punti: li vedono tutti"><Icona n="add_location_alt" />Punti</button>
+        <button className={st.k === 'vie' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'vie' ? { k: 'naviga' } : { k: 'vie' }, sel: null, selPoi: null, selVia: null, viaBozza: null, pannello: st.k === 'vie' ? null : 'via' }); setAperto(null) }} data-tip="Correggi le vie a mano sul satellite: le vedono tutti e migliorano i percorsi"><Icona n="edit_road" />Vie</button>
+        <button className={st.k === 'eventi' ? 'acceso' : ''} onClick={() => { s.set({ strumento: st.k === 'eventi' ? { k: 'naviga' } : { k: 'eventi' }, sel: null, selPoi: null, selEvento: null, nuovoEvento: null, pannello: st.k === 'eventi' ? null : 'evento' }); setAperto(null) }} data-tip="Concerti, feste, mercati, chiusure: compaiono solo mentre sono in corso"><Icona n="celebration" />Eventi</button>
       </nav>}
 
       {(st.k === 'disegna' || st.k === 'misura') && (
@@ -238,7 +285,7 @@ export default function App() {
           <span>{st.k === 'disegna' ? st.aiuto : st.modo === 'quota' ? 'Clicca un punto' : st.modo === 'altezza' ? 'Clicca due punti' : 'Clicca i punti; ogni nuova misura parte dopo «Nuova»'}</span>
           {st.k === 'disegna' && <button className="primary" disabled={s.bozza.length < st.min} onClick={finisci}>Fine ({s.bozza.length})</button>}
           {st.k === 'misura' && <button onClick={() => s.set({ misure: [...s.misure, { id: Math.random().toString(36).slice(2), modo: st.modo, pts: [] }] })}>Nuova</button>}
-          <button className="quiet" onClick={() => s.set({ strumento: { k: 'naviga' }, bozza: [] })}>Esci</button>
+          <button className="quiet" onClick={() => s.set({ strumento: { k: 'naviga' }, bozza: [] })}>{t('Esci')}</button>
         </div>
       )}
 
@@ -246,11 +293,13 @@ export default function App() {
       {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} esci={() => s.set({ strumento: { k: 'naviga' }, percorso: { ...s.percorso, scegli: null } })} />}
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
+      {s.selGoogle && !s.selPoi && !s.pannello && st.k !== 'percorso' && <SchedaGoogle />}
+      {s.selEvento && !s.pannello && st.k !== 'percorso' && st.k !== 'eventi' && <SchedaEvento />}
       {pronto && !mod && !s.ospite && (s.scegliCasa || (!s.casaChiesta && !s.selPoi && st.k === 'naviga' && !s.pannello)) && <SchedaCasa />}
       {s.pannello && <Pannello chiudi={() => s.set({ pannello: null, sel: null, selEdificio: null, info: null })} />}
 
       <footer className="stato">
-        <span ref={barra}>Positano</span>
+        <span ref={barra}>{t('Positano')}</span>
       </footer>
       {s.avviso && <div className="avviso" role="status">{s.avviso}</div>}
       <Suggerimenti />

@@ -4,7 +4,7 @@ import type { Env } from './index'
 
 type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 const GIORNI = 30
-const CATEGORIE = new Set(['bagni', 'fermate', 'biglietti', 'traghetti', 'taxi', 'parcheggi', 'bar', 'ristoranti', 'farmacie', 'salute', 'bancomat', 'acqua', 'info', 'alimentari', 'spiagge', 'panorami', 'chiese', 'sicurezza', 'altro'])
+const CATEGORIE = new Set(['bagni', 'fermate', 'biglietti', 'traghetti', 'taxi', 'parcheggi', 'bar', 'ristoranti', 'farmacie', 'salute', 'bancomat', 'acqua', 'info', 'alimentari', 'spiagge', 'panorami', 'chiese', 'sicurezza', 'alloggi', 'negozi', 'attivita', 'altro'])
 const IMPOSTAZIONI = new Set(['coloriVie'])
 
 const json = (d: unknown, status = 200, h: Record<string, string> = {}) => Response.json(d, { status, headers: { 'Cache-Control': 'no-store', ...h } })
@@ -93,6 +93,54 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
       if (!(Math.abs(lon - 14.48) < 0.1 && Math.abs(lat - 40.62) < 0.08)) return errore('Il punto deve essere a Positano')
       await env.DB.prepare('INSERT INTO poi (id, c, n, lon, lat, note, nascosto, autore, aggiornato) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET c = excluded.c, n = excluded.n, lon = excluded.lon, lat = excluded.lat, note = excluded.note, nascosto = excluded.nascosto, autore = excluded.autore, aggiornato = excluded.aggiornato')
         .bind(id, b.c, (b.n ?? '').trim().slice(0, 80) || null, lon, lat, (b.note ?? '').trim().slice(0, 400) || null, b.nascosto ? 1 : 0, io!.email, new Date().toISOString()).run()
+      return json({ ok: true })
+    }
+  }
+
+  // eventi a tempo: tutti leggono quelli non ancora finiti, gli editor scrivono
+  if (via[0] === 'eventi') {
+    if (m === 'GET') {
+      const r = await env.DB.prepare('SELECT id, titolo, titolo_en, descr, descr_en, lon, lat, inizio, fine, link FROM eventi WHERE fine > ? ORDER BY inizio').bind(new Date(Date.now() - 864e5).toISOString()).all()
+      return json(r.results, 200, { 'Cache-Control': 'public, max-age=30' })
+    }
+    if (!puoModificare) return errore('Serve un account abilitato alla modifica', 403)
+    const id = via[1]
+    if (!id || id.length > 60) return errore('Evento non valido')
+    if (m === 'DELETE') { await env.DB.prepare('DELETE FROM eventi WHERE id = ?').bind(id).run(); return json({ ok: true }) }
+    if (m === 'PUT') {
+      const b = await corpo<{ titolo?: string; titolo_en?: string; descr?: string; descr_en?: string; lon?: number; lat?: number; inizio?: string; fine?: string; link?: string }>(req)
+      const titolo = (b?.titolo ?? '').trim().slice(0, 100), lon = Number(b?.lon), lat = Number(b?.lat)
+      const ini = new Date(b?.inizio ?? ''), fin = new Date(b?.fine ?? '')
+      if (!titolo) return errore('Serve un titolo')
+      if (!(Math.abs(lon - 14.48) < 0.1 && Math.abs(lat - 40.62) < 0.08)) return errore('L\'evento deve essere a Positano')
+      if (isNaN(+ini) || isNaN(+fin) || fin <= ini) return errore('Date non valide: la fine deve venire dopo l\'inizio')
+      const link = (b?.link ?? '').trim()
+      if (link && !/^https:\/\//.test(link)) return errore('Il link deve iniziare con https://')
+      const cut = (x?: string, n = 600) => (x ?? '').trim().slice(0, n) || null
+      await env.DB.prepare('INSERT INTO eventi (id, titolo, titolo_en, descr, descr_en, lon, lat, inizio, fine, link, autore, aggiornato) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET titolo = excluded.titolo, titolo_en = excluded.titolo_en, descr = excluded.descr, descr_en = excluded.descr_en, lon = excluded.lon, lat = excluded.lat, inizio = excluded.inizio, fine = excluded.fine, link = excluded.link, autore = excluded.autore, aggiornato = excluded.aggiornato')
+        .bind(id, titolo, cut(b?.titolo_en, 100), cut(b?.descr), cut(b?.descr_en), lon, lat, ini.toISOString(), fin.toISOString(), link || null, io!.email, new Date().toISOString()).run()
+      return json({ ok: true })
+    }
+  }
+
+  // vie corrette a mano: tutti leggono, gli editor scrivono
+  if (via[0] === 'vie') {
+    if (m === 'GET') {
+      const r = await env.DB.prepare('SELECT id, c, dz, controllata, nascosta, aggiornato FROM vie').all<{ c: string }>()
+      return json(r.results.map(x => ({ ...x, c: JSON.parse(x.c) })), 200, { 'Cache-Control': 'public, max-age=30' })
+    }
+    if (!puoModificare) return errore('Serve un account abilitato alla modifica', 403)
+    const id = via[1]
+    if (!id || !/^w\d+$/.test(id)) return errore('Via non valida')
+    if (m === 'DELETE') { await env.DB.prepare('DELETE FROM vie WHERE id = ?').bind(id).run(); return json({ ok: true }) }
+    if (m === 'PUT') {
+      const b = await corpo<{ c?: unknown; dz?: number; controllata?: boolean; nascosta?: boolean }>(req)
+      const c = b?.c
+      if (!Array.isArray(c) || c.length < 2 || c.length > 2000 || !c.every(p => Array.isArray(p) && p.length === 2 && Math.abs(Number(p[0]) - 14.48) < 0.1 && Math.abs(Number(p[1]) - 40.62) < 0.08)) return errore('Punti non validi')
+      const dz = Math.max(-20, Math.min(30, Number(b?.dz) || 0))
+      const pulito = JSON.stringify(c.map(p => [Math.round(Number(p[0]) * 1e7) / 1e7, Math.round(Number(p[1]) * 1e7) / 1e7]))
+      await env.DB.prepare('INSERT INTO vie (id, c, dz, controllata, nascosta, autore, aggiornato) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET c = excluded.c, dz = excluded.dz, controllata = excluded.controllata, nascosta = excluded.nascosta, autore = excluded.autore, aggiornato = excluded.aggiornato')
+        .bind(id, pulito, dz, b?.controllata === false ? 0 : 1, b?.nascosta ? 1 : 0, io!.email, new Date().toISOString()).run()
       return json({ ok: true })
     }
   }

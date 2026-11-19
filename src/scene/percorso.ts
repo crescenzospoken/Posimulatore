@@ -1,3 +1,4 @@
+import { t as tr } from '../i18n'
 import * as C from 'cesium'
 import { viewer, pos, quotaGoogle, googleAcceso } from './viewer'
 import { quota as quotaTerreno } from './terreno'
@@ -26,7 +27,7 @@ export function disegnaPercorso(r: Percorso | null, da: Tappa | null, a: Tappa |
   }
   // A e B in HTML sopra la scena, come i punti di interesse (nitidi sul telefono)
   impostaVoci('tappa', ([['A', da, '#188038'], ['B', a, '#c5221f']] as const).flatMap(([lettera, t, col]) => t ? [{
-    id: 'tappa:' + lettera, tipo: 'tappa' as const, pos: pos(t.p[0], t.p[1], zSuolo(t.p) + 3), testo: (lettera === 'A' ? 'Da ' : 'A ') + (t.nome ?? 'punto scelto'),
+    id: 'tappa:' + lettera, tipo: 'tappa' as const, pos: pos(t.p[0], t.p[1], zSuolo(t.p) + 3), testo: tr(lettera === 'A' ? 'Da' : 'A') + ' ' + (t.nome ?? tr('punto scelto')),
     icona: lettera === 'A' ? 'my_location' : 'location_on', col, scelto: true, maxDist: 1e9,
   }] : []))
   viewer.scene.requestRender()

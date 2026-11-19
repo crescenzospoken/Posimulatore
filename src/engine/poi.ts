@@ -23,6 +23,9 @@ export const CATEGORIE: Categoria[] = [
   { k: 'panorami', s: 'photo_camera', nome: 'Panorami', icona: '📷', col: '#0b8a9e', base: false },
   { k: 'chiese', s: 'church', nome: 'Chiese', icona: '⛪', col: '#5f6368', base: false },
   { k: 'sicurezza', s: 'local_police', nome: 'Polizia e soccorso', icona: '🚓', col: '#3c4043', base: false },
+  { k: 'alloggi', s: 'hotel', nome: 'Hotel e alloggi', icona: '🏨', col: '#8e24aa', base: false },
+  { k: 'negozi', s: 'storefront', nome: 'Negozi', icona: '🛍️', col: '#c2185b', base: false },
+  { k: 'attivita', s: 'work', nome: 'Altre attività', icona: '💼', col: '#5f6368', base: false },
   { k: 'altro', s: 'location_on', nome: 'Altro', icona: '📍', col: '#5f6368', base: false },
 ]
 export const categoria = (k: string) => CATEGORIE.find(c => c.k === k) ?? CATEGORIE[CATEGORIE.length - 1]
