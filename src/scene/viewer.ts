@@ -126,29 +126,43 @@ export function impostaQualita(q: Qualita) {
 }
 let onGoogle: (() => void) | undefined, onGoogleKo: (() => void) | undefined
 let googlePronto = false
+let fonteGoogle: 'google' | 'ion' | '' = ''
+/** Da dove arriva il 3D: Google diretto o Cesium ion (per le prove). */
+export const fonte3D = () => fonteGoogle
 /** Chiamata quando Google smette di rispondere e si torna al satellite. */
 export const quandoGoogleKo = (f: () => void) => { onGoogleKo = f }
 /** Chiamata ogni volta che Google ha finito di caricare la vista: le quote lette possono essere cambiate. */
 export const quandoGoogle = (f: () => void) => { onGoogle = f }
-export async function impostaGoogle(on: boolean, token: string): Promise<string | null> {
+export async function impostaGoogle(on: boolean, token: string, chiave = ''): Promise<string | null> {
   if (!on) {
     if (google) google.show = false
     viewer.scene.globe.show = true
     return null
   }
-  if (!token) return 'Serve il codice di accesso gratuito di Cesium ion (Impostazioni)'
+  if (!token && !chiave) return 'Serve il codice di accesso gratuito di Cesium ion (Impostazioni)'
   try {
     if (!google) {
-      C.Ion.defaultAccessToken = token
+      if (token) C.Ion.defaultAccessToken = token
       const v = Q[qAttuale]
-      google = await C.createGooglePhotorealistic3DTileset(undefined, {
+      const opzioni: C.Cesium3DTileset.ConstructorOptions = {
         maximumScreenSpaceError: v.sse, cacheBytes: v.cacheMB * 1024 * 1024,
         // meno dettaglio ai bordi e in lontananza, niente tile a vuoto mentre si muove la vista
         foveatedScreenSpaceError: true, dynamicScreenSpaceError: true, preloadFlightDestinations: false, loadSiblings: false,
         enableCollision: false,
         // salta i livelli intermedi: meno tessere da scaricare e decodificare mentre ci si muove (era la causa degli scatti sul telefono)
         skipLevelOfDetail: true, baseScreenSpaceError: 1024, skipScreenSpaceErrorFactor: 16, skipLevels: 1, immediatelyLoadDesiredLevelOfDetail: false,
-      })
+      }
+      // prima Google diretto con la chiave del sito (uso pubblico gratuito entro la quota, tetto giornaliero nella console Google);
+      // se non risponde (quota finita, chiave sbagliata) si prova Cesium ion
+      google = undefined
+      if (chiave) {
+        try { google = await C.createGooglePhotorealistic3DTileset({ key: chiave, onlyUsingWithGoogleGeocoder: true }, opzioni); fonteGoogle = 'google' }
+        catch (e) { console.warn('Google diretto non risponde, provo Cesium ion', e) }
+      }
+      if (!google) {
+        if (!token) throw new Error('Google non risponde')
+        google = await C.createGooglePhotorealistic3DTileset({ onlyUsingWithGoogleGeocoder: true }, opzioni); fonteGoogle = 'ion'
+      }
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY
       google.allTilesLoaded.addEventListener(() => onGoogle?.())

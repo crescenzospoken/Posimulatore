@@ -46,6 +46,8 @@ type Stato = {
   livelli: Livelli
   ionToken: string
   ionTokenSito: string
+  /** chiave di Google Map Tiles del sito: il 3D si prende da Google diretto (uso pubblico permesso); Cesium ion resta di riserva */
+  googleKey: string
   ultimaQuota: number | null
   googleGiro: number
   /** punto scelto dell'oggetto selezionato */
@@ -132,6 +134,7 @@ export const useS = create<Stato>((set, get) => ({
   livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), ...((iniziale?.livelli?.rev ?? 0) < 2 ? { edifici: false, progetto: false } : {}), ...((iniziale?.livelli?.rev ?? 0) < 3 ? { strade: true, coloriVie: {}, rev: 3 } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
   ionToken: iniziale?.ionToken ?? '',
   ionTokenSito: '',
+  googleKey: '',
   ultimaQuota: null,
   googleGiro: 0,
   vSel: null,

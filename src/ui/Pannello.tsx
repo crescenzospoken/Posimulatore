@@ -244,7 +244,7 @@ function Livelli() {
       {t('nomi', 'Nomi dei luoghi')}
       {t('confine', 'Confine comunale')}
       {t('google', 'Google 3D fotorealistico', 'La base più fedele: i progetti si disegnano sopra. Solo da guardare, mai copiato')}
-      {!s.ionTokenSito && (l.google || !s.ionToken) && (
+      {!s.ionTokenSito && !s.googleKey && (l.google || !s.ionToken) && (
         <label>Codice Cesium ion
           <input type="password" value={s.ionToken} placeholder="Incolla il codice di accesso" onChange={e => s.set({ ionToken: e.target.value.trim() })} />
           <small>Account gratuito su ion.cesium.com, sezione Access Tokens. Resta solo in questo browser.</small>

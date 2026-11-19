@@ -60,7 +60,7 @@ export default function App() {
     let stop: (() => void) | undefined
     ;(async () => {
       try {
-        try { const c = await (await fetch('/config')).json(); if (c.ionToken) useS.setState(st => ({ ionTokenSito: c.ionToken, livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
+        try { const c = await (await fetch('/config')).json(); if (c.ionToken || c.googleKey) useS.setState(st => ({ ionTokenSito: c.ionToken ?? '', googleKey: c.googleKey ?? '', livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
         await creaViewer(el.current!)
         avviaSovrapposti(el.current!)
         impostaOrto(useS.getState().livelli.orto)
@@ -117,8 +117,8 @@ export default function App() {
   useEffect(() => { document.title = s.ospite && a?.nome ? `Come arrivare a ${a.nome} · Posimulatore` : 'Posimulatore' }, [s.ospite, a?.nome])
   useEffect(() => {
     if (!pronto) return
-    impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
-  }, [pronto, s.livelli.google, s.ionToken, s.ionTokenSito])
+    impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
+  }, [pronto, s.livelli.google, s.ionToken, s.ionTokenSito, s.googleKey])
   useEffect(() => { if (pronto) { if (s.strumento.k === 'cammina') avviaCammina(); else fermaCammina() } }, [pronto, s.strumento.k])
 
   // tastiera
