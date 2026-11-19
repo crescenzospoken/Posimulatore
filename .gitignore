@@ -3,3 +3,6 @@ dist
 .wrangler
 *.log
 public/cesium
+
+# Claude Code: approvazioni locali, possono contenere token
+.claude/settings.local.json
