@@ -7,7 +7,7 @@ import type { Vista } from '../engine/model'
 ;(window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = '/cesium/'
 export let viewer: C.Viewer
 export const VAI: { nome: string; lon: number; lat: number; h: number; heading: number; pitch: number }[] = [
-  { nome: 'Tutta Positano', lon: 14.4835, lat: 40.6085, h: 1500, heading: 0, pitch: -32 },
+  { nome: 'Tutta Positano', lon: 14.4858, lat: 40.6192, h: 900, heading: 6, pitch: -42 },
   { nome: 'Bivio di Chiesa Nuova', lon: 14.48335, lat: 40.62935, h: 222, heading: 262, pitch: -38 },
   { nome: 'Spiaggia Grande e Collegiata', lon: 14.4852, lat: 40.6248, h: 160, heading: 0, pitch: -25 },
   { nome: 'La Sponda', lon: 14.4905, lat: 40.6250, h: 200, heading: -10, pitch: -35 },
@@ -20,6 +20,8 @@ export const VAI: { nome: string; lon: number; lat: number; h: number; heading: 
 let pavimento = true
 /** Il pavimento della camera si spegne mentre si cammina (lì la quota la decide la camminata). */
 export const pavimentoAttivo = (on: boolean) => { pavimento = on }
+/** Tutta Positano dal mare; sul telefono (schermo stretto) un po' più alta per starci tutta. */
+export const vistaTotale = (durata = 1.6) => { const v = VAI[0]; vai(telefono() ? { ...v, h: v.h * 1.6, lat: v.lat - 0.004 } : v, durata) }
 export const pos = (lon: number, lat: number, z: number) => C.Cartesian3.fromDegrees(lon, lat, z + GEOIDE)
 
 export async function creaViewer(el: HTMLElement, onReady?: () => void) {

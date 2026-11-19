@@ -71,6 +71,11 @@ type Stato = {
   coloriBase: Record<string, string>
   /** percorso a piedi da A a B; scegli = quale dei due prende il prossimo clic sulla mappa */
   percorso: { da: Tappa | null; a: Tappa | null; scegli: 'da' | 'a' | null }
+  /** punto «Casa» del visitatore (dove alloggia): partenza di base dei percorsi; scegliCasa = il prossimo clic sulla mappa lo fissa */
+  casa: Tappa | null
+  scegliCasa: boolean
+  /** il visitatore ha già visto (o chiuso) la richiesta del punto Casa */
+  casaChiesta: boolean
   /** aperto da un link o da un QR: interfaccia ridotta al solo percorso */
   ospite: boolean
   passato: string[]
@@ -99,7 +104,7 @@ type Stato = {
   dici: (t: string) => void
 }
 const KEY = 'posimulatore.v5'
-type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean }
+type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?: string; partenza?: Tappa | null; poiCat?: string[]; inModifica?: boolean; senzaEsempio?: boolean; casa?: Tappa | null; casaChiesta?: boolean }
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
@@ -117,7 +122,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 function salva(s: Stato) {
   clearTimeout(timer)
   timer = setTimeout(() => {
-    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true })) } catch { /* pieno o privato */ }
+    try { localStorage.setItem(KEY, JSON.stringify({ progetti: s.progetti, pid: s.pid, livelli: s.livelli, ionToken: s.ionToken, partenza: s.ospite ? leggi()?.partenza : s.percorso.da, poiCat: s.poiCat, inModifica: s.inModifica, senzaEsempio: true, casa: s.casa, casaChiesta: s.casaChiesta })) } catch { /* pieno o privato */ }
   }, 300)
 }
 
@@ -143,6 +148,9 @@ export const useS = create<Stato>((set, get) => ({
   pannello: null,
   percorso: { da: iniziale?.partenza ?? null, a: null, scegli: null },
   ospite: false,
+  casa: iniziale?.casa ?? null,
+  scegliCasa: false,
+  casaChiesta: iniziale?.casaChiesta ?? false,
   utente: null,
   inModifica: iniziale?.inModifica ?? false,
   poiCat: iniziale?.poiCat ?? CATEGORIE.filter(c => c.base).map(c => c.k),
@@ -202,7 +210,7 @@ export const useS = create<Stato>((set, get) => ({
     set({ progetti: s.progetti.map(p => p.id !== s.pid ? p : { ...p, opzioni: p.opzioni.map(x => (x.id === o.id ? o : x)) }), futuro: s.futuro.slice(0, -1), passato: [...s.passato, ora] })
     salva(get())
   },
-  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p) salva(get()) },
+  set(p) { set(p); if ('ionToken' in p || 'poiCat' in p || 'inModifica' in p || 'casa' in p || 'casaChiesta' in p) salva(get()) },
   setLivelli(p) { set({ livelli: { ...get().livelli, ...p, ...('google' in p ? { googleScelto: p.google } : {}) } }); salva(get()) },
   nuovoProgetto(nome) {
     const o: Opzione = { id: uid(), nome: 'Opzione A', oggetti: [], edifici: {} }

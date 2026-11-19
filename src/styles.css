@@ -344,3 +344,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .segno-poi.lontano { margin: -10px 0 0 -10px; }
 .segno-poi.tappa .testo { background: var(--vetro-forte); padding: 3px 8px; border-radius: 999px; text-shadow: none; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25); }
 .ospite .crediti { background: var(--vetro-forte); }
+.scheda-casa .cerca { position: relative; max-width: none; }
+.scheda-casa .cerca input { width: 100%; }
+.scheda-casa .risultati { position: absolute; left: 0; right: 0; top: calc(100% + 6px); list-style: none; margin: 0; padding: 6px; border-radius: 16px; max-height: 40vh; overflow: auto; z-index: 5; }
+.riga-casa { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 14px; background: rgba(11, 107, 203, 0.07); }
+.riga-casa > span:not(.icona-m) { flex: 1; }
+.riga-casa .icona-m { color: var(--accento); }

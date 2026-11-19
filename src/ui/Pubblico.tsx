@@ -4,6 +4,7 @@ import { Icona } from './Icona'
 import type { NomeIcona } from './icone'
 import { CATEGORIE, categoria, orariLeggibili } from '../engine/poi'
 import { poiDa, ricaricaPoi } from '../scene/poi'
+import { cerca } from '../scene/contesto'
 import { ultimaPosizione, dentroPositano } from '../scene/gps'
 
 /** Chiamata alle API: JSON, intestazione propria (le scritture la richiedono) e messaggio d'errore leggibile. */
@@ -120,6 +121,7 @@ export function Accesso() {
     return (
       <div className="campi">
         <p>Hai fatto l'accesso come <b>{u.nome}</b> ({u.email}).</p>
+        <RigaCasa />
         {u.ruolo === 'attesa' && <p className="nota">Il tuo account aspetta di essere abilitato dall'amministratore. Intanto puoi usare la mappa come tutti.</p>}
         {puoModificare(u) && <label className="riga"><span>Modalità modifica<small>Progetti, disegno, edifici, punti di interesse</small></span><input type="checkbox" checked={s.inModifica} onChange={e => s.set({ inModifica: e.target.checked })} /></label>}
         {u.ruolo === 'admin' && <button onClick={() => s.set({ pannello: 'utenti' })}>Utenti e permessi</button>}
@@ -137,6 +139,7 @@ export function Accesso() {
   }
   return (
     <form className="campi" onSubmit={invia}>
+      <RigaCasa />
       <p className="nota">La mappa è aperta a tutti. L'accesso serve a chi progetta e aggiorna i punti di interesse.</p>
       {modo === 'registrati' && <label>Nome e cognome<input value={d.nome} autoComplete="name" onChange={e => setD({ ...d, nome: e.target.value })} required /></label>}
       <label>Email<input type="email" value={d.email} autoComplete="email" onChange={e => setD({ ...d, email: e.target.value })} required /></label>
@@ -177,6 +180,53 @@ export function Utenti() {
           </>}
         </li>
       ))}</ul>
+    </div>
+  )
+}
+
+/** Benvenuto per chi apre il sito: il punto «Casa» (dove alloggia), da posizione, mappa o ricerca. Diventa la partenza dei percorsi. */
+export function SchedaCasa() {
+  const s = useS()
+  const [q, setQ] = useState('')
+  const ris = q ? cerca(q) : []
+  const fissa = (t: { p: [number, number]; nome?: string }) => s.set({ casa: { p: t.p, nome: t.nome || 'Casa' }, casaChiesta: true, scegliCasa: false })
+  const posizione = () => {
+    if (!navigator.geolocation) { s.dici('Questo dispositivo non dà la posizione'); return }
+    navigator.geolocation.getCurrentPosition(
+      g => { const p: [number, number] = [g.coords.longitude, g.coords.latitude]; if (!dentroPositano(p)) { s.dici('Sei fuori Positano: tocca la mappa o cerca un indirizzo'); return } fissa({ p, nome: 'Casa' }) },
+      e => s.dici(e.code === e.PERMISSION_DENIED ? 'Posizione non permessa: tocca la mappa o cerca un indirizzo' : 'Posizione non disponibile adesso'),
+      { enableHighAccuracy: true, timeout: 10000 },
+    )
+  }
+  if (s.scegliCasa) return (
+    <div className="guida-strumento vetro"><b>Casa</b><span>Tocca la mappa dove alloggi</span><button className="quiet" onClick={() => s.set({ scegliCasa: false })}>Annulla</button></div>
+  )
+  return (
+    <section className="scheda-poi scheda-casa" aria-label="Il tuo punto Casa">
+      <div className="pannello-testa">
+        <h2><span className="icona-tonda" style={{ background: '#0b6bcb' }}><Icona n="home" /></span>Dove alloggi?</h2>
+        <button className="tondo quiet" onClick={() => s.set({ casaChiesta: true })} aria-label="Più tardi"><Icona n="close" /></button>
+      </div>
+      <p className="nota">Scegli il tuo punto Casa: i percorsi partiranno da lì e lo ritrovi con un tocco.</p>
+      <div className="riga-bottoni">
+        <button className="primary" onClick={posizione}><Icona n="my_location" />Sono qui</button>
+        <button onClick={() => s.set({ scegliCasa: true })}><Icona n="location_on" />Tocca la mappa</button>
+      </div>
+      <div className="cerca" style={{ marginTop: 10 }}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="Cerca hotel, via o luogo" aria-label="Cerca il tuo alloggio" />
+        {ris.length > 0 && <ul className="risultati vetro">{ris.map(x => <li key={x.nome + x.tipo}><button onClick={() => fissa({ p: x.p, nome: x.nome })}><Icona n="location_on" /><span>{x.nome}</span><small>{x.tipo}</small></button></li>)}</ul>}
+      </div>
+    </section>
+  )
+}
+
+/** Il punto Casa nel pannello dell'account: si cambia o si toglie. */
+function RigaCasa() {
+  const s = useS()
+  return (
+    <div className="riga-casa">
+      <Icona n="home" /><span>{s.casa ? <>Casa: <b>{s.casa.nome && s.casa.nome !== 'Casa' ? s.casa.nome : 'punto scelto'}</b></> : 'Nessun punto Casa'}</span>
+      <button type="button" className="quiet" onClick={() => s.set({ casaChiesta: false, casa: null, pannello: null })}>{s.casa ? 'Cambia' : 'Scegli'}</button>
     </div>
   )
 }

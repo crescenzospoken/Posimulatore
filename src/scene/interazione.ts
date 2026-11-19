@@ -62,6 +62,12 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     const s = S()
     const t = s.strumento
     if (t.k === 'cammina') return
+    if (s.scegliCasa) {
+      const q = puntoA(e.position, false)
+      if (q) useS.setState({ casa: { p: q.p, nome: 'Casa' }, scegliCasa: false, casaChiesta: true })
+      useS.getState().set({ casaChiesta: true })
+      return
+    }
     if (t.k === 'percorso') {
       // il clic sceglie la partenza o l'arrivo; dal link (ospite) solo se si è chiesto di scegliere
       const r = s.percorso, quale = r.scegli ?? (s.ospite ? null : r.da ? 'a' : 'da')

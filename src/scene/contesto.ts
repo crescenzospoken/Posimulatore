@@ -21,7 +21,7 @@ export const GRUPPI_VIE: { k: string; nome: string; tipi: string[]; col: string;
   { k: 'sentieri', nome: 'Sentieri e mulattiere', tipi: ['path', 'track'], col: '#a8dab5', w: 3 },
 ]
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
-let vie: C.PolylineCollection | undefined
+let vie: C.PrimitiveCollection | undefined
 let nomiOn = false
 let vociVie: Voce[] = []
 const mat = new Map<string, C.Material>()
@@ -66,7 +66,7 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
   if (conStrade) disegnaVie(google)
   if (vie) vie.show = conStrade
   if (nomiOn !== (conStrade && nomi)) { nomiOn = conStrade && nomi; impostaVoci('via', nomiOn ? vociVie : []) }
-  for (const g of GRUPPI_VIE) { const m = mat.get(g.k); if (m) m.uniforms.color = C.Color.fromCssColorString(colori[g.k] ?? g.col).withAlpha(0.92) }
+  for (const g of GRUPPI_VIE) { const m = mat.get(g.k); if (m) m.uniforms.color = C.Color.fromCssColorString(colori[g.k] ?? g.col).withAlpha(0.9) }
   viewer.scene.requestRender()
 }
 
@@ -89,27 +89,50 @@ export function puntiVia(c: LL[], z: number[], google: boolean, alza = 1.5): C.C
   return C.Cartesian3.fromDegreesArrayHeights(out)
 }
 let fatteCon: boolean | null = null
+const primPerGruppo = new Map<string, C.GroundPolylinePrimitive>()
+/** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
+function altezzaVie() {
+  const h = viewer.camera.positionCartographic.height
+  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 2500 : h < 800)
+}
+let altezzaAgganciata = false
+/** Vie «dipinte» sulla superficie visibile (Google 3D o il nostro terreno), come su Google Earth: niente linee sospese
+ * che si sovrappongono male o spariscono sotto la mesh. Una primitiva per gruppo, così il colore si cambia al volo. */
 function disegnaVie(google: boolean) {
   if (fatteCon === google) return
   const t0 = performance.now()
   fatteCon = google
   if (vie) viewer.scene.primitives.remove(vie)
-  vie = viewer.scene.primitives.add(new C.PolylineCollection())
+  vie = viewer.scene.primitives.add(new C.PrimitiveCollection())
   vociVie = []
   const r = reteVie()
+  const perGruppo = new Map<string, C.GeometryInstance[]>()
   strade.forEach((s, i) => {
     const g = gruppoDi(s.k)
-    let m = mat.get(g.k)
-    if (!m) { m = C.Material.fromType('Color', { color: C.Color.fromCssColorString(g.col) }); mat.set(g.k, m) }
-    const z = r.quote[i] ?? quoteVia(s, zVertice, sVertice)
-    vie!.add({ positions: puntiVia(s.c, z, google), width: g.w, material: m, id: 'st:' + s.id })
+    if (s.c.length > 1) {
+      const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
+      l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.GroundPolylineGeometry({ positions: C.Cartesian3.fromDegreesArray(s.c.flat()), width: g.w }) }))
+    }
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n && s.c.length > 1) {
+      const z = r.quote[i] ?? quoteVia(s, zVertice, sVertice)
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
       const lo = (p[0] + q[0]) / 2, la = (p[1] + q[1]) / 2, zz = google ? (z[k] + z[k + 1]) / 2 : quotaTerreno(lo, la)
       vociVie.push({ id: 'via:' + s.id, tipo: 'via', pos: C.Cartesian3.fromDegrees(lo, la, zz + 3 + GEOIDE), testo: s.n, maxDist: s.k === 'primary' ? 900 : 420 })
     }
   })
+  for (const g of GRUPPI_VIE) {
+    const inst = perGruppo.get(g.k)
+    if (!inst?.length) continue
+    let m = mat.get(g.k)
+    if (!m) { m = C.Material.fromType('Color', { color: C.Color.fromCssColorString(g.col).withAlpha(0.9) }); mat.set(g.k, m) }
+    primPerGruppo.set(g.k, vie.add(new C.GroundPolylinePrimitive({
+      geometryInstances: inst, appearance: new C.PolylineMaterialAppearance({ material: m }),
+      classificationType: google ? C.ClassificationType.CESIUM_3D_TILE : C.ClassificationType.TERRAIN, asynchronous: true,
+    })))
+  }
+  altezzaVie()
+  if (!altezzaAgganciata) { altezzaAgganciata = true; viewer.scene.preRender.addEventListener(altezzaVie) }
   if (nomiOn) impostaVoci('via', vociVie)
   if (location.search.includes('prova')) console.info('vie disegnate in', Math.round(performance.now() - t0), 'ms')
 }
