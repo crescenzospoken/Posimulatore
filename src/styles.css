@@ -434,3 +434,21 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 @media (prefers-reduced-motion: reduce) { .fab-reset.lampeggia { animation: none; } }
 .riquadro-vetro { position: absolute; inset: 0; z-index: 3; cursor: crosshair; touch-action: none; }
 .riquadro-scelta { position: absolute; display: none; border: 2px dashed var(--accento); background: rgba(11, 107, 203, 0.12); border-radius: 4px; }
+
+/* iPhone: con viewport-fit=cover la pagina va sotto notch, isola dinamica e barra home: si tiene tutto dentro la zona sicura */
+.cima { top: calc(12px + env(safe-area-inset-top)); left: calc(12px + env(safe-area-inset-left)); right: calc(12px + env(safe-area-inset-right)); }
+.fab { right: calc(16px + env(safe-area-inset-right)); bottom: calc(28px + env(safe-area-inset-bottom)); }
+.crediti { left: calc(10px + env(safe-area-inset-left)) !important; bottom: calc(8px + env(safe-area-inset-bottom)) !important; }
+@media (max-width: 760px) {
+  .cima { top: calc(8px + env(safe-area-inset-top)); left: calc(8px + env(safe-area-inset-left)); right: calc(8px + env(safe-area-inset-right)); }
+  .fab { right: calc(10px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); }
+  .pubblico .pannello, .pubblico .scheda-percorso, .scheda-poi { padding-bottom: env(safe-area-inset-bottom); }
+}
+/* telefono in orizzontale: la colonna dei pulsanti tondi non copre i filtri */
+@media (orientation: landscape) and (max-height: 520px) {
+  .cima { right: calc(76px + env(safe-area-inset-right)); }
+  .pannello, .scheda-percorso, .street-view { top: 104px; bottom: 10px; }
+  .pannello, .scheda-percorso { left: calc(12px + env(safe-area-inset-left)) !important; right: auto !important; width: min(380px, calc(100% - 110px)) !important; }
+}
+/* iOS ingrandisce la pagina se un campo ha il testo sotto i 16 px */
+@media (pointer: coarse) { input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]), select, textarea { font-size: 16px; } }

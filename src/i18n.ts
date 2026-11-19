@@ -139,6 +139,27 @@ const EN: Record<string, string> = {
   'A pagamento': 'Paid', 'Gratuito': 'Free', 'Orari': 'Hours', 'nascosto ai visitatori': 'hidden from visitors',
   'strada': 'street', 'Tutta Positano': 'All of Positano', 'Spiaggia Grande e Collegiata': 'Spiaggia Grande and the Collegiata',
   'Bivio di Chiesa Nuova': 'Chiesa Nuova junction', 'La Sponda': 'La Sponda', 'Fornillo': 'Fornillo', 'Montepertuso': 'Montepertuso', 'Nocelle': 'Nocelle', 'Laurito': 'Laurito', 'Li Galli': 'Li Galli',
+  // pannelli pubblici: Livelli, Guida
+  'mappa e percorsi a piedi': 'map and walking routes',
+  'Tipo di mappa': 'Map type', 'Foto 3D': '3D photos', 'Mappa': 'Map', 'Immagine del suolo': 'Ground image', 'Mappa semplice': 'Simple map', 'Satellite': 'Satellite',
+  'Mappa OpenStreetMap': 'OpenStreetMap map', 'Torna ai colori di base': 'Back to default colours', 'Qualità e velocità': 'Quality and speed',
+  'Leggera: veloce, adatta al telefono': 'Light: fast, best on phones', 'Normale': 'Normal', 'Alta: più dettaglio, serve un telefono o computer potente': 'High: more detail, needs a powerful phone or computer',
+  'Vie, scale e sentieri': 'Streets, steps and paths', 'Tocca un colore per cambiarlo': 'Tap a colour to change it', 'Nomi dei luoghi': 'Place names', 'Confine comunale': 'Town boundary',
+  'Immagine più nitida': 'Sharper image', 'Più dettaglio e colore sulle foto aeree': 'More detail and colour on aerial photos',
+  'Statale': 'Main road', 'Strade': 'Roads', 'Accessi e cortili': 'Driveways and yards', 'Vie pedonali': 'Pedestrian streets', 'Sentieri e mulattiere': 'Paths and mule tracks',
+  'Punto di interesse': 'Place', 'tappe': 'stops', 'Fatto': 'Done',
+  'Come si usa': 'How to use it', 'Da dove vengono i dati': 'Where the data comes from', 'solo da guardare': 'view only', 'Terreno': 'Terrain', 'vie': 'streets',
+  "Ministero dell'Ambiente": 'Italian Ministry of the Environment', 'Vie, luoghi e confine': 'Streets, places and boundary', 'Satellite e mappa semplice': 'Satellite and simple map',
+  'Tempi e quote sono indicativi: in paese ci sono molte scale, calcola qualche minuto in più.': 'Times and heights are estimates: Positano has many steps, allow a few extra minutes.',
+  'Muoversi': 'Moving around', 'un dito sposta la mappa, due dita avvicinano e ruotano, due dita in su o in giù inclinano. Se ti perdi, il pulsante con le frecce rimette la vista.': 'one finger moves the map, two fingers zoom and rotate, two fingers up or down tilt it. If you get lost, the arrows button resets the view.',
+  'Cercare': 'Search', 'scrivi nella barra in alto una via, un luogo, un negozio o un servizio. Tocca un risultato per vederlo sulla mappa.': 'type a street, place, shop or service in the top bar. Tap a result to see it on the map.',
+  'Servizi': 'Services', 'i bottoni sotto la barra mostrano bagni, fermate, biglietti, parcheggi, traghetti e farmacie.': 'the buttons under the bar show toilets, bus stops, tickets, parking, ferries and pharmacies.',
+  'scegli due o più tappe dalla ricerca, dalla mappa, dalla tua posizione o da Casa; trascinale per cambiare ordine. Vedi il tempo a piedi, le scale, la salita e le alternative.': 'pick two or more stops from search, the map, your location or Home; drag them to reorder. You see walking time, steps, climb and alternatives.',
+  'il pulsante con la casetta ricorda dove alloggi e ti riporta lì.': 'the house button remembers where you are staying and takes you back there.',
+  'il pulsante col mirino mostra la tua posizione col GPS del telefono.': 'the crosshair button shows where you are with your phone GPS.',
+  'foto 3D o mappa semplice, 3D più chiaro, colori delle vie, qualità.': '3D photos or simple map, lighter 3D, street colours, quality.',
+  'Street View': 'Street View', 'in un punto o lungo il percorso, le foto a 360° di Google.': 'at a place or along your route, Google 360° photos.',
+  'ogni punto e ogni percorso ha un link da mandare su WhatsApp.': 'every place and route has a link you can send on WhatsApp.',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */

@@ -1,0 +1,342 @@
+import * as C from 'cesium';
+import { viewer, pos, googleAcceso, quotaGoogle } from './viewer';
+import { GEOIDE, quota } from './terreno';
+import { useS } from '../store';
+import { uid } from '../engine/model';
+/** Punto 3D sotto il cursore: terreno, edifici, oggetti o Google 3D. */
+export function puntoA(win, conOggetto = true) {
+    const s = viewer.scene;
+    let c;
+    if (s.pickPositionSupported)
+        c = s.pickPosition(win);
+    if (!c) {
+        const ray = viewer.camera.getPickRay(win);
+        if (ray)
+            c = s.globe.pick(ray, s);
+    }
+    if (!c)
+        return null;
+    const g = C.Cartographic.fromCartesian(c);
+    if (!g)
+        return null;
+    const p = [C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)];
+    let z = g.height - GEOIDE;
+    const zt = quota(p[0], p[1]);
+    // se il punto è a meno di 30 cm dal terreno lo appoggiamo al terreno
+    // sul terreno nostro: se il punto è a meno di 30 cm lo appoggiamo al terreno; su Google 3D vale la superficie vera
+    if (!isFinite(z) || (!googleAcceso() && Math.abs(z - zt) < 0.3))
+        z = zt;
+    // chi c'è sotto il cursore costa un secondo disegno della scena: solo sui clic, mai mentre il mouse si muove
+    const pk = conOggetto ? s.pick(win) : undefined;
+    const su = pk && pk.id instanceof C.Entity ? String(pk.id.id).split(':')[0] : undefined;
+    return { p, z, su };
+}
+const idDi = (pk) => {
+    if (!pk || typeof pk !== 'object')
+        return null;
+    const o = pk;
+    if (o.id instanceof C.Entity)
+        return String(o.id.id);
+    if (typeof o.id === 'string')
+        return o.id;
+    return null;
+};
+const quotaSuolo = (lon, lat) => quotaGoogle(lon, lat) ?? quota(lon, lat);
+let anteprima;
+let cursore = null;
+let trascina = null;
+export function avviaInterazione(onCursore, fine) {
+    const h = new C.ScreenSpaceEventHandler(viewer.canvas);
+    const S = () => useS.getState();
+    const ctrl = viewer.scene.screenSpaceCameraController;
+    anteprima = viewer.entities.add({
+        polyline: {
+            positions: new C.CallbackProperty(() => {
+                const s = S();
+                const pts = s.strumento.k === 'disegna' ? s.bozza : s.strumento.k === 'misura' ? (s.misure.at(-1)?.pts.map(q => q.p) ?? []) : [];
+                const tutti = [...pts, ...(cursore && pts.length && (s.strumento.k === 'disegna' || s.strumento.k === 'misura') ? [cursore] : [])];
+                if (s.strumento.k === 'disegna' && (s.strumento.min >= 3) && tutti.length > 2)
+                    tutti.push(tutti[0]);
+                return tutti.length > 1 ? C.Cartesian3.fromDegreesArray(tutti.flat()) : [];
+            }, false),
+            width: 3, clampToGround: true,
+            material: new C.PolylineDashMaterialProperty({ color: C.Color.fromCssColorString('#38b6ff'), dashLength: 12 }),
+        },
+    });
+    h.setInputAction((e) => {
+        const s = S();
+        const t = s.strumento;
+        if (t.k === 'cammina')
+            return;
+        if (s.scegliCasa) {
+            const q = puntoA(e.position, false);
+            if (q)
+                useS.setState({ casa: { p: q.p, nome: 'Casa' }, scegliCasa: false, casaAperta: false });
+            useS.getState().set({ casaChiesta: true });
+            return;
+        }
+        if (t.k === 'percorso') {
+            // il tocco aggiunge una tappa quando lo si è chiesto, o finché il percorso non ha partenza e arrivo
+            if (!(s.aggiungiDaMappa || (s.tappe.length < 2 && !s.ospite)))
+                return;
+            const q = puntoA(e.position, false);
+            if (!q)
+                return;
+            useS.setState({ tappe: [...s.tappe, { p: q.p }], aggiungiDaMappa: false });
+            return;
+        }
+        if (t.k === 'eventi') {
+            // eventi: tocca la mappa dove si svolge per crearne uno (toccare un evento esistente lo apre, dal suo simbolo)
+            const q = puntoA(e.position, false);
+            if (q)
+                useS.setState({ nuovoEvento: q.p, selEvento: null, pannello: 'evento' });
+            return;
+        }
+        if (t.k === 'vie') {
+            // correzione delle vie: si sceglie una via toccandola (le maniglie si trascinano da sole)
+            const id = idDi(viewer.scene.pick(e.position));
+            if (id?.startsWith('st:'))
+                useS.setState({ selVia: id.slice(3), viaBozza: null, viaSel: [], pannello: 'via' });
+            return;
+        }
+        if (t.k === 'poi') {
+            // punto di interesse: tocca un simbolo per correggerlo, o la mappa per aggiungerne uno lì (o spostare quello aperto)
+            const id = idDi(viewer.scene.pick(e.position));
+            if (id?.startsWith('poi:') && !s.spostaPoi) {
+                useS.setState({ selPoi: id.slice(4), pannello: 'poi', poiPos: null });
+                return;
+            }
+            const q = puntoA(e.position, false);
+            if (!q)
+                return;
+            if (s.spostaPoi && s.selPoi) {
+                useS.setState({ poiPos: q.p, spostaPoi: false });
+                return;
+            }
+            useS.setState({ poiPos: null, selPoi: `nuovo:${q.p[0].toFixed(7)}:${q.p[1].toFixed(7)}`, pannello: 'poi' });
+            return;
+        }
+        const pt = puntoA(e.position);
+        if (t.k === 'disegna') {
+            if (!pt)
+                return;
+            const b = [...s.bozza, pt.p];
+            if (b.length === 1)
+                useS.setState({ ultimaQuota: pt.z });
+            // il primo punto decide la quota d'appoggio: se si clicca su una piazza o un volume, si sta lì sopra
+            if (b.length === 1)
+                zBozza = pt.su && pt.su !== 'h' && s.opzione().oggetti.some(o => o.id === pt.su && (o.tipo === 'piazza' || o.tipo === 'volume')) ? pt.z : undefined;
+            useS.setState({ bozza: b });
+            viewer.scene.requestRender();
+            if (b.length >= t.max)
+                fine();
+            return;
+        }
+        if (t.k === 'misura') {
+            if (!pt)
+                return;
+            const m = s.misure.at(-1);
+            const nuova = !m || m.modo !== t.modo || chiusa(m);
+            const lista = nuova ? [...s.misure, { id: uid(), modo: t.modo, pts: [pt] }] : [...s.misure.slice(0, -1), { ...m, pts: [...m.pts, pt] }];
+            useS.setState({ misure: lista });
+            return;
+        }
+        // naviga: selezione
+        const pk = viewer.scene.pick(e.position);
+        const id = idDi(pk);
+        if (id?.startsWith('poi:')) {
+            useS.setState({ selPoi: id.slice(4), sel: null, selEdificio: null, pannello: null });
+            return;
+        }
+        // fuori dalla modalità modifica la mappa si guarda e basta: niente schede di punti o oggetti
+        if (!s.inModifica || !(s.utente?.ruolo === 'editor' || s.utente?.ruolo === 'admin')) {
+            if (s.selPoi)
+                useS.setState({ selPoi: null });
+            return;
+        }
+        if (id?.startsWith('ed:')) {
+            useS.setState({ selEdificio: id.slice(3), sel: null, pannello: 'oggetto', info: pt ? { p: pt.p, z: pt.z } : null });
+            return;
+        }
+        if (id && !id.startsWith('st:') && !id.startsWith('lu:') && !id.startsWith('h:')) {
+            const oid = id.split(':')[0];
+            if (s.opzione().oggetti.some(o => o.id === oid)) {
+                useS.setState({ sel: oid, vSel: s.sel === oid ? s.vSel : null, selEdificio: null, pannello: 'oggetto' });
+                return;
+            }
+        }
+        useS.setState({ sel: null, vSel: null, selEdificio: null, info: pt ? { p: pt.p, z: pt.z } : null, pannello: pt ? 'oggetto' : s.pannello });
+    }, C.ScreenSpaceEventType.LEFT_CLICK);
+    h.setInputAction(() => { if (S().strumento.k === 'disegna')
+        fine(); }, C.ScreenSpaceEventType.LEFT_DOUBLE_CLICK);
+    h.setInputAction((e) => {
+        const s = S();
+        if (s.strumento.k !== 'naviga' || !s.sel)
+            return;
+        const id = idDi(viewer.scene.pick(e.position));
+        if (!id)
+            return;
+        const o = s.opzione().oggetti.find(x => x.id === s.sel);
+        if (!o)
+            return;
+        let i = null;
+        if (id.startsWith('h:')) {
+            const [, oid, k] = id.split(':');
+            if (oid !== o.id)
+                return;
+            i = Number(k);
+        }
+        else if (id.split(':')[0] !== o.id)
+            return;
+        const pt = puntoA(e.position);
+        if (!pt)
+            return;
+        ctrl.enableInputs = false;
+        s.aggiorna(o.id, () => { }, true); // un passo nella storia prima di muovere
+        useS.setState({ vSel: i });
+        trascina = { id: o.id, i, da: pt.p, z: pt.z, orig: o.pts.map(q => [...q]) };
+    }, C.ScreenSpaceEventType.LEFT_DOWN);
+    h.setInputAction(() => {
+        if (trascina) {
+            trascina = null;
+            ctrl.enableInputs = true;
+        }
+    }, C.ScreenSpaceEventType.LEFT_UP);
+    let ultimo = 0, ultimoFondo = 0, premuto = false;
+    viewer.canvas.addEventListener('pointerdown', () => (premuto = true));
+    window.addEventListener('pointerup', () => (premuto = false));
+    window.addEventListener('pointercancel', () => (premuto = false));
+    h.setInputAction((e) => {
+        const now = performance.now();
+        if (trascina) {
+            const pt = puntoPiano(e.endPosition, trascina.z);
+            if (!pt)
+                return;
+            // lo spostamento si arrotonda al passo scelto (in metri, verso est e verso nord)
+            const fr = new Frame(trascina.da[0], trascina.da[1]), m = fr.toXY(pt), ps = S().passo;
+            const mm = ps > 0 ? [Math.round(m[0] / ps) * ps, Math.round(m[1] / ps) * ps] : m;
+            const q2 = fr.toLL(mm);
+            const d = [q2[0] - trascina.da[0], q2[1] - trascina.da[1]];
+            const tr = trascina;
+            S().aggiorna(tr.id, o => {
+                o.pts = tr.orig.map((q, k) => (tr.i === null || tr.i === k ? [q[0] + d[0], q[1] + d[1]] : q));
+            }, false);
+            return;
+        }
+        // mentre si disegna o si misura serve il punto 3D preciso, ma non più di 8 volte al secondo;
+        // altrimenti basta la posizione sul terreno per la barra in basso, 4 volte al secondo e mai durante il movimento della vista
+        const k = S().strumento.k, disegno = k === 'disegna' || k === 'misura';
+        if (now - ultimo < (disegno ? 120 : 250))
+            return;
+        if (!disegno && premuto)
+            return; // la vista si sta muovendo: la barra può aspettare
+        ultimo = now;
+        if (disegno) {
+            const pt = puntoA(e.endPosition, false);
+            cursore = pt?.p ?? null;
+            onCursore(pt);
+            viewer.scene.requestRender();
+        }
+        else if (viewer.scene.globe.show) {
+            const g = puntoGlobo(e.endPosition);
+            onCursore(g ? { p: g, z: quotaSuolo(g[0], g[1]) } : null);
+        }
+        else if (now - ultimoFondo > 400) {
+            // con Google acceso il terreno nostro è spento: un punto preciso, ma al massimo due volte e mezza al secondo
+            ultimoFondo = now;
+            onCursore(puntoA(e.endPosition, false));
+        }
+    }, C.ScreenSpaceEventType.MOUSE_MOVE);
+    // tocco: su telefono il trascinamento con un dito sposta l'oggetto selezionato come col mouse
+    return () => { h.destroy(); if (anteprima)
+        viewer.entities.remove(anteprima); };
+}
+let zBozza;
+export const quotaBozza = () => zBozza;
+/** Dove il raggio del cursore incontra il piano orizzontale alla quota z (m s.l.m.): conti puri, nessun disegno. */
+function puntoPiano(win, z) {
+    const ray = viewer.camera.getPickRay(win);
+    if (!ray)
+        return null;
+    const c = viewer.camera.positionCartographic;
+    const o = C.Cartesian3.fromRadians(c.longitude, c.latitude, z + GEOIDE);
+    const n = C.Ellipsoid.WGS84.geodeticSurfaceNormal(o);
+    const pl = C.Plane.fromPointNormal(o, n);
+    const x = C.IntersectionTests.rayPlane(ray, pl);
+    if (!x)
+        return null;
+    const g = C.Cartographic.fromCartesian(x);
+    return [C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)];
+}
+function puntoGlobo(win) {
+    const ray = viewer.camera.getPickRay(win);
+    const c = ray && viewer.scene.globe.pick(ray, viewer.scene);
+    if (!c)
+        return null;
+    const g = C.Cartographic.fromCartesian(c);
+    return [C.Math.toDegrees(g.longitude), C.Math.toDegrees(g.latitude)];
+}
+export const chiusa = (m) => (m.modo === 'quota' && m.pts.length >= 1) || (m.modo === 'altezza' && m.pts.length >= 2);
+// ---------- disegno delle misure ----------
+const dm = new C.CustomDataSource('misure');
+let dmPronto = false;
+export async function disegnaMisure(lista) {
+    if (!dmPronto) {
+        await viewer.dataSources.add(dm);
+        dmPronto = true;
+    }
+    dm.entities.removeAll();
+    for (const m of lista) {
+        const P = m.pts.map(q => pos(q.p[0], q.p[1], q.z + 0.05));
+        m.pts.forEach((q, i) => dm.entities.add({ position: P[i], point: { pixelSize: 9, color: C.Color.fromCssColorString('#ffd84a'), outlineColor: C.Color.BLACK, outlineWidth: 1, disableDepthTestDistance: Number.POSITIVE_INFINITY } }));
+        if (m.modo === 'quota' && m.pts[0]) {
+            dm.entities.add({ position: P[0], label: lab(`${m.pts[0].z.toFixed(1).replace('.', ',')} m s.l.m.`) });
+            continue;
+        }
+        if (P.length > 1) {
+            const chiudi = m.modo === 'area' && P.length > 2;
+            dm.entities.add({ polyline: { positions: chiudi ? [...P, P[0]] : P, width: 3, material: C.Color.fromCssColorString('#ffd84a'), depthFailMaterial: C.Color.fromCssColorString('#ffd84a').withAlpha(0.5) } });
+        }
+        if (m.modo === 'area' && P.length > 2)
+            dm.entities.add({ polygon: { hierarchy: P, material: C.Color.fromCssColorString('#ffd84a').withAlpha(0.25), classificationType: C.ClassificationType.BOTH } });
+        const r = risultato(m);
+        if (r && P.length > 1) {
+            const c = C.BoundingSphere.fromPoints(P).center;
+            dm.entities.add({ position: c, label: lab(r) });
+        }
+    }
+    viewer.scene.requestRender();
+}
+const lab = (t) => ({ text: t, font: '600 14px system-ui, sans-serif', fillColor: C.Color.BLACK, showBackground: true, backgroundColor: C.Color.fromCssColorString('#ffd84a'), pixelOffset: new C.Cartesian2(0, -18), disableDepthTestDistance: Number.POSITIVE_INFINITY });
+import { Frame } from '../engine/geo';
+const fmt = (v, d = 2) => v.toFixed(d).replace('.', ',');
+export function risultato(m) {
+    const p = m.pts;
+    if (m.modo === 'quota')
+        return p[0] ? `${fmt(p[0].z, 1)} m s.l.m.` : '';
+    if (p.length < 2)
+        return '';
+    const f = new Frame(p[0].p[0], p[0].p[1]);
+    if (m.modo === 'altezza')
+        return `Dislivello ${fmt(Math.abs(p[1].z - p[0].z))} m`;
+    if (m.modo === 'area') {
+        if (p.length < 3)
+            return '';
+        const xy = p.map(q => f.toXY(q.p));
+        let a = 0;
+        for (let i = 0; i < xy.length; i++) {
+            const u = xy[i], v = xy[(i + 1) % xy.length];
+            a += u[0] * v[1] - v[0] * u[1];
+        }
+        return `${Math.round(Math.abs(a) / 2).toLocaleString('it-IT')} m²`;
+    }
+    let o = 0, d3 = 0;
+    for (let i = 1; i < p.length; i++) {
+        const a = f.toXY(p[i - 1].p), b = f.toXY(p[i].p);
+        const dh = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        o += dh;
+        d3 += Math.hypot(dh, p[i].z - p[i - 1].z);
+    }
+    const dz = p.at(-1).z - p[0].z;
+    return `${fmt(o)} m in pianta · ${fmt(d3)} m reali · dislivello ${fmt(dz, 1)} m · pendenza ${o > 0 ? Math.round((dz / o) * 100) : 0}%`;
+}
