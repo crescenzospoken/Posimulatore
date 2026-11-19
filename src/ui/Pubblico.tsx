@@ -51,7 +51,7 @@ export function SchedaPoi() {
   const p = s.selPoi ? poiDa(s.selPoi) : undefined
   if (!p) return null
   const c = categoria(p.c)
-  const portami = () => portamiA({ p: p.p, nome: p.n ?? c.nome })
+  const portami = () => portamiA({ p: p.p, nome: p.n ?? t(c.nome) })
   const x = p.x ?? {}
   return (
     <section className="scheda-poi" aria-label={p.n ?? c.nome}>
