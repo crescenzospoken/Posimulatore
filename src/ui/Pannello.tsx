@@ -1,3 +1,4 @@
+import { t as tr } from '../i18n'
 import { useRef, useState } from 'react'
 import { useS } from '../store'
 import type { Obj, Progetto } from '../engine/model'
@@ -221,6 +222,12 @@ function Livelli() {
         <button role="radio" aria-checked={l.google} className={l.google ? 'acceso' : ''} onClick={() => s.setLivelli({ google: true, orto: 'esri' })}><Icona n="photo_camera" />Foto 3D</button>
         <button role="radio" aria-checked={!l.google && l.orto === 'mappa'} className={!l.google && l.orto === 'mappa' ? 'acceso' : ''} onClick={() => s.setLivelli({ google: false, orto: 'mappa', strade: true })}><Icona n="map" />Mappa</button>
       </div>
+      {l.google && (
+        <label>{tr('Attenua il 3D')}: {Math.round((l.attenua ?? 0) * 100)}%
+          <input type="range" min={0} max={0.9} step={0.05} value={l.attenua ?? 0} onChange={e => s.setLivelli({ attenua: Number(e.target.value) })} />
+          <small>{tr('Schiarisce le foto del 3D: vie, percorsi e punti risaltano di più')}</small>
+        </label>
+      )}
       <label>Immagine del suolo
         <select value={l.orto} onChange={e => s.setLivelli({ orto: e.target.value as typeof l.orto })}>
           <option value="esri">Satellite (Esri World Imagery)</option>

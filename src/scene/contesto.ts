@@ -28,7 +28,7 @@ const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUP
 let vie: C.PrimitiveCollection | undefined
 let nomiOn = false
 let vociVie: Voce[] = []
-const mat = new Map<string, C.Material>(), matDietro = new Map<string, C.Material>()
+const mat = new Map<string, C.Material>()
 let coloriAttuali: Record<string, string> = {}
 let quoteLidar = new Map<string, number>(), superficie = new Map<string, number>()
 let rete: Rete | undefined
@@ -116,9 +116,8 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
   if (nomiOn !== (conStrade && nomi)) { nomiOn = conStrade && nomi; impostaVoci('via', nomiOn ? vociVie : []) }
   for (const g of GRUPPI_VIE) {
     const c = C.Color.fromCssColorString(colori[g.k] ?? g.col)
-    const m = mat.get(g.k), f = matDietro.get(g.k)
+    const m = mat.get(g.k)
     if (m) m.uniforms.color = c.withAlpha(0.95)
-    if (f) f.uniforms.color = c.withAlpha(0.35)
   }
   coloriAttuali = colori
   viewer.scene.requestRender()
@@ -146,8 +145,10 @@ let fatteCon: boolean | null = null
 const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
 function altezzaVie() {
-  const h = viewer.camera.positionCartographic.height
-  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 2500 : h < 800)
+  // conta l'altezza sopra il terreno, non sul mare: sopra Montepertuso (350 m) guardando dall'alto prima sparivano scale e sentieri
+  const c = viewer.camera.positionCartographic
+  const h = c.height - GEOIDE - quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude))
+  for (const [k, p] of primPerGruppo) p.show = k === 'statale' || (k === 'strade' ? h < 3000 : h < 1400)
 }
 let altezzaAgganciata = false
 /** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono
@@ -167,7 +168,7 @@ function disegnaVie(google: boolean) {
     const g = gruppoDi(s.k)
     const z = quoteDi(s)
     const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 1.2), width: g.w, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+    l.push(new C.GeometryInstance({ id: 'st:' + s.id, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
@@ -179,12 +180,11 @@ function disegnaVie(google: boolean) {
     const inst = perGruppo.get(g.k)
     if (!inst?.length) continue
     const c = C.Color.fromCssColorString(coloriAttuali[g.k] ?? g.col)
-    let m = mat.get(g.k), f = matDietro.get(g.k)
+    let m = mat.get(g.k)
     if (!m) { m = C.Material.fromType('Color', { color: c.withAlpha(0.95) }); mat.set(g.k, m) }
-    if (!f) { f = C.Material.fromType('Color', { color: c.withAlpha(0.35) }); matDietro.set(g.k, f) }
     primPerGruppo.set(g.k, vie.add(new C.Primitive({
       geometryInstances: inst, asynchronous: true,
-      appearance: new C.PolylineMaterialAppearance({ material: m }), depthFailAppearance: new C.PolylineMaterialAppearance({ material: f }),
+      appearance: new C.PolylineMaterialAppearance({ material: m }),
     })))
   }
   altezzaVie()

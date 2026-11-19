@@ -64,7 +64,7 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (t.k === 'cammina') return
     if (s.scegliCasa) {
       const q = puntoA(e.position, false)
-      if (q) useS.setState({ casa: { p: q.p, nome: 'Casa' }, scegliCasa: false, casaChiesta: true })
+      if (q) useS.setState({ casa: { p: q.p, nome: 'Casa' }, scegliCasa: false, casaAperta: false })
       useS.getState().set({ casaChiesta: true })
       return
     }
@@ -85,7 +85,7 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     if (t.k === 'vie') {
       // correzione delle vie: si sceglie una via toccandola (le maniglie si trascinano da sole)
       const id = idDi(viewer.scene.pick(e.position))
-      if (id?.startsWith('st:')) useS.setState({ selVia: id.slice(3), viaBozza: null, viaVSel: null, pannello: 'via' })
+      if (id?.startsWith('st:')) useS.setState({ selVia: id.slice(3), viaBozza: null, viaSel: [], pannello: 'via' })
       return
     }
     if (t.k === 'poi') {

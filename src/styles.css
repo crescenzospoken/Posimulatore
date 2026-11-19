@@ -429,3 +429,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .barra-tappe.riassunto .freccia { color: var(--tenue); }
 .barra-tappe.riassunto small { color: var(--tenue); white-space: nowrap; }
 .barra-tappe.riassunto .icona-m { color: var(--accento); }
+.fab-reset.lampeggia { animation: lampeggia 0.9s ease-in-out infinite; background: var(--accento) !important; color: #fff !important; }
+@keyframes lampeggia { 0%, 100% { box-shadow: 0 0 0 0 rgba(11, 107, 203, 0.6), var(--ombra); } 50% { box-shadow: 0 0 0 12px rgba(11, 107, 203, 0), var(--ombra); transform: scale(1.08); } }
+@media (prefers-reduced-motion: reduce) { .fab-reset.lampeggia { animation: none; } }
+.riquadro-vetro { position: absolute; inset: 0; z-index: 3; cursor: crosshair; touch-action: none; }
+.riquadro-scelta { position: absolute; display: none; border: 2px dashed var(--accento); background: rgba(11, 107, 203, 0.12); border-radius: 4px; }

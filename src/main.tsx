@@ -1,3 +1,4 @@
+import { avviaGesti } from './ui/gesti'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles.css'
@@ -13,6 +14,9 @@ for (const ev of ['gesturestart', 'gesturechange', 'gestureend']) document.addEv
 document.addEventListener('touchmove', e => { if (e.touches.length > 1 && !(e.target as HTMLElement).closest?.('.scena')) e.preventDefault() }, { passive: false })
 let ultimoTocco = 0
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - ultimoTocco < 300 && !(e.target as HTMLElement).closest?.('input,textarea,select')) e.preventDefault(); ultimoTocco = t }, { passive: false })
+
+// schede che si chiudono trascinandole verso il basso
+avviaGesti()
 
 // app installabile e offline (solo sul sito vero, non in sviluppo)
 if ('serviceWorker' in navigator && location.protocol === 'https:' && !location.hostname.startsWith('claude-')) navigator.serviceWorker.register('/sw.js').catch(() => {})
