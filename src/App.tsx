@@ -10,6 +10,7 @@ import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso, BarraTappe } from './ui/Percorso'
 import { caricaMiei } from './ui/account'
+import { avvio } from './ui/avvio'
 import { Servizi, SchedaPoi, SchedaCasa, SchedaGoogle, chiama, puoModificare } from './ui/Pubblico'
 import { avviaSovrapposti, impostaVoci } from './scene/sovrapposti'
 import { caricaEventi, disegnaEventi } from './scene/eventi'
@@ -68,13 +69,16 @@ export default function App() {
     ;(async () => {
       try {
         try { const c = await (await fetch('/config')).json(); if (c.googleClientId) useS.setState({ googleClientId: c.googleClientId }); if (c.ionToken || c.googleKey) useS.setState(st => ({ ionTokenSito: c.ionToken ?? '', googleKey: c.googleKey ?? '', livelli: { ...st.livelli, google: st.livelli.googleScelto ?? true } })) } catch { /* sviluppo senza Worker */ }
+        avvio()?.fase('terreno')
         await creaViewer(el.current!)
+        avvio()?.fase('vie')
         avviaSovrapposti(el.current!)
         impostaOrto(useS.getState().livelli.orto)
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
         chiama<Utente | null>('io').then(u => { useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })); if (u) caricaMiei() }, () => {})
         chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
         await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
+        avvio()?.fase('foto')
         disegnaCupole(viewer)
         let tG: ReturnType<typeof setTimeout> | undefined
         // Google finisce di caricare dopo ogni movimento: ricalcolare tutti gli oggetti ogni volta bloccava la pagina.
@@ -127,9 +131,12 @@ export default function App() {
         else if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
+        // la schermata d'avvio si toglie quando Google ha la prima vista (viewer.ts); se tarda o è spento, al massimo dopo 8 s
+        if (!useS.getState().livelli.google) avvio()?.fine(); else setTimeout(() => avvio()?.fine(), 8000)
       } catch (e) {
         console.error(e)
         setErrore(e instanceof Error ? e.message : String(e))
+        avvio()?.fine()
       }
     })()
     return () => stop?.()
@@ -187,7 +194,7 @@ export default function App() {
   useEffect(() => { document.title = s.ospite && a?.nome ? `${t('Come arrivare a')} ${a.nome} · Positano 3D` : 'Positano 3D · ' + t('mappa e percorsi a piedi') }, [s.ospite, a?.nome, s.lingua])
   useEffect(() => {
     if (!pronto) return
-    impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
+    impostaGoogle(s.livelli.google, s.ionToken || s.ionTokenSito, s.googleKey).then(err => { if (err) { avvio()?.fine(); s.dici(err); s.setLivelli({ google: false }) } else disegnaOggetti(op.oggetti, s.sel) })
   }, [pronto, s.livelli.google, s.ionToken, s.ionTokenSito, s.googleKey])
   // Cammina: si cammina nel 3D e Street View segue, per vedere i luoghi in alta qualità
   useEffect(() => { if (pronto) { if (s.strumento.k === 'cammina') { avviaCammina(); if (s.googleKey) s.set({ vista360: { modo: 'cammina' } }) } else { fermaCammina(); if (s.vista360?.modo === 'cammina') s.set({ vista360: null }) } } }, [pronto, s.strumento.k])
@@ -223,7 +230,6 @@ export default function App() {
   return (
     <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>
       <div ref={el} className="scena" />
-      {!pronto && !errore && <div className="caricamento">{t('Preparo Positano in 3D…')}</div>}
       {errore && <div className="caricamento errore">Il 3D non parte su questo dispositivo: {errore}</div>}
 
       <header className={'cima' + (cercaAperta ? ' cerca-aperta' : '')}>

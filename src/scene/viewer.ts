@@ -1,4 +1,5 @@
 import * as C from 'cesium'
+import { avvio } from '../ui/avvio'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
 import { GEOIDE, caricaTerreno, quota as quotaTerreno } from './terreno'
 import type { Livelli } from '../store'
@@ -234,6 +235,9 @@ export async function impostaGoogle(on: boolean, token: string, chiave = ''): Pr
       google.customShader = attenuatore
       google.allTilesLoaded.addEventListener(() => onGoogle?.())
       // il satellite resta sotto finché Google non ha la prima vista: prima, se Google tardava o falliva, restava tutto blu
+      // la schermata d'avvio segue le tessere che mancano e si toglie alla prima vista completa
+      google.loadProgress.addEventListener((attesa: number, lavoro: number) => avvio()?.tessere(attesa + lavoro))
+      google.initialTilesLoaded.addEventListener(() => avvio()?.fine())
       google.initialTilesLoaded.addEventListener(() => { googlePronto = true; if (google?.show) { viewer.scene.globe.show = false; viewer.scene.requestRender() } })
       // se le tessere di Google falliscono a raffica si torna al satellite (e si riprova al prossimo caricamento)
       let errori: number[] = []
