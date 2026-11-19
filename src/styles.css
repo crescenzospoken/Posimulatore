@@ -6,7 +6,11 @@
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; color: var(--testo);
 }
 * { box-sizing: border-box; }
-html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #10202c; }
+html, body, #root { margin: 0; height: 100%; overflow: hidden; background: #10202c; overscroll-behavior: none; }
+/* il pizzico ingrandisce la mappa, non la pagina (prima Brave e Safari ingrandivano tutta l'interfaccia) */
+html, body { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
+.scena, .scena canvas { touch-action: none; }
+.cima, .fab, .pannello, .scheda-percorso, .scheda-poi, .barra-tappe, .street-view { touch-action: pan-y; }
 button, select, input { font: inherit; color: inherit; }
 button, .bottone {
   border: 1px solid var(--linea); background: #fff; border-radius: 8px; padding: 7px 11px; cursor: pointer; text-decoration: none;

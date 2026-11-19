@@ -28,3 +28,4 @@
 - Eventi a tempo: D1 `eventi` (`migrations/0003_eventi.sql`, API `/api/eventi`), strumento «Eventi» per gli editor, `src/scene/eventi.ts` e `src/ui/Eventi.tsx`. Sulla mappa solo quelli in corso (simbolo che pulsa e chip in testa ai filtri); titolo e descrizione anche in inglese.
 - Street View: `src/ui/StreetView.tsx` (Maps JavaScript `StreetViewPanorama`, stessa chiave, foto solo da guardare). Modi: punto (luoghi, eventi), percorso a passi di 25 m, Cammina (segue la camera ogni 12 m). Pallino arancione sulla mappa dove sta la foto.
 - Regola di Crescenzo (19/11): finché non si va live, ogni PR si unisce e si pubblica subito; quando serve lui, dargli un link per provare.
+- Il pizzico deve ingrandire la mappa, mai la pagina: viewport con `user-scalable=no`, `touch-action` in `styles.css` e blocco dei gesti di Safari in `main.tsx`.
