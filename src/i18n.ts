@@ -167,6 +167,7 @@ const EN: Record<string, string> = {
   'Cerco dove sei…': 'Finding where you are…', 'Posizione non disponibile: parto da Casa': 'Location not available: starting from Home',
   'Sei fuori Positano: parto da Casa': 'You are outside Positano: starting from Home',
   'GPS spento o non permesso: parto da Casa': 'GPS off or not allowed: starting from Home', 'GPS spento o non permesso: scegli la partenza sulla mappa': 'GPS off or not allowed: pick the start on the map',
+  'Informativa sulla privacy': 'Privacy notice', 'Elimina il mio account': 'Delete my account', 'Account eliminato': 'Account deleted', 'Sì, elimina tutto': 'Yes, delete everything', 'No': 'No',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */

@@ -133,6 +133,7 @@ export function Accesso() {
         <RigaCasa />
         <MieiLuoghi />
         <p className="nota">{t('Casa e luoghi salvati restano nel tuo account, su ogni telefono.')}</p>
+        <EliminaAccount />
         {puoModificare(u) && <label className="riga"><span>Modalità modifica<small>Progetti, disegno, edifici, punti di interesse</small></span><input type="checkbox" checked={s.inModifica} onChange={e => s.set({ inModifica: e.target.checked })} /></label>}
         {u.ruolo === 'admin' && <button onClick={() => s.set({ pannello: 'utenti' })}>Utenti e permessi</button>}
         <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } google()?.accounts.id.disableAutoSelect(); s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Sei uscito')) }}>{t('Esci')}</button>
@@ -167,6 +168,7 @@ export function Accesso() {
           {modo === 'registrati' && <p className="nota">{t('Dopo la registrazione l\'amministratore abilita il tuo account alla modifica.')}</p>}
         </form>
       </details>
+      <p className="nota"><a href={'/privacy?lang=' + s.lingua} target="_blank" rel="noopener">{t('Informativa sulla privacy')}</a></p>
     </div>
   )
 }
@@ -274,6 +276,19 @@ function BottoneGoogle({ entrato, errore }: { entrato: (u: Utente) => void; erro
     return () => { vivo = false }
   }, [s.googleClientId, s.lingua])
   return <div ref={el} className="bottone-google" />
+}
+
+/** Cancella account, Casa e luoghi salvati dal server: due tocchi, niente confirm() di sistema. */
+function EliminaAccount() {
+  const s = useS()
+  const [chiedi, setChiedi] = useState(false)
+  if (!chiedi) return <button className="quiet danger-testo" onClick={() => setChiedi(true)}>{t('Elimina il mio account')}</button>
+  return (
+    <div className="riga-bottoni">
+      <button className="danger" onClick={async () => { try { await chiama('io', 'DELETE'); s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Account eliminato')) } catch (e) { s.dici((e as Error).message) } }}>{t('Sì, elimina tutto')}</button>
+      <button className="quiet" onClick={() => setChiedi(false)}>{t('No')}</button>
+    </div>
+  )
 }
 
 /** Luoghi salvati: tocca per andarci, X per toglierli. */

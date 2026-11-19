@@ -36,6 +36,19 @@ async function nuovaSessione(env: Env, email: string) {
   await env.DB.prepare('INSERT INTO sessioni (token, email, scade) VALUES (?, ?, ?)').bind(token, email, Date.now() + GIORNI * 864e5).run()
   return token
 }
+// Limite ai tentativi (contro chi prova password a raffica o crea account in massa). Ritorna false se oltre il limite.
+async function improntaIp(req: Request) {
+  const ip = req.headers.get('CF-Connecting-IP') ?? 'sconosciuto'
+  const h = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('posimulatore:' + ip))
+  return b64(h).slice(0, 22)
+}
+async function entroLimite(env: Env, k: string, max: number, finestraMin: number) {
+  const ora = Date.now(), f = finestraMin * 60000
+  const r = await env.DB.prepare('INSERT INTO tentativi (k, n, da) VALUES (?1, 1, ?2) ON CONFLICT(k) DO UPDATE SET n = CASE WHEN ?2 - da > ?3 THEN 1 ELSE n + 1 END, da = CASE WHEN ?2 - da > ?3 THEN ?2 ELSE da END RETURNING n').bind(k, ora, f).first<{ n: number }>()
+  if (Math.random() < 0.02) await env.DB.prepare('DELETE FROM tentativi WHERE da < ?').bind(ora - 864e5).run()
+  return (r?.n ?? 0) <= max
+}
+const troppi = () => errore('Troppi tentativi: riprova tra un quarto d\'ora', 429)
 const corpo = async <T>(req: Request): Promise<T | null> => { try { return (await req.json()) as T } catch { return null } }
 
 export async function api(req: Request, url: URL, env: Env): Promise<Response> {
@@ -49,6 +62,7 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
   if (via[0] === 'io' && m === 'GET') return json(io)
 
   if (via[0] === 'registrati' && m === 'POST') {
+    if (!(await entroLimite(env, 'reg:' + (await improntaIp(req)), 5, 60))) return troppi()
     const b = await corpo<{ email?: string; nome?: string; password?: string }>(req)
     const email = (b?.email ?? '').trim().toLowerCase(), nome = (b?.nome ?? '').trim().slice(0, 60), pw = b?.password ?? ''
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 120) return errore('Email non valida')
@@ -64,15 +78,18 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
   if (via[0] === 'accedi' && m === 'POST') {
     const b = await corpo<{ email?: string; password?: string }>(req)
     const email = (b?.email ?? '').trim().toLowerCase()
+    if (!(await entroLimite(env, 'acc:' + (await improntaIp(req)), 20, 15)) || !(await entroLimite(env, 'mail:' + email, 8, 15))) return troppi()
     const u = await env.DB.prepare('SELECT email, nome, ruolo, hash, sale FROM utenti WHERE email = ?').bind(email).first<Utente & { hash: string; sale: string }>()
     // stesso tempo e stesso messaggio se l'email non esiste: non si scopre chi è registrato
     const h = await impronta(b?.password ?? '', u?.sale ?? 'nessuno')
     if (!u || !uguali(h, u.hash)) return errore('Email o password sbagliate', 401)
+    await env.DB.prepare('DELETE FROM tentativi WHERE k = ?').bind('mail:' + email).run()
     const t = await nuovaSessione(env, email)
     return json({ email: u.email, nome: u.nome, ruolo: u.ruolo }, 200, { 'Set-Cookie': cookieSessione(t, GIORNI * 86400) })
   }
   if (via[0] === 'google' && m === 'POST') {
     if (!env.GOOGLE_CLIENT_ID) return errore('Accesso con Google non attivo', 404)
+    if (!(await entroLimite(env, 'goo:' + (await improntaIp(req)), 30, 15))) return troppi()
     const b = await corpo<{ credential?: string }>(req)
     const g = b?.credential ? await verificaGoogle(b.credential, env.GOOGLE_CLIENT_ID).catch(() => null) : null
     if (!g) return errore('Accesso con Google non riuscito, riprova', 401)
@@ -97,6 +114,12 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
       await env.DB.prepare('UPDATE utenti SET dati = ? WHERE email = ?').bind(testo, io.email).run()
       return json({ ok: true })
     }
+  }
+  // il visitatore cancella il proprio account e tutto ciò che contiene (GDPR, art. 17)
+  if (via[0] === 'io' && m === 'DELETE') {
+    if (!io) return errore('Non hai fatto l\'accesso', 401)
+    await env.DB.batch([env.DB.prepare('DELETE FROM sessioni WHERE email = ?').bind(io.email), env.DB.prepare('DELETE FROM utenti WHERE email = ?').bind(io.email), env.DB.prepare('DELETE FROM tentativi WHERE k = ?').bind('mail:' + io.email)])
+    return json({ ok: true }, 200, { 'Set-Cookie': cookieSessione('', 0) })
   }
   if (via[0] === 'esci' && m === 'POST') {
     const t = cookie(req, 'ps')

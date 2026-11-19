@@ -30,6 +30,8 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   viewer = new C.Viewer(el, {
     terrainProvider,
     baseLayer: false,
+    // niente stelle né luna (0,9 MB scaricati per un cielo che di giorno non si vede)
+    skyBox: false,
     animation: false, timeline: false, geocoder: false, homeButton: false, sceneModePicker: false,
     baseLayerPicker: false, navigationHelpButton: false, fullscreenButton: false, infoBox: false,
     selectionIndicator: false, scene3DOnly: true, shadows: false,

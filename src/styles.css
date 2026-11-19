@@ -475,3 +475,10 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .miei-luoghi li > button:first-child { flex: 1; justify-content: flex-start; min-width: 0; }
 .miei-luoghi li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .miei-luoghi .icona-m { color: var(--accento); }
+/* zona da toccare di almeno 44 px (linee guida Apple e Google) senza cambiare il disegno: un bordo invisibile attorno */
+.cima .chip { position: relative; }
+.cima .chip::after { content: ''; position: absolute; inset: -5px -2px; }
+.avatar, .ricerca .lingua { width: 44px; height: 44px; }
+.segno-poi::after { content: ''; position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; }
+.segno-poi.lontano::after { left: -12px; top: -12px; width: 44px; height: 44px; }
+button.danger-testo { color: var(--pericolo); align-self: flex-start; }

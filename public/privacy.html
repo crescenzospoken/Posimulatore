@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Privacy · Positano 3D</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<style>
+  :root { --testo: #1b1f24; --tenue: #5f6368; --accento: #0b6bcb; --sfondo: #f6f7f9; --carta: #fff; }
+  @media (prefers-color-scheme: dark) { :root { --testo: #e8eaed; --tenue: #a8adb3; --accento: #8ab4f8; --sfondo: #15181c; --carta: #1f2328; } }
+  body { margin: 0; background: var(--sfondo); color: var(--testo); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 26px; margin: 8px 0; }
+  h2 { font-size: 18px; margin: 28px 0 6px; }
+  a { color: var(--accento); }
+  .lingue a { margin-left: 12px; font-weight: 600; }
+  .scheda { background: var(--carta); border-radius: 16px; padding: 4px 20px 16px; margin-top: 16px; }
+  .nota { color: var(--tenue); font-size: 14px; }
+  .da-compilare { background: #fff3cd; color: #5c4400; border-radius: 4px; padding: 0 4px; }
+  ul { padding-left: 20px; }
+  [lang=en] { display: none; }
+  body.en [lang=it] { display: none; }
+  body.en [lang=en] { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <a href="/">← Positano 3D</a>
+    <span class="lingue"><a href="?lang=it" id="it">Italiano</a><a href="?lang=en" id="en">English</a></span>
+  </header>
+
+  <section lang="it">
+    <h1>Informativa sulla privacy</h1>
+    <p class="nota">Aggiornata il 19 novembre 2026 · Regolamento UE 2016/679 (GDPR)</p>
+    <div class="scheda">
+      <h2>In breve</h2>
+      <ul>
+        <li>La mappa si usa senza account. Non ci sono pubblicità né statistiche di navigazione, e non usiamo cookie per tracciarti.</li>
+        <li>La tua posizione GPS resta sul telefono: serve a calcolare il percorso nel browser e non arriva al nostro server.</li>
+        <li>Se crei un account salviamo solo email, nome, Casa e luoghi salvati. Puoi cancellare tutto da solo, in qualsiasi momento.</li>
+      </ul>
+
+      <h2>Titolare del trattamento</h2>
+      <p><span class="da-compilare">[Nome e cognome o ragione sociale]</span>, <span class="da-compilare">[indirizzo]</span>. Contatto per la privacy: <span class="da-compilare">[email]</span>.</p>
+
+      <h2>Quali dati e perché</h2>
+      <ul>
+        <li><b>Account</b> (solo se lo crei): email, nome e, se scegli email e password, la password cifrata (PBKDF2, non leggibile da nessuno). Con «Continua con Google» riceviamo da Google solo email e nome. Base giuridica: esecuzione del servizio che chiedi (art. 6.1.b).</li>
+        <li><b>Casa e luoghi salvati</b>: coordinate e nome dei punti che scegli tu, per ritrovarli su ogni telefono. Base: art. 6.1.b.</li>
+        <li><b>Cookie di sessione</b> «ps»: tecnico, serve solo a restare dentro l'account, dura 30 giorni o finché esci. Non richiede consenso.</li>
+        <li><b>Sicurezza</b>: per bloccare chi prova password a raffica contiamo i tentativi per un'impronta cifrata dell'indirizzo IP (mai l'IP in chiaro) e per email; le righe si cancellano entro un giorno. Base: legittimo interesse alla sicurezza (art. 6.1.f).</li>
+        <li><b>Preferenze sul telefono</b> (lingua, livelli, Casa, ultimi percorsi): restano nella memoria del browser e non arrivano a noi finché non accedi.</li>
+        <li><b>Link e QR</b>: un percorso condiviso contiene nel link le coordinate delle tappe; lo vede solo chi riceve il link.</li>
+      </ul>
+
+      <h2>Servizi esterni</h2>
+      <p>Per mostrare la mappa il tuo browser scarica dati direttamente da questi fornitori, che ricevono il tuo indirizzo IP e le zone della mappa che guardi, secondo le loro informative:</p>
+      <ul>
+        <li><b>Google</b>: foto 3D (Map Tiles API), ricerca dei luoghi (Places API), Street View, accesso con Google. <a href="https://policies.google.com/privacy" rel="noopener">Informativa di Google</a>.</li>
+        <li><b>Cloudflare</b>: ospita il sito e il database (dati in Europa dove possibile); registra per pochi giorni i dati tecnici delle richieste per sicurezza e diagnosi. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Informativa di Cloudflare</a>.</li>
+        <li><b>Esri</b> (satellite e mappa semplice) e <b>Cesium ion</b> (3D di riserva).</li>
+      </ul>
+      <p class="nota">Alcuni di questi fornitori hanno sede negli Stati Uniti: i trasferimenti avvengono con le garanzie previste dal GDPR (decisione di adeguatezza UE-USA o clausole contrattuali tipo).</p>
+
+      <h2>Per quanto tempo</h2>
+      <ul>
+        <li>Account, Casa e luoghi salvati: finché non cancelli l'account.</li>
+        <li>Sessione: 30 giorni. Contatori di sicurezza: al massimo 1 giorno.</li>
+      </ul>
+
+      <h2>I tuoi diritti</h2>
+      <p>Puoi chiedere accesso, correzione, cancellazione, limitazione, portabilità dei tuoi dati e opporti al trattamento (art. 15-22) scrivendo al contatto qui sopra. Per cancellare tutto da solo: <b>Account → Elimina il mio account</b>. Puoi anche presentare reclamo al <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+
+      <h2>Minori</h2>
+      <p>L'account è per chi ha almeno 14 anni (art. 2-quinquies del Codice privacy). La mappa si usa senza account a qualsiasi età.</p>
+    </div>
+  </section>
+
+  <section lang="en">
+    <h1>Privacy notice</h1>
+    <p class="nota">Updated 19 November 2026 · EU Regulation 2016/679 (GDPR)</p>
+    <div class="scheda">
+      <h2>In short</h2>
+      <ul>
+        <li>You can use the map without an account. No ads, no browsing analytics, no tracking cookies.</li>
+        <li>Your GPS location stays on your phone: routes are calculated in the browser and your position never reaches our server.</li>
+        <li>If you create an account we keep only your email, name, Home and saved places. You can delete everything yourself at any time.</li>
+      </ul>
+
+      <h2>Data controller</h2>
+      <p><span class="da-compilare">[Full name or company]</span>, <span class="da-compilare">[address]</span>. Privacy contact: <span class="da-compilare">[email]</span>.</p>
+
+      <h2>What data and why</h2>
+      <ul>
+        <li><b>Account</b> (only if you create one): email, name and, with email and password, the password hashed with PBKDF2 (unreadable by anyone). With “Continue with Google” we receive only your email and name from Google. Legal basis: providing the service you ask for (Art. 6(1)(b)).</li>
+        <li><b>Home and saved places</b>: coordinates and names of the places you choose, so you find them on every phone. Basis: Art. 6(1)(b).</li>
+        <li><b>Session cookie</b> “ps”: strictly necessary to keep you signed in, lasts 30 days or until you sign out. No consent needed.</li>
+        <li><b>Security</b>: to stop password guessing we count attempts per hashed IP address (never the plain IP) and per email; records are deleted within one day. Basis: legitimate interest in security (Art. 6(1)(f)).</li>
+        <li><b>Preferences on your phone</b> (language, layers, Home, recent routes): stored in your browser and never sent to us unless you sign in.</li>
+        <li><b>Links and QR codes</b>: a shared route contains the coordinates of its stops in the link; only people who receive it see them.</li>
+      </ul>
+
+      <h2>Third-party services</h2>
+      <p>To show the map your browser loads data directly from these providers, which receive your IP address and the map areas you view, under their own policies:</p>
+      <ul>
+        <li><b>Google</b>: 3D photos (Map Tiles API), place search (Places API), Street View, Sign in with Google. <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a>.</li>
+        <li><b>Cloudflare</b>: hosts the site and the database; keeps technical request logs for a few days for security and troubleshooting. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare privacy policy</a>.</li>
+        <li><b>Esri</b> (satellite and simple map) and <b>Cesium ion</b> (backup 3D).</li>
+      </ul>
+      <p class="nota">Some providers are based in the United States: transfers rely on the safeguards of the GDPR (EU-US adequacy decision or standard contractual clauses).</p>
+
+      <h2>How long</h2>
+      <ul>
+        <li>Account, Home and saved places: until you delete your account.</li>
+        <li>Session: 30 days. Security counters: at most 1 day.</li>
+      </ul>
+
+      <h2>Your rights</h2>
+      <p>You can ask for access, correction, deletion, restriction, portability and object to processing (Art. 15-22) by writing to the contact above. To delete everything yourself: <b>Account → Delete my account</b>. You can also complain to the Italian data protection authority, the <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+
+      <h2>Children</h2>
+      <p>Accounts are for people aged 14 or over. The map can be used without an account at any age.</p>
+    </div>
+  </section>
+</main>
+<script>
+  const q = new URLSearchParams(location.search).get('lang')
+  const en = q ? q === 'en' : !(navigator.language || 'it').toLowerCase().startsWith('it')
+  if (en) { document.body.classList.add('en'); document.documentElement.lang = 'en'; document.title = 'Privacy · Positano 3D' }
+</script>
+</body>
+</html>

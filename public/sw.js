@@ -1,7 +1,7 @@
 // Posimulatore offline: la pagina, il codice, Cesium e i nostri dati (vie, quote, punti) restano sul telefono,
 // così percorsi e indicazioni funzionano anche nei vicoli senza campo. Google 3D, API e /config sempre dalla rete.
-const VERSIONE = 'posimulatore-1'
-const BASE = ['/', '/index.html', '/manifest.webmanifest', '/icona-192.png', '/data/strade.json', '/data/quote-vie.json', '/data/poi.json', '/data/luoghi.json', '/data/confine.json', '/data/terreno.json', '/data/terreno-dettaglio.bin']
+const VERSIONE = 'posimulatore-2'
+const BASE = ['/', '/index.html', '/manifest.webmanifest', '/icona-192.png', '/data/strade.json', '/data/quote-vie.json', '/data/poi.json', '/data/luoghi.json', '/data/confine.json', '/data/terreno.json', '/data/terreno-dettaglio.d16.gz', '/data/terreno-contesto.d16.gz']
 self.addEventListener('install', e => { e.waitUntil(caches.open(VERSIONE).then(c => c.addAll(BASE)).then(() => self.skipWaiting())) })
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== VERSIONE).map(x => caches.delete(x)))).then(() => self.clients.claim())) })
 self.addEventListener('fetch', e => {
