@@ -1,5 +1,5 @@
 import * as C from 'cesium'
-import { viewer } from './viewer'
+import { viewer, pavimentoAttivo } from './viewer'
 import { GEOIDE } from './terreno'
 import { quota } from './oggetti'
 import { useS } from '../store'
@@ -26,6 +26,7 @@ function suolo(lon: number, lat: number) {
 export function avviaCammina() {
   if (attivo) return
   attivo = true
+  pavimentoAttivo(false)
   const cam = viewer.camera
   const ctrl = viewer.scene.screenSpaceCameraController
   ctrl.enableInputs = false
@@ -91,5 +92,6 @@ export function avviaCammina() {
 export function fermaCammina() {
   if (!attivo) return
   attivo = false
+  pavimentoAttivo(true)
   rimuovi?.(); rimuovi = null
 }

@@ -1,6 +1,6 @@
 import * as C from 'cesium'
 import 'cesium/Build/Cesium/Widgets/widgets.css'
-import { GEOIDE, caricaTerreno } from './terreno'
+import { GEOIDE, caricaTerreno, quota as quotaTerreno } from './terreno'
 import type { Livelli } from '../store'
 import type { Vista } from '../engine/model'
 
@@ -17,6 +17,9 @@ export const VAI: { nome: string; lon: number; lat: number; h: number; heading: 
   { nome: 'Laurito', lon: 14.5050, lat: 40.6205, h: 160, heading: 0, pitch: -25 },
   { nome: 'Li Galli', lon: 14.4330, lat: 40.5740, h: 250, heading: 0, pitch: -25 },
 ]
+let pavimento = true
+/** Il pavimento della camera si spegne mentre si cammina (lì la quota la decide la camminata). */
+export const pavimentoAttivo = (on: boolean) => { pavimento = on }
 export const pos = (lon: number, lat: number, z: number) => C.Cartesian3.fromDegrees(lon, lat, z + GEOIDE)
 
 export async function creaViewer(el: HTMLElement, onReady?: () => void) {
@@ -47,6 +50,19 @@ export async function creaViewer(el: HTMLElement, onReady?: () => void) {
   // il terreno e le immagini che arrivano chiedono un nuovo disegno
   s.globe.tileLoadProgressEvent.addEventListener(() => s.requestRender())
   ;(viewer.cesiumWidget.creditContainer as HTMLElement).classList.add('crediti')
+  // pavimento: la camera non scende sotto il terreno (con Google acceso il globo è nascosto e senza questo si finiva sotto la mesh).
+  // Il controllo di collisione di Cesium con il 3D costerebbe un'interrogazione della scena a ogni fotogramma; qui basta la nostra griglia.
+  const g = new C.Cartographic()
+  s.preRender.addEventListener(() => {
+    if (!pavimento) return
+    const c = C.Cartographic.fromCartesian(viewer.camera.positionWC, undefined, g)
+    if (!c) return
+    const min = quotaTerreno(C.Math.toDegrees(c.longitude), C.Math.toDegrees(c.latitude)) + GEOIDE + 4
+    if (c.height < min) {
+      const su = C.Cartesian3.fromRadians(c.longitude, c.latitude, min)
+      viewer.camera.setView({ destination: su, orientation: { heading: viewer.camera.heading, pitch: viewer.camera.pitch, roll: 0 } })
+    }
+  })
   onReady?.()
   return viewer
 }
@@ -149,8 +165,7 @@ export async function impostaGoogle(on: boolean, token: string, chiave = ''): Pr
         // meno dettaglio ai bordi e in lontananza, niente tile a vuoto mentre si muove la vista
         foveatedScreenSpaceError: true, dynamicScreenSpaceError: true, preloadFlightDestinations: false, loadSiblings: false,
         enableCollision: false,
-        // salta i livelli intermedi: meno tessere da scaricare e decodificare mentre ci si muove (era la causa degli scatti sul telefono)
-        skipLevelOfDetail: true, baseScreenSpaceError: 1024, skipScreenSpaceErrorFactor: 16, skipLevels: 1, immediatelyLoadDesiredLevelOfDetail: false,
+        // niente skipLevelOfDetail: con le tessere di Google stira la mesh in strisce lungo la vista (19/11)
       }
       // prima Google diretto con la chiave del sito (uso pubblico gratuito entro la quota, tetto giornaliero nella console Google);
       // se non risponde (quota finita, chiave sbagliata) si prova Cesium ion
