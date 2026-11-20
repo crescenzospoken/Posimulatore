@@ -1,6 +1,6 @@
 // Posimulatore: file statici + proxy dell'ortofoto del Geoportale Nazionale (servita solo in http).
 import { api } from './api'
-export interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string; GOOGLE_TILES_KEY?: string; GOOGLE_CLIENT_ID?: string; DB: D1Database; ADMIN_EMAIL?: string }
+export interface Env { ASSETS: Fetcher; CESIUM_ION_TOKEN?: string; GOOGLE_TILES_KEY?: string; GOOGLE_CLIENT_ID?: string; DB: D1Database; ADMIN_EMAIL?: string; HOST_CANONICO?: string }
 const PCN = 'http://wms.pcn.minambiente.it/ogc?map=/ms_ogc/WMS_v1.3/raster/ortofoto_colore_12.map'
 const AMMESSI = new Set(['service', 'request', 'version', 'layers', 'styles', 'srs', 'crs', 'bbox', 'width', 'height', 'format', 'transparent'])
 
@@ -44,6 +44,8 @@ function anteprima(url: URL, r: Response): Response {
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url)
+    // Migrazione su cre.cy: con HOST_CANONICO impostato, il vecchio indirizzo workers.dev manda tutto al dominio nuovo (301).
+    if (env.HOST_CANONICO && url.hostname.endsWith('.workers.dev')) return Response.redirect(`https://${env.HOST_CANONICO}${url.pathname}${url.search}`, 301)
     if (url.pathname === '/robots.txt') return new Response('User-agent: *\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain' } })
     if (url.pathname === '/wms/pcn') return ortofoto(req, url, ctx)
     if (url.pathname.startsWith('/api/')) return api(req, url, env)
