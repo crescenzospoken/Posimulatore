@@ -45,8 +45,11 @@ export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(req.url)
     // Migrazione su cre.cy: con HOST_CANONICO impostato, il vecchio indirizzo workers.dev manda tutto al dominio nuovo (301).
-    if (env.HOST_CANONICO && url.hostname.endsWith('.workers.dev')) return Response.redirect(`https://${env.HOST_CANONICO}${url.pathname}${url.search}`, 301)
-    if (url.pathname === '/robots.txt') return new Response('User-agent: *\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain' } })
+    // Solo l'indirizzo vecchio esatto: le anteprime dei rami (altri nomi su workers.dev) restano dove sono.
+    if (env.HOST_CANONICO && url.hostname === 'posimulatore.crescy.workers.dev') return Response.redirect(`https://${env.HOST_CANONICO}${url.pathname}${url.search}`, 301)
+    // finché non si va live niente indicizzazione (X-Robots-Tag noindex in _headers); home, privacy e termini restano
+    // leggibili dai robot perché Google controlla che la home rimandi all'informativa (schermata del consenso)
+    if (url.pathname === '/robots.txt') return new Response('User-agent: *\nAllow: /$\nAllow: /privacy\nAllow: /termini\nAllow: /legale.css\nDisallow: /\n', { headers: { 'Content-Type': 'text/plain' } })
     if (url.pathname === '/wms/pcn') return ortofoto(req, url, ctx)
     if (url.pathname.startsWith('/api/')) return api(req, url, env)
     // chiavi da browser: Google Map Tiles (limitata al dominio e con tetto giornaliero nella console Google) e, di riserva, Cesium ion

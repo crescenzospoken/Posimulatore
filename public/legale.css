@@ -1,0 +1,19 @@
+/* Privacy e Termini: pagine statiche, senza JavaScript. Stessi colori e caratteri dell'app (accento blu, vetro chiaro). */
+:root { --testo: #1b1f24; --tenue: #5f6368; --accento: #0b6bcb; --sfondo: #eef2f6; --carta: #ffffff; --linea: #dde3ea; }
+@media (prefers-color-scheme: dark) { :root { --testo: #e8eaed; --tenue: #a8adb3; --accento: #8ab4f8; --sfondo: #15181c; --carta: #1f2328; --linea: #30363d; } }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--sfondo); color: var(--testo); font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 760px; margin: 0 auto; padding: 20px 16px 64px; }
+nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-weight: 600; }
+nav .lingue a { margin-left: 16px; }
+a { color: var(--accento); }
+h1 { font-size: 26px; line-height: 1.25; margin: 28px 0 4px; }
+h2 { font-size: 17px; margin: 24px 0 6px; }
+section { background: var(--carta); border: 1px solid var(--linea); border-radius: 20px; padding: 4px 20px 16px; margin-top: 16px; }
+.data { color: var(--tenue); font-size: 14px; margin: 0; }
+ul { padding-left: 20px; } li { margin: 4px 0; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; vertical-align: top; padding: 8px 6px; border-top: 1px solid var(--linea); }
+th { font-weight: 600; }
+@media (max-width: 560px) { table, thead, tbody, tr, th, td { display: block; } thead { display: none; } td { border: 0; padding: 2px 0; } tr { border-top: 1px solid var(--linea); padding: 8px 0; } td:first-child { font-weight: 600; } }
+footer { margin-top: 28px; color: var(--tenue); font-size: 14px; }
