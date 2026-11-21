@@ -8,6 +8,8 @@
   // dominio cre.cy (20/11/2026). HOST_CANONICO si accende solo dopo aver aggiunto posimulatore.cre.cy
   // alla chiave Google (referrer) e al token Cesium ion: finché non c'è, workers.dev resta com'è.
   "routes": [{ "pattern": "posimulatore.cre.cy", "custom_domain": true }],
+  // referrer della chiave Google e token Cesium ion aggiornati da Crescenzo il 21/11: workers.dev ora rimanda qui (301)
+  "vars": { "HOST_CANONICO": "posimulatore.cre.cy" },
   // le variabili messe a mano nel pannello di Cloudflare (es. GOOGLE_TILES_KEY) restano dopo ogni pubblicazione
   "keep_vars": true,
   // utenti, punti di interesse corretti a mano e impostazioni per tutti; schema in migrations/

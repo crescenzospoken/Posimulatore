@@ -134,6 +134,7 @@ export function Accesso() {
         <MieiLuoghi />
         <p className="nota">{t('Casa e luoghi salvati restano nel tuo account, su ogni telefono.')}</p>
         <EliminaAccount />
+        <p className="nota"><a href={'/privacy' + (s.lingua === 'en' ? '#en' : '')} target="_blank" rel="noopener">{t('Privacy')}</a> · <a href={'/termini' + (s.lingua === 'en' ? '#en' : '')} target="_blank" rel="noopener">{t('Termini d\'uso')}</a></p>
         {puoModificare(u) && <label className="riga"><span>Modalità modifica<small>Progetti, disegno, edifici, punti di interesse</small></span><input type="checkbox" checked={s.inModifica} onChange={e => s.set({ inModifica: e.target.checked })} /></label>}
         {u.ruolo === 'admin' && <button onClick={() => s.set({ pannello: 'utenti' })}>Utenti e permessi</button>}
         <button className="quiet" onClick={async () => { try { await chiama('esci', 'POST') } catch { /* già fuori */ } google()?.accounts.id.disableAutoSelect(); s.set({ utente: null, inModifica: false, pannello: null }); s.dici(t('Sei uscito')) }}>{t('Esci')}</button>
@@ -155,6 +156,7 @@ export function Accesso() {
       <MieiLuoghi />
       {s.googleClientId && <>
         <BottoneGoogle entrato={entrato} errore={setErr} />
+        <p className="nota"><a href={'/privacy' + (s.lingua === 'en' ? '#en' : '')} target="_blank" rel="noopener">{t('Privacy')}</a> · <a href={'/termini' + (s.lingua === 'en' ? '#en' : '')} target="_blank" rel="noopener">{t('Termini d\'uso')}</a></p>
         <p className="nota">{t('Con l\'accesso Casa e luoghi salvati ti seguono su ogni telefono. La mappa resta aperta a tutti.')}</p>
       </>}
       {err && <p className="errore-campo" role="alert">{err}</p>}
@@ -168,7 +170,6 @@ export function Accesso() {
           {modo === 'registrati' && <p className="nota">{t('Dopo la registrazione l\'amministratore abilita il tuo account alla modifica.')}</p>}
         </form>
       </details>
-      <p className="nota"><a href={'/privacy?lang=' + s.lingua} target="_blank" rel="noopener">{t('Informativa sulla privacy')}</a></p>
     </div>
   )
 }

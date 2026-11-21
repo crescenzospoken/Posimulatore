@@ -3,133 +3,108 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<meta name="robots" content="noindex" />
-<title>Privacy · Positano 3D</title>
+<title>Privacy · Posimulatore</title>
+<meta name="description" content="Informativa sulla privacy di Posimulatore (Positano 3D). Privacy notice." />
 <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-<style>
-  :root { --testo: #1b1f24; --tenue: #5f6368; --accento: #0b6bcb; --sfondo: #f6f7f9; --carta: #fff; }
-  @media (prefers-color-scheme: dark) { :root { --testo: #e8eaed; --tenue: #a8adb3; --accento: #8ab4f8; --sfondo: #15181c; --carta: #1f2328; } }
-  body { margin: 0; background: var(--sfondo); color: var(--testo); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
-  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 26px; margin: 8px 0; }
-  h2 { font-size: 18px; margin: 28px 0 6px; }
-  a { color: var(--accento); }
-  .lingue a { margin-left: 12px; font-weight: 600; }
-  .scheda { background: var(--carta); border-radius: 16px; padding: 4px 20px 16px; margin-top: 16px; }
-  .nota { color: var(--tenue); font-size: 14px; }
-  .da-compilare { background: #fff3cd; color: #5c4400; border-radius: 4px; padding: 0 4px; }
-  ul { padding-left: 20px; }
-  [lang=en] { display: none; }
-  body.en [lang=it] { display: none; }
-  body.en [lang=en] { display: block; }
-</style>
+<link rel="stylesheet" href="/legale.css" />
 </head>
 <body>
 <main>
-  <header>
-    <a href="/">← Positano 3D</a>
-    <span class="lingue"><a href="?lang=it" id="it">Italiano</a><a href="?lang=en" id="en">English</a></span>
-  </header>
+  <nav><a href="/">← Posimulatore</a><span class="lingue"><a href="#it" hreflang="it">Italiano</a><a href="#en" hreflang="en">English</a></span></nav>
 
-  <section lang="it">
+  <article id="it" lang="it">
     <h1>Informativa sulla privacy</h1>
-    <p class="nota">Aggiornata il 19 novembre 2026 · Regolamento UE 2016/679 (GDPR)</p>
-    <div class="scheda">
-      <h2>In breve</h2>
-      <ul>
-        <li>La mappa si usa senza account. Non ci sono pubblicità né statistiche di navigazione, e non usiamo cookie per tracciarti.</li>
-        <li>La tua posizione GPS resta sul telefono: serve a calcolare il percorso nel browser e non arriva al nostro server.</li>
-        <li>Se crei un account salviamo solo email, nome, Casa e luoghi salvati. Puoi cancellare tutto da solo, in qualsiasi momento.</li>
-      </ul>
-
+    <p class="data">Posimulatore (sulla mappa «Positano 3D») · aggiornata il 21 novembre 2026 · Regolamento UE 2016/679 (GDPR)</p>
+    <section>
       <h2>Titolare del trattamento</h2>
-      <p>Crescenzo Parlato, impresa individuale (CREO Positano), via Cristoforo Colombo 163/A, 84017 Positano (SA). P. IVA 05475940655. Contatto per la privacy: <a href="mailto:creo@positanoglasses.com">creo@positanoglasses.com</a> · PEC <a href="mailto:parlatocrescenzo@pec.studiomilano.it">parlatocrescenzo@pec.studiomilano.it</a>.</p>
+      <p>Parlato Crescenzo, ditta individuale, via Cristoforo Colombo 163/A, 84017 Positano (SA), P. IVA 05475940655.<br />Contatto: <a href="mailto:crescy@gmail.com">crescy@gmail.com</a></p>
 
-      <h2>Quali dati e perché</h2>
-      <ul>
-        <li><b>Account</b> (solo se lo crei): email, nome e, se scegli email e password, la password cifrata (PBKDF2, non leggibile da nessuno). Con «Continua con Google» riceviamo da Google solo email e nome. Base giuridica: esecuzione del servizio che chiedi (art. 6.1.b).</li>
-        <li><b>Casa e luoghi salvati</b>: coordinate e nome dei punti che scegli tu, per ritrovarli su ogni telefono. Base: art. 6.1.b.</li>
-        <li><b>Cookie di sessione</b> «ps»: tecnico, serve solo a restare dentro l'account, dura 30 giorni o finché esci. Non richiede consenso.</li>
-        <li><b>Sicurezza</b>: per bloccare chi prova password a raffica contiamo i tentativi per un'impronta cifrata dell'indirizzo IP (mai l'IP in chiaro) e per email; le righe si cancellano entro un giorno. Base: legittimo interesse alla sicurezza (art. 6.1.f).</li>
-        <li><b>Preferenze sul telefono</b> (lingua, livelli, Casa, ultimi percorsi): restano nella memoria del browser e non arrivano a noi finché non accedi.</li>
-        <li><b>Link e QR</b>: un percorso condiviso contiene nel link le coordinate delle tappe; lo vede solo chi riceve il link.</li>
-      </ul>
+      <h2>Quali dati, perché, per quanto</h2>
+      <table>
+        <thead><tr><th>Dato</th><th>Perché e base giuridica</th><th>Quanto resta</th></tr></thead>
+        <tbody>
+          <tr><td>Email e nome</td><td>Account, solo se lo crei. Con «Continua con Google» riceviamo da Google solo email verificata e nome: nessuna foto, nessun altro dato del profilo, nessun accesso ad altri servizi Google. Esecuzione del servizio richiesto (art. 6.1.b).</td><td>Finché non cancelli l'account</td></tr>
+          <tr><td>Password</td><td>Solo se scegli email e password: la salviamo cifrata (PBKDF2), nessuno può leggerla. Art. 6.1.b.</td><td>Finché non cancelli l'account</td></tr>
+          <tr><td>Casa e luoghi salvati</td><td>Coordinate e nomi dei punti che salvi tu, per ritrovarli su ogni dispositivo. Art. 6.1.b.</td><td>Finché li togli o cancelli l'account</td></tr>
+          <tr><td>Cookie di sessione «ps»</td><td>Cookie tecnico per restare dentro l'account (HttpOnly, Secure). Non serve consenso.</td><td>30 giorni o finché esci</td></tr>
+          <tr><td>Impronta cifrata dell'IP, email</td><td>Contatore dei tentativi di accesso e registrazione, contro chi prova password a raffica. L'IP non viene mai salvato in chiaro. Legittimo interesse alla sicurezza (art. 6.1.f).</td><td>Circa 1 giorno</td></tr>
+          <tr><td>Email di chi modifica la mappa</td><td>Solo per gli account abilitati alla modifica: resta accanto ai punti, alle vie e agli eventi che hanno cambiato. Legittimo interesse a sapere chi ha modificato cosa (art. 6.1.f).</td><td>Finché restano quei contenuti</td></tr>
+          <tr><td>Registri tecnici delle richieste</td><td>Cloudflare, che ospita il sito, registra le richieste (indirizzo IP, pagina, ora, esito) per sicurezza e diagnosi. Art. 6.1.f.</td><td>Fino a 7 giorni</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Cosa resta solo sul tuo dispositivo</h2>
+      <p>Nella memoria del browser restano lingua, livelli della mappa, servizi accesi, Casa, luoghi salvati e l'ultima partenza dei percorsi, che può essere la tua posizione. Per chi modifica la mappa restano anche i progetti e, se lo inserisce, il proprio codice Cesium ion. Questi dati non arrivano a noi, tranne Casa e luoghi salvati quando hai fatto l'accesso. La posizione GPS si usa solo nel browser, per calcolare il percorso. Non usiamo pubblicità, statistiche di navigazione o cookie di profilazione.</p>
 
       <h2>Servizi esterni</h2>
       <p>Per mostrare la mappa il tuo browser scarica dati direttamente da questi fornitori, che ricevono il tuo indirizzo IP e le zone della mappa che guardi, secondo le loro informative:</p>
       <ul>
-        <li><b>Google</b>: foto 3D (Map Tiles API), ricerca dei luoghi (Places API), Street View, accesso con Google. <a href="https://policies.google.com/privacy" rel="noopener">Informativa di Google</a>.</li>
-        <li><b>Cloudflare</b>: ospita il sito e il database (dati in Europa dove possibile); registra per pochi giorni i dati tecnici delle richieste per sicurezza e diagnosi. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Informativa di Cloudflare</a>.</li>
-        <li><b>Esri</b> (satellite e mappa semplice) e <b>Cesium ion</b> (3D di riserva).</li>
+        <li><b>Google</b>: foto 3D (Map Tiles API), ricerca dei luoghi (Places API: riceve il testo che scrivi nella ricerca), Street View (Maps JavaScript API), accesso con Google. <a href="https://policies.google.com/privacy" rel="noopener">Informativa di Google</a></li>
+        <li><b>Cesium ion</b>: 3D di riserva quando Google non risponde. <a href="https://cesium.com/legal/privacy/" rel="noopener">Informativa di Cesium</a></li>
+        <li><b>Esri</b>: immagini satellitari e mappa semplice. <a href="https://www.esri.com/en-us/privacy/overview" rel="noopener">Informativa di Esri</a></li>
+        <li><b>OpenStreetMap</b>: mappa alternativa, solo se la scegli nei livelli. <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">Informativa di OpenStreetMap</a></li>
+        <li><b>Cloudflare</b>: ospita il sito, il server e il database. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Informativa di Cloudflare</a></li>
       </ul>
-      <p class="nota">Alcuni di questi fornitori hanno sede negli Stati Uniti: i trasferimenti avvengono con le garanzie previste dal GDPR (decisione di adeguatezza UE-USA o clausole contrattuali tipo).</p>
-
-      <h2>Per quanto tempo</h2>
-      <ul>
-        <li>Account, Casa e luoghi salvati: finché non cancelli l'account.</li>
-        <li>Sessione: 30 giorni. Contatori di sicurezza: al massimo 1 giorno.</li>
-      </ul>
+      <p>Alcuni fornitori hanno sede negli Stati Uniti: i trasferimenti avvengono con le garanzie del GDPR (decisione di adeguatezza UE-USA o clausole contrattuali tipo).</p>
 
       <h2>I tuoi diritti</h2>
-      <p>Puoi chiedere accesso, correzione, cancellazione, limitazione, portabilità dei tuoi dati e opporti al trattamento (art. 15-22) scrivendo al contatto qui sopra. Per cancellare tutto da solo: <b>Account → Elimina il mio account</b>. Puoi anche presentare reclamo al <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+      <p>Puoi chiedere accesso, rettifica, cancellazione, limitazione e portabilità dei tuoi dati, e opporti al trattamento (art. 15-22 GDPR), scrivendo a <a href="mailto:crescy@gmail.com">crescy@gmail.com</a>. Rispondiamo entro un mese. Puoi presentare reclamo al <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+
+      <h2>Cancellare l'account e i dati</h2>
+      <p>Nell'app: <b>Account → Elimina il mio account → Sì, elimina tutto</b>. Si cancellano subito account, sessioni, Casa e luoghi salvati. In alternativa scrivi a <a href="mailto:crescy@gmail.com">crescy@gmail.com</a> dall'indirizzo dell'account. Per togliere anche i dati sul dispositivo, cancella i dati del sito dalle impostazioni del browser. Se sei entrato con Google, puoi togliere l'accesso anche da <a href="https://myaccount.google.com/connections" rel="noopener">myaccount.google.com/connections</a>.</p>
 
       <h2>Minori</h2>
-      <p>L'account è per chi ha almeno 14 anni (art. 2-quinquies del Codice privacy). La mappa si usa senza account a qualsiasi età.</p>
-    </div>
-  </section>
+      <p>L'account è per chi ha almeno 14 anni. La mappa si usa senza account a qualsiasi età.</p>
+    </section>
+  </article>
 
-  <section lang="en">
+  <article id="en" lang="en">
     <h1>Privacy notice</h1>
-    <p class="nota">Updated 19 November 2026 · EU Regulation 2016/679 (GDPR)</p>
-    <div class="scheda">
-      <h2>In short</h2>
-      <ul>
-        <li>You can use the map without an account. No ads, no browsing analytics, no tracking cookies.</li>
-        <li>Your GPS location stays on your phone: routes are calculated in the browser and your position never reaches our server.</li>
-        <li>If you create an account we keep only your email, name, Home and saved places. You can delete everything yourself at any time.</li>
-      </ul>
-
+    <p class="data">Posimulatore (shown on the map as “Positano 3D”) · updated 21 November 2026 · EU Regulation 2016/679 (GDPR)</p>
+    <section>
       <h2>Data controller</h2>
-      <p>Crescenzo Parlato, sole proprietorship (CREO Positano), via Cristoforo Colombo 163/A, 84017 Positano (SA), Italy. VAT no. IT05475940655. Privacy contact: <a href="mailto:creo@positanoglasses.com">creo@positanoglasses.com</a> · certified email <a href="mailto:parlatocrescenzo@pec.studiomilano.it">parlatocrescenzo@pec.studiomilano.it</a>.</p>
+      <p>Parlato Crescenzo, sole proprietorship, via Cristoforo Colombo 163/A, 84017 Positano (SA), Italy, VAT no. IT05475940655.<br />Contact: <a href="mailto:crescy@gmail.com">crescy@gmail.com</a></p>
 
-      <h2>What data and why</h2>
-      <ul>
-        <li><b>Account</b> (only if you create one): email, name and, with email and password, the password hashed with PBKDF2 (unreadable by anyone). With “Continue with Google” we receive only your email and name from Google. Legal basis: providing the service you ask for (Art. 6(1)(b)).</li>
-        <li><b>Home and saved places</b>: coordinates and names of the places you choose, so you find them on every phone. Basis: Art. 6(1)(b).</li>
-        <li><b>Session cookie</b> “ps”: strictly necessary to keep you signed in, lasts 30 days or until you sign out. No consent needed.</li>
-        <li><b>Security</b>: to stop password guessing we count attempts per hashed IP address (never the plain IP) and per email; records are deleted within one day. Basis: legitimate interest in security (Art. 6(1)(f)).</li>
-        <li><b>Preferences on your phone</b> (language, layers, Home, recent routes): stored in your browser and never sent to us unless you sign in.</li>
-        <li><b>Links and QR codes</b>: a shared route contains the coordinates of its stops in the link; only people who receive it see them.</li>
-      </ul>
+      <h2>What data, why, how long</h2>
+      <table>
+        <thead><tr><th>Data</th><th>Purpose and legal basis</th><th>Kept for</th></tr></thead>
+        <tbody>
+          <tr><td>Email and name</td><td>Your account, only if you create one. With “Continue with Google” we receive from Google only your verified email and your name: no photo, no other profile data, no access to other Google services. Performance of the service you ask for (Art. 6(1)(b)).</td><td>Until you delete your account</td></tr>
+          <tr><td>Password</td><td>Only if you choose email and password: stored hashed with PBKDF2, unreadable by anyone. Art. 6(1)(b).</td><td>Until you delete your account</td></tr>
+          <tr><td>Home and saved places</td><td>Coordinates and names of the places you save, so you find them on every device. Art. 6(1)(b).</td><td>Until you remove them or delete your account</td></tr>
+          <tr><td>Session cookie “ps”</td><td>Strictly necessary cookie to keep you signed in (HttpOnly, Secure). No consent needed.</td><td>30 days or until you sign out</td></tr>
+          <tr><td>Hashed IP address, email</td><td>Counter of sign-in and sign-up attempts, to stop password guessing. The plain IP address is never stored. Legitimate interest in security (Art. 6(1)(f)).</td><td>About 1 day</td></tr>
+          <tr><td>Email of map editors</td><td>Only for accounts allowed to edit the map: stored next to the places, streets and events they changed. Legitimate interest in knowing who changed what (Art. 6(1)(f)).</td><td>As long as that content exists</td></tr>
+          <tr><td>Technical request logs</td><td>Cloudflare, which hosts the site, logs requests (IP address, page, time, result) for security and troubleshooting. Art. 6(1)(f).</td><td>Up to 7 days</td></tr>
+        </tbody>
+      </table>
+
+      <h2>What stays only on your device</h2>
+      <p>Your browser stores your language, map layers, services shown, Home, saved places and the last starting point of your routes, which may be your location. Map editors also store their projects and, if they enter it, their own Cesium ion token. This data does not reach us, except Home and saved places when you are signed in. Your GPS location is used only in the browser to calculate routes. We use no ads, no browsing analytics and no profiling cookies.</p>
 
       <h2>Third-party services</h2>
       <p>To show the map your browser loads data directly from these providers, which receive your IP address and the map areas you view, under their own policies:</p>
       <ul>
-        <li><b>Google</b>: 3D photos (Map Tiles API), place search (Places API), Street View, Sign in with Google. <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a>.</li>
-        <li><b>Cloudflare</b>: hosts the site and the database; keeps technical request logs for a few days for security and troubleshooting. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare privacy policy</a>.</li>
-        <li><b>Esri</b> (satellite and simple map) and <b>Cesium ion</b> (backup 3D).</li>
+        <li><b>Google</b>: 3D photos (Map Tiles API), place search (Places API: receives the text you type in the search box), Street View (Maps JavaScript API), Sign in with Google. <a href="https://policies.google.com/privacy" rel="noopener">Google privacy policy</a></li>
+        <li><b>Cesium ion</b>: backup 3D when Google does not respond. <a href="https://cesium.com/legal/privacy/" rel="noopener">Cesium privacy policy</a></li>
+        <li><b>Esri</b>: satellite imagery and simple map. <a href="https://www.esri.com/en-us/privacy/overview" rel="noopener">Esri privacy policy</a></li>
+        <li><b>OpenStreetMap</b>: alternative map, only if you choose it in the layers. <a href="https://osmfoundation.org/wiki/Privacy_Policy" rel="noopener">OpenStreetMap privacy policy</a></li>
+        <li><b>Cloudflare</b>: hosts the site, the server and the database. <a href="https://www.cloudflare.com/privacypolicy/" rel="noopener">Cloudflare privacy policy</a></li>
       </ul>
-      <p class="nota">Some providers are based in the United States: transfers rely on the safeguards of the GDPR (EU-US adequacy decision or standard contractual clauses).</p>
-
-      <h2>How long</h2>
-      <ul>
-        <li>Account, Home and saved places: until you delete your account.</li>
-        <li>Session: 30 days. Security counters: at most 1 day.</li>
-      </ul>
+      <p>Some providers are based in the United States: transfers rely on the safeguards of the GDPR (EU-US adequacy decision or standard contractual clauses).</p>
 
       <h2>Your rights</h2>
-      <p>You can ask for access, correction, deletion, restriction, portability and object to processing (Art. 15-22) by writing to the contact above. To delete everything yourself: <b>Account → Delete my account</b>. You can also complain to the Italian data protection authority, the <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+      <p>You can ask for access, rectification, erasure, restriction and portability of your data, and object to processing (Art. 15-22 GDPR), by writing to <a href="mailto:crescy@gmail.com">crescy@gmail.com</a>. We reply within one month. You can complain to the Italian data protection authority, the <a href="https://www.garanteprivacy.it" rel="noopener">Garante per la protezione dei dati personali</a>.</p>
+
+      <h2>Deleting your account and data</h2>
+      <p>In the app: <b>Account → Delete my account → Yes, delete everything</b>. Your account, sessions, Home and saved places are deleted at once. Or write to <a href="mailto:crescy@gmail.com">crescy@gmail.com</a> from your account address. To remove the data on your device as well, clear this site's data in your browser settings. If you signed in with Google, you can also remove access at <a href="https://myaccount.google.com/connections" rel="noopener">myaccount.google.com/connections</a>.</p>
 
       <h2>Children</h2>
       <p>Accounts are for people aged 14 or over. The map can be used without an account at any age.</p>
-    </div>
-  </section>
+    </section>
+  </article>
+
+  <footer><a href="/termini">Termini d'uso · Terms of use</a></footer>
 </main>
-<script>
-  const q = new URLSearchParams(location.search).get('lang')
-  const en = q ? q === 'en' : !(navigator.language || 'it').toLowerCase().startsWith('it')
-  if (en) { document.body.classList.add('en'); document.documentElement.lang = 'en'; document.title = 'Privacy · Positano 3D' }
-</script>
 </body>
 </html>

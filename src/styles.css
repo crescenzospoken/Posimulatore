@@ -482,3 +482,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .segno-poi::after { content: ''; position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; }
 .segno-poi.lontano::after { left: -12px; top: -12px; width: 44px; height: 44px; }
 button.danger-testo { color: var(--pericolo); align-self: flex-start; }
+/* Privacy e Termini, in basso a sinistra sopra i crediti (link fisso in index.html) */
+.legali { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(32px + env(safe-area-inset-bottom)); z-index: 2; font-size: 11px; line-height: 1; padding: 4px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.78); color: #3c4043; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.legali a { color: inherit; text-decoration: none; padding: 6px 2px; }
+#root:has(.in-modifica) + .legali, #root:has(.ospite) + .legali { display: none; }
