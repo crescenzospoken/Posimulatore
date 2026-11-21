@@ -10,6 +10,8 @@
   "routes": [{ "pattern": "posimulatore.cre.cy", "custom_domain": true }],
   // referrer della chiave Google e token Cesium ion aggiornati da Crescenzo il 21/11: workers.dev ora rimanda qui (301)
   "vars": { "HOST_CANONICO": "posimulatore.cre.cy" },
+  // con un dominio personalizzato wrangler spegne workers.dev se non lo si tiene acceso: serve acceso per il 301
+  "workers_dev": true,
   // le variabili messe a mano nel pannello di Cloudflare (es. GOOGLE_TILES_KEY) restano dopo ogni pubblicazione
   "keep_vars": true,
   // utenti, punti di interesse corretti a mano e impostazioni per tutti; schema in migrations/
