@@ -3,10 +3,11 @@
   "name": "posimulatore",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
-  "assets": { "directory": "dist", "binding": "ASSETS", "run_worker_first": ["/", "/wms/*", "/robots.txt", "/config", "/api/*"], "not_found_handling": "single-page-application" },
+  // tutto passa dal Worker: serve al 301 da workers.dev anche per i file statici (privacy, termini, codice)
+  "assets": { "directory": "dist", "binding": "ASSETS", "run_worker_first": true, "not_found_handling": "single-page-application" },
   "observability": { "enabled": true },
-  // dominio cre.cy (20/11/2026). HOST_CANONICO si accende solo dopo aver aggiunto posimulatore.cre.cy
-  // alla chiave Google (referrer) e al token Cesium ion: finché non c'è, workers.dev resta com'è.
+  // dominio cre.cy (20/11/2026); HOST_CANONICO (vars) acceso il 21/11 dopo aver aggiunto posimulatore.cre.cy
+  // alla chiave Google (referrer) e al token Cesium ion.
   "routes": [{ "pattern": "posimulatore.cre.cy", "custom_domain": true }],
   // referrer della chiave Google e token Cesium ion aggiornati da Crescenzo il 21/11: workers.dev ora rimanda qui (301)
   "vars": { "HOST_CANONICO": "posimulatore.cre.cy" },
