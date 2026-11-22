@@ -62,7 +62,7 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
   h.setInputAction((e: C.ScreenSpaceEventHandler.PositionedEvent) => {
     const s = S()
     const t = s.strumento
-    if (t.k === 'cammina') return
+    if (t.k === 'cammina' || t.k === 'allinea') return
     // prima i simboli sopra la mappa (punti di interesse, eventi, tappe)
     if (toccaVoce(e.position.x, e.position.y)) return
     if (s.scegliCasa) {

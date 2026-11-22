@@ -217,6 +217,17 @@ function disegnaVie(google: boolean) {
   if (nomiOn) impostaVoci('via', vociVie)
   if (location.search.includes('prova')) console.info('vie disegnate in', Math.round(performance.now() - t0), 'ms')
 }
+/** Ridisegna le vie da capo (dopo un cambio dell'allineamento). */
+export function ridisegnaVie() { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }
+/** Anteprima mentre si trascina con lo strumento «Allinea»: tutte le linee spostate di (e, n) metri attorno a un punto. */
+export function anteprimaSpostamento(e: number, n: number, lon: number, lat: number) {
+  if (!vie) return
+  const enu = C.Transforms.eastNorthUpToFixedFrame(C.Cartesian3.fromDegrees(lon, lat))
+  const t = new C.Cartesian3(enu[0] * e + enu[4] * n, enu[1] * e + enu[5] * n, enu[2] * e + enu[6] * n)
+  const m = C.Matrix4.fromTranslation(t)
+  for (let i = 0; i < vie.length; i++) (vie.get(i) as C.Primitive).modelMatrix = m
+  viewer.scene.requestRender()
+}
 export const strada = (id: string) => strade.find(s => s.id === id)
 export function cerca(q: string): { nome: string; tipo: string; p: LL; z?: number }[] {
   const t = q.trim().toLowerCase()
