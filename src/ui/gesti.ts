@@ -1,5 +1,6 @@
 // Gesti delle schede sul telefono: trascinando verso il basso (dalla maniglia, dalla testata o con il contenuto già in cima)
 // la scheda segue il dito e, oltre 90 px o con un colpo veloce, si chiude come col suo pulsante ✕.
+// La scheda del percorso non si chiude: si riduce a una riga (`data-ridotta`), e trascinandola in su si riapre.
 const SCHEDE = '.pannello, .scheda-percorso, .scheda-poi'
 const CHIUDI = '.pannello-testa button[aria-label]'
 
@@ -21,6 +22,9 @@ export function avviaGesti() {
   document.addEventListener('touchmove', e => {
     if (!el) return
     dy = e.touches[0].clientY - y0
+    const ridotta = el.dataset.ridotta === '1'
+    // ridotta: conta solo il gesto verso l'alto (la scheda non segue il dito, si apre al rilascio)
+    if (ridotta) { if (dy < -8) { attivo = true; e.preventDefault() } return }
     if (!attivo && dy > 8) { attivo = true; el.style.transition = 'none' }
     if (!attivo) return
     if (dy < 0) dy = 0
@@ -32,6 +36,10 @@ export function avviaGesti() {
     const s = el, v = dy / Math.max(1, performance.now() - t0)
     el = null
     if (!attivo) return
+    const pulsante = s.querySelector(CHIUDI) as HTMLElement | null
+    if (s.dataset.ridotta === '1') { if (dy < -30) pulsante?.click(); return }
+    // la scheda del percorso si riduce sul posto, senza uscire dallo schermo
+    if (s.dataset.ridotta === '0') { s.style.transition = ''; s.style.transform = ''; if (dy > 60 || v > 0.6) pulsante?.click(); return }
     s.style.transition = 'transform 0.18s ease-out'
     if (dy > 90 || v > 0.6) {
       s.style.transform = 'translateY(100%)'

@@ -12,7 +12,7 @@ export const linguaIniziale = (): Lingua => {
 }
 
 const EN: Record<string, string> = {
-  'Preparo Positano in 3D…': 'Loading Positano in 3D…',
+  
   'Da Google Maps': 'From Google Maps',
   'Risultati di Google': 'Results by Google',
   'Vai a': 'Go to',
@@ -39,8 +39,8 @@ const EN: Record<string, string> = {
   'Condividi': 'Share',
   'Modifica': 'Edit',
   'Hai fatto l\'accesso come': 'Signed in as',
-  'Il tuo account aspetta di essere abilitato dall\'amministratore. Intanto puoi usare la mappa come tutti.': 'Your account is waiting for approval. Meanwhile you can use the map like everyone else.',
-  'La mappa è aperta a tutti. L\'accesso serve a chi progetta e aggiorna i punti di interesse.': 'The map is open to everyone. Signing in is for people who design and update places.',
+  
+  
   'Nome e cognome': 'Full name',
   'Email': 'Email',
   'Password': 'Password',
@@ -54,9 +54,9 @@ const EN: Record<string, string> = {
   'Account': 'Account',
   'Il tuo account': 'Your account',
   'Accedi per progettare e aggiornare la mappa': 'Sign in to design and update the map',
-  'Tocca la mappa dove alloggi': 'Tap the map where you are staying',
-  'Dove alloggi?': 'Where are you staying?',
-  'Scegli il tuo punto Casa: i percorsi partiranno da lì e lo ritrovi con un tocco.': 'Choose your Home: directions start from there and it is always one tap away.',
+  
+  
+  
   'Sono qui': 'I am here',
   'Tocca la mappa': 'Tap the map',
   'Annulla': 'Cancel',
@@ -72,7 +72,7 @@ const EN: Record<string, string> = {
   'Chiudi': 'Close',
   'Riduci': 'Minimise',
   'Il tuo punto Casa': 'Your Home',
-  'Più tardi': 'Later',
+  
   'Cerca hotel, via o luogo': 'Search hotel, street or place',
   'Cerca il tuo alloggio': 'Search for where you are staying',
   'Sei uscito': 'Signed out',
@@ -83,10 +83,10 @@ const EN: Record<string, string> = {
   'Posizione non permessa: abilitala nelle impostazioni del browser': 'Location not allowed: enable it in your browser settings',
   'Link copiato': 'Link copied',
   'Copia non riuscita': 'Copy failed',
-  'Cambia partenza o arrivo': 'Change start or destination',
+  
   'Da qui': 'From here',
-  'Da Casa': 'From Home',
-  'A Casa': 'To Home',
+  
+  
   'Inverti': 'Swap',
   'Come conviene': 'Best way to get there',
   'Indicazioni': 'Step by step',
@@ -97,7 +97,7 @@ const EN: Record<string, string> = {
   'Copia link': 'Copy link',
   'Crea QR da stampare': 'Create printable QR',
   'Scarica l\'immagine': 'Download image',
-  'Scegli sulla mappa': 'Choose on the map',
+  
   'Parti da dove sei adesso': 'Start from where you are now',
   'Scambia partenza e arrivo': 'Swap start and destination',
   'Percorsi alternativi': 'Alternative routes',
@@ -107,11 +107,11 @@ const EN: Record<string, string> = {
   'Copia non riuscita: tieni premuto sul link': 'Copy failed: press and hold the link',
   'La mia posizione': 'My location',
   'Partenza': 'Start',
-  'Arrivo': 'Destination',
-  'Cerca via o luogo': 'Search street or place',
-  'Cambia: cerca via o luogo': 'Change: search street or place',
-  'Tocca la mappa per scegliere la partenza.': 'Tap the map to choose the start.',
-  'Tocca la mappa per scegliere l\'arrivo.': 'Tap the map to choose the destination.',
+  
+  
+  
+  
+  
   'Carico Street View…': 'Loading Street View…', 'Qui Google non ha foto a 360°: prova un po\' più avanti': 'No 360° photos here: try a little further on', 'Street View non raggiungibile': 'Street View not available', 'Indietro': 'Back', 'Avanti': 'Forward', 'Guarda il percorso': 'Preview the route',
   'Trascina per spostare': 'Drag to reorder', 'Togli la tappa': 'Remove stop', 'Da dove parti?': 'Where from?', 'Dove vuoi andare?': 'Where to?', 'Aggiungi una tappa': 'Add a stop', 'Sulla mappa': 'On the map', 'Tocca la mappa per aggiungere una tappa.': 'Tap the map to add a stop.', 'Cambia le tappe': 'Change stops',
   'Attenua il 3D': 'Soften the 3D', 'Schiarisce le foto del 3D: vie, percorsi e punti risaltano di più': 'Lightens the 3D photos so streets, routes and places stand out',
@@ -167,7 +167,9 @@ const EN: Record<string, string> = {
   'Cerco dove sei…': 'Finding where you are…', 'Posizione non disponibile: parto da Casa': 'Location not available: starting from Home',
   'Sei fuori Positano: parto da Casa': 'You are outside Positano: starting from Home',
   'GPS spento o non permesso: parto da Casa': 'GPS off or not allowed: starting from Home', 'GPS spento o non permesso: scegli la partenza sulla mappa': 'GPS off or not allowed: pick the start on the map',
-  'Informativa sulla privacy': 'Privacy notice', 'Privacy': 'Privacy', "Termini d'uso": 'Terms of use', 'Elimina il mio account': 'Delete my account', 'Account eliminato': 'Account deleted', 'Sì, elimina tutto': 'Yes, delete everything', 'No': 'No',
+  'Privacy': 'Privacy', "Termini d'uso": 'Terms of use', 'Elimina il mio account': 'Delete my account', 'Account eliminato': 'Account deleted', 'Sì, elimina tutto': 'Yes, delete everything', 'No': 'No',
+  'Apri i dettagli': 'Show details',
+  'Chiudi il percorso': 'Close the route', 'La mappa 3D non parte su questo dispositivo. Prova ad aggiornare il browser o a riaprire la pagina.': 'The 3D map cannot start on this device. Try updating your browser or reloading the page.',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */

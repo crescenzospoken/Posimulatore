@@ -131,6 +131,8 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
     const c = C.Color.fromCssColorString(colori[g.k] ?? g.col)
     const m = mat.get(g.k)
     if (m) m.uniforms.color = c.withAlpha(0.95)
+    const mf = matF.get(g.k)
+    if (mf) mf.uniforms.color = c.withAlpha(ALFA_FILIGRANA)
   }
   coloriAttuali = colori
   viewer.scene.requestRender()
@@ -159,6 +161,9 @@ const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
 // Ogni via si mostra secondo la SUA distanza dalla camera (attributo per istanza, lo calcola la GPU), non secondo l'altezza
 // della camera: quella cambiava di colpo inclinando (sopra il mare 0 m, sopra la montagna 1000 m) e le vie lampeggiavano.
+// Filigrana: le vie coperte dal 3D si intravedono solo da vicino (da lontano si vedrebbero attraverso le montagne)
+const FILIGRANA_MAX = 1300, ALFA_FILIGRANA = 0.38
+const matF = new Map<string, C.Material>()
 const DISTANZA_MAX: Record<string, number> = { statale: 1e7, strade: 9000, servizio: 4500, pedonali: 4500, scale: 4500, sentieri: 4500 }
 /** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono
  * in trasparenza invece di sparire. Le linee «dipinte» sulla mesh di Google sembravano gelato sciolto dove non combaciavano.
@@ -171,13 +176,16 @@ function disegnaVie(google: boolean) {
   vie = viewer.scene.primitives.add(new C.PrimitiveCollection())
   primPerGruppo.clear()
   vociVie = []
-  const perGruppo = new Map<string, C.GeometryInstance[]>()
+  const perGruppo = new Map<string, C.GeometryInstance[]>(), perGruppoF = new Map<string, C.GeometryInstance[]>()
   strade.forEach(s => {
     if (s.c.length < 2) return
     const g = gruppoDi(s.k)
     const z = quoteDi(s)
     const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: puntiVia(s.c, z, true, 3.5), width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+    const punti = puntiVia(s.c, z, true, 3.5)
+    l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: punti, width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+    // la stessa via «in filigrana»: da vicino si intravede anche dove il 3D di Google la copre (tetti, muri, mesh imprecisa)
+    if (google) { const f = perGruppoF.get(g.k) ?? []; perGruppoF.set(g.k, f); f.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, FILIGRANA_MAX) }, geometry: new C.PolylineGeometry({ positions: punti, width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) })) }
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n) {
       const k = Math.floor((s.c.length - 1) / 2), p = s.c[k], q = s.c[k + 1]
@@ -191,6 +199,13 @@ function disegnaVie(google: boolean) {
     const c = C.Color.fromCssColorString(coloriAttuali[g.k] ?? g.col)
     let m = mat.get(g.k)
     if (!m) { m = materialeVia(c.withAlpha(0.95)); mat.set(g.k, m) }
+    const instF = perGruppoF.get(g.k)
+    if (instF?.length) {
+      let mf = matF.get(g.k)
+      if (!mf) { mf = materialeVia(c.withAlpha(ALFA_FILIGRANA)); matF.set(g.k, mf) }
+      // senza prova di profondità: si vede attraverso il 3D, ma tenue e solo entro FILIGRANA_MAX dalla camera
+      vie.add(new C.Primitive({ geometryInstances: instF, asynchronous: true, appearance: new C.PolylineMaterialAppearance({ material: mf, translucent: true, renderState: { depthTest: { enabled: false }, depthMask: false, blending: C.BlendingState.ALPHA_BLEND } }) }))
+    }
     primPerGruppo.set(g.k, vie.add(new C.Primitive({
       geometryInstances: inst, asynchronous: true,
       appearance: new C.PolylineMaterialAppearance({ material: m, translucent: true }),

@@ -28,14 +28,12 @@ input, select { border: 1px solid var(--linea); border-radius: 7px; padding: 6px
 .app { position: relative; height: 100%; }
 .scena { position: absolute; inset: 0; }
 
-.caricamento { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 18px; background: #10202c; z-index: 5; }
-.caricamento.errore { padding: 24px; text-align: center; }
+.caricamento.errore { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; padding: 24px; text-align: center; color: #fff; font-size: 18px; background: #10202c; }
 
 .barra {
   position: absolute; top: 10px; left: 10px; right: 10px; display: flex; align-items: center; gap: 8px; z-index: 3;
   background: var(--carta); border-radius: var(--r); box-shadow: var(--ombra); padding: 6px 8px;
 }
-.marchio { font-weight: 750; letter-spacing: 0.02em; color: #0e4f7d; padding: 0 6px; white-space: nowrap; }
 .progetto-nome { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
 .cerca { position: relative; flex: 1; max-width: 340px; }
 .cerca input { width: 100%; }
@@ -140,15 +138,9 @@ input.num.largo { width: 76px; }
 }
 .scheda-percorso .pannello-testa { padding: 10px 0 6px; position: sticky; top: 0; background: var(--carta); z-index: 1; }
 .scheda-percorso h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tenue); margin: 14px 0 4px; }
-.scheda-percorso.riapri { width: auto; padding: 10px 16px; font-weight: 600; }
 .tappa { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--linea); }
 .tappa .lettera { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 13px; background: #1f9d55; margin-top: 4px; }
 .tappa + .tappa .lettera, .lettera.b { background: #d93a2b !important; }
-.tratta p { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-weight: 600; }
-.tratta .lettera { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 12px; background: #1f9d55; flex: none; }
-.tappa-corpo { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.tappa-corpo .cerca { max-width: none; position: relative; }
-.tappa-corpo .cerca input { width: 100%; }
 .riga-bottoni { display: flex; flex-wrap: wrap; gap: 6px; }
 .inverti { margin-top: 4px; }
 .esito { margin-top: 8px; }
@@ -173,7 +165,6 @@ input.num.largo { width: 76px; }
   .azioni select { min-width: 80px; max-width: 92px; flex: none; }
   .azioni button, .azioni select { padding-left: 6px; padding-right: 6px; font-size: 13px; }
   .azioni .solo-desktop { display: none; }
-  .marchio { font-size: 15px; }
   .strumenti { top: auto; bottom: 6px; left: 6px; right: 6px; flex-direction: row; overflow-x: auto; }
   .strumenti > button, .gruppo > button { width: 70px; flex: none; }
   .menu { position: fixed; left: 6px; right: 6px; top: auto; bottom: 84px; min-width: 0; max-height: 50vh; overflow: auto; }
@@ -185,7 +176,6 @@ input.num.largo { width: 76px; }
   .pad-nota { display: none; }
   .scheda-percorso { top: auto; left: 6px; right: 6px; bottom: 84px; width: auto; max-height: 56vh; }
   .ospite .scheda-percorso { bottom: 6px; max-height: 50vh; }
-  .scheda-percorso.riapri { left: auto; }
 }
 
 /* mappa pubblica: filtri dei punti di interesse, scheda del punto, accesso */
@@ -212,7 +202,6 @@ textarea { border: 1px solid var(--linea); border-radius: 7px; padding: 6px 8px;
   .servizi { top: 104px; left: 6px; right: 6px; }
   .pubblico .azioni { flex: 1 1 0; min-width: 0; gap: 0; }
   .pubblico .azioni select { min-width: 0; max-width: 64px; }
-  .pubblico .marchio { font-size: 14px; }
   .in-modifica .servizi { left: 6px; }
   .scheda-poi { top: auto; left: 6px; right: 6px; bottom: 6px; width: auto; }
   .in-modifica .scheda-poi { bottom: 84px; }
@@ -377,8 +366,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .indicazioni li { position: relative; padding-left: 10px; }
 .indicazioni li + li::before { content: ''; position: absolute; left: 20px; top: -6px; height: 8px; border-left: 2px dotted rgba(60, 64, 67, 0.35); }
 @media (max-width: 760px) { .cifre { grid-template-columns: repeat(2, 1fr); } }
-.risultati .cerca-fuori { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: var(--accento); text-decoration: none; font-size: 14px; }
-.risultati .cerca-fuori:hover { background: rgba(11, 107, 203, 0.08); }
 .maniglie { z-index: 2; }
 .maniglia-via { pointer-events: auto; position: absolute; left: 0; top: 0; margin: -13px 0 0 -13px; width: 26px; height: 26px; padding: 0; border-radius: 50%;
   justify-content: center; font-size: 11px; font-weight: 700; background: #fff; color: #0b3d5c; border: 2px solid var(--accento); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4); touch-action: none; cursor: grab; }
@@ -401,7 +388,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
   .street-view { top: 0; left: 0; right: 0; bottom: auto; width: auto; height: 52vh; border-radius: 0 0 24px 24px; }
   .in-modifica .street-view { height: 46vh; }
 }
-.tappa-corpo .risultati { position: static; margin-top: 6px !important; list-style: none; margin: 0; padding: 6px; border-radius: 16px; max-height: 40vh; overflow: auto; z-index: 6; }
 .risultati .titoletto { list-style: none; }
 .risultati button span { text-align: left; }
 /* tappe del percorso in alto, al posto della ricerca */
@@ -424,7 +410,8 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .barra-tappe .nota { margin: 0 6px 4px; }
 @media (max-width: 760px) { .barra-tappe { width: 100%; max-height: 48vh; } }
 .barra-tappe .riga-aggiungi { order: 0; flex-basis: auto; }
-.barra-tappe.riassunto { flex-direction: row; align-items: center; gap: 8px; padding: 10px 14px; border: 0; text-align: left; height: auto; }
+.barra-tappe.riassunto { flex-direction: row; align-items: center; gap: 2px; padding: 4px 6px 4px 8px; border: 0; height: auto; }
+.tappe-riassunto { flex: 1; min-width: 0; gap: 8px; padding: 8px 6px; text-align: left; }
 .barra-tappe.riassunto .nome { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
 .barra-tappe.riassunto .freccia { color: var(--tenue); }
 .barra-tappe.riassunto small { color: var(--tenue); white-space: nowrap; }
@@ -479,10 +466,23 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accento); o
 .cima .chip { position: relative; }
 .cima .chip::after { content: ''; position: absolute; inset: -5px -2px; }
 .avatar, .ricerca .lingua { width: 44px; height: 44px; }
-.segno-poi::after { content: ''; position: absolute; left: -12px; top: -12px; width: 50px; height: 50px; }
-.segno-poi.lontano::after { left: -12px; top: -12px; width: 44px; height: 44px; }
+/* i simboli non intercettano le dita: il tocco lo riconosce la mappa (toccaVoce, raggio 24 px), così il pizzico funziona ovunque */
+.segno-poi { pointer-events: none !important; }
 button.danger-testo { color: var(--pericolo); align-self: flex-start; }
 /* Privacy e Termini, in basso a sinistra sopra i crediti (link fisso in index.html) */
 .legali { position: fixed; left: calc(10px + env(safe-area-inset-left)); bottom: calc(32px + env(safe-area-inset-bottom)); z-index: 2; font-size: 11px; line-height: 1; padding: 4px 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.78); color: #3c4043; -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .legali a { color: inherit; text-decoration: none; padding: 6px 2px; }
 #root:has(.in-modifica) + .legali, #root:has(.ospite) + .legali { display: none; }
+/* scheda del percorso: ridotta a una riga (tempo, metri, gradini) più le alternative; la mappa resta libera */
+.scheda-percorso .pannello-testa { cursor: pointer; }
+.scheda-percorso .pannello-testa h2 { font-size: 20px; gap: 8px; white-space: nowrap; min-width: 0; }
+.scheda-percorso .pannello-testa h2 .icona-m { width: 22px; height: 22px; color: var(--accento); flex: none; }
+.scheda-percorso .pannello-testa h2 small { font-size: 14px; font-weight: 500; color: var(--tenue); overflow: hidden; text-overflow: ellipsis; }
+.scheda-percorso.ridotta { overflow: hidden; max-height: none; padding-bottom: 10px; }
+.scheda-percorso.ridotta .esito { margin-top: 0; }
+.scheda-percorso.ridotta .alternative { margin: 2px 0 0; }
+.scheda-percorso.ridotta .alternative button { padding: 6px 12px; }
+@media (max-width: 760px) { .scheda-percorso.ridotta { padding-bottom: calc(10px + env(safe-area-inset-bottom)) !important; } }
+/* in percorso il pulsante «Percorso» non serve, e i pulsanti tondi salgono sopra la scheda ridotta */
+.app:has(.scheda-percorso) .fab .fab-grande { display: none; }
+@media (max-width: 760px) { .app:has(.scheda-percorso.ridotta) .fab { bottom: calc(168px + env(safe-area-inset-bottom)); } .app:has(.scheda-percorso:not(.ridotta)) .fab { display: none; } .app:has(.scheda-percorso) ~ .legali, #root:has(.scheda-percorso) + .legali, #root:has(.scheda-poi) + .legali, #root:has(.pannello) + .legali { display: none; } }

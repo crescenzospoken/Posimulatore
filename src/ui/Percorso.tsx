@@ -25,11 +25,13 @@ const ICONA_MEZZO: Record<string, NomeIcona> = { piedi: 'directions_walk', bus: 
 const NOME_MEZZO: Record<string, string> = { piedi: 'A piedi', bus: 'Bus', auto: 'Auto' }
 const fermate = () => elencoPoi().filter(p => p.c === 'fermate' && !p.nascosto).map(p => p.p)
 
-export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: Percorso | null; opzioni: Percorso[]; scelta: number; scegli: (i: number) => void; esci: () => void }) {
+export function SchedaPercorso({ calc, opzioni, scelta, scegli }: { calc: Percorso | null; opzioni: Percorso[]; scelta: number; scegli: (i: number) => void }) {
   const s = useS()
   const inizio = s.tappe[0] ?? null, fine = s.tappe.length > 1 ? s.tappe[s.tappe.length - 1] : null
   const [qr, setQr] = useState<string | null>(null)
-  const [chiuso, setChiuso] = useState(false)
+  // sul telefono la scheda parte ridotta a una riga (tempo, metri, gradini e alternative): la mappa resta libera per
+  // seguire il percorso; si apre toccandola o trascinandola in su, e non chiude mai il percorso (quello si chiude dall'alto)
+  const [aperta, setAperta] = useState(() => !matchMedia('(max-width: 760px)').matches)
   const link = linkPercorso(s.tappe)
   useEffect(() => { setQr(null) }, [link])
   const faiQr = async () => {
@@ -50,12 +52,12 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
   const copia = async () => { try { await navigator.clipboard.writeText(link); s.dici(tr('Link copiato')) } catch { s.dici(tr('Copia non riuscita: tieni premuto sul link')) } }
   // con meno di due tappe la scheda non serve: le tappe si scelgono in alto
   if (s.tappe.length < 2) return null
-  if (chiuso) return <button className="scheda-percorso riapri" onClick={() => setChiuso(false)}>{calc ? `${minutiTesto(calc.minuti)} ${tr('a piedi')}` : tr('Percorso')}</button>
+  const gradini = calc && calc.gradini > 20 ? `~${m(Math.round(calc.gradini / 10) * 10)} ${tr('gradini')}` : tr('senza scale')
   return (
-    <section className="scheda-percorso" aria-label={tr('Percorso a piedi')}>
-      <div className="pannello-testa">
-        <h2>{fine?.nome ?? tr('Percorso a piedi')}</h2>
-        <button className="tondo quiet" onClick={() => (s.ospite ? setChiuso(true) : esci())} aria-label={tr(s.ospite ? 'Riduci' : 'Chiudi')}><Icona n="close" /></button>
+    <section className={'scheda-percorso' + (aperta ? '' : ' ridotta')} data-ridotta={aperta ? '0' : '1'} aria-label={tr('Percorso a piedi')}>
+      <div className="pannello-testa" onClick={() => setAperta(!aperta)}>
+        <h2>{calc ? <><Icona n="directions_walk" />{minutiTesto(calc.minuti)}<small>{m(calc.metri)} m · {gradini}</small></> : tr('Percorso a piedi')}</h2>
+        <button className="tondo quiet" onClick={e => { e.stopPropagation(); setAperta(!aperta) }} aria-expanded={aperta} aria-label={tr(aperta ? 'Riduci' : 'Apri i dettagli')}><Icona n={aperta ? 'expand_more' : 'expand_less'} /></button>
       </div>
       {s.tappe.length >= 2 && (calc ? (
         <div className="esito">
@@ -68,6 +70,7 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
               ))}
             </div>
           )}
+          {aperta && <>
           <button className="quiet" onClick={() => s.set({ vista360: { modo: 'percorso', pts: calc.pts.map(p => [p[0], p[1]] as [number, number]), titolo: s.tappe[s.tappe.length - 1]?.nome } })}><Icona n="streetview" />{tr('Guarda il percorso')}</button>
           <div className="cifre">
             <span><Icona n="schedule" /><b>{minutiTesto(calc.minuti)}</b><small>{tr('ritorno')} {minutiTesto(calc.ritorno)}</small></span>
@@ -92,9 +95,10 @@ export function SchedaPercorso({ calc, opzioni, scelta, scegli, esci }: { calc: 
             </>
           )}
           <p className="nota">{tr('Stime nostre: passo tranquillo con salite e scale (regola DIN 33466 sulle quote LiDAR), gradini stimati in 16 cm l\'uno. Bus e auto sono indicativi. Col censimento delle scale diventeranno misure vere.')}</p>
+          </>}
         </div>
       ) : <p className="nota">{tr('Nessun percorso trovato: scegli punti vicino a una via o a una scala.')}</p>)}
-      {!s.ospite && s.tappe.length >= 2 && (
+      {aperta && !s.ospite && s.tappe.length >= 2 && (
         <div className="condividi">
           <h3>{tr('Link e QR')}</h3>
           <p className="nota">{tr('Chi lo apre vede solo questo percorso. Dai un nome alla partenza e all\'arrivo: compare sul cartello.')}</p>
@@ -159,13 +163,16 @@ export function BarraTappe({ esci }: { esci: () => void }) {
   }
   const ordine = trascina ? (() => { const x = tappe.map((_, i) => i), [v] = x.splice(trascina.da, 1); x.splice(trascina.a, 0, v); return x })() : tappe.map((_, i) => i)
   if (!aperta && tappe.length >= 2) return (
-    <button className="barra-tappe vetro riassunto" onClick={() => { setAperta(true); setModifica(true) }} aria-label={tr('Cambia le tappe')}>
-      <span className="lettera a">A</span><span className="nome">{nomeDi(tappe[0])}</span>
-      <span className="freccia">→</span>
-      <span className="lettera b">{lettera(tappe.length - 1)}</span><span className="nome">{nomeDi(tappe[tappe.length - 1])}</span>
-      {tappe.length > 2 && <small>{tappe.length} {tr('tappe')}</small>}
-      <Icona n="edit" />
-    </button>
+    <div className="barra-tappe vetro riassunto">
+      <button className="quiet tappe-riassunto" onClick={() => { setAperta(true); setModifica(true) }} aria-label={tr('Cambia le tappe')}>
+        <span className="lettera a">A</span><span className="nome">{nomeDi(tappe[0])}</span>
+        <span className="freccia">→</span>
+        <span className="lettera b">{lettera(tappe.length - 1)}</span><span className="nome">{nomeDi(tappe[tappe.length - 1])}</span>
+        {tappe.length > 2 && <small>{tappe.length} {tr('tappe')}</small>}
+        <Icona n="edit" />
+      </button>
+      {!s.ospite && <button className="tondo quiet" onClick={esci} aria-label={tr('Chiudi il percorso')}><Icona n="close" /></button>}
+    </div>
   )
   return (
     <div className="barra-tappe vetro">

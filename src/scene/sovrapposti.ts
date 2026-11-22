@@ -11,6 +11,16 @@ let voci: Voce[] = []
 let strato: HTMLDivElement
 const elementi = new Map<string, HTMLElement>()
 const scratch = new C.Cartesian2()
+// dove stanno adesso sullo schermo i simboli che si possono toccare (aggiornato a ogni disegno)
+let toccabili: { v: Voce; x: number; y: number }[] = []
+/** Tocco sulla mappa in (x, y): se cade su un simbolo (entro 24 px) lo apre. I simboli non ricevono i tocchi da sé
+ * (`pointer-events: none`): così pizzico e trascinamento arrivano sempre alla mappa, anche partendo sopra un simbolo. */
+export function toccaVoce(x: number, y: number) {
+  let meglio: Voce | undefined, dMin = 24
+  for (const t of toccabili) { const d = Math.hypot(t.x - x, t.y - y); if (d < dMin) { dMin = d; meglio = t.v } }
+  meglio?.clic?.()
+  return !!meglio
+}
 
 export function avviaSovrapposti(contenitore: HTMLElement) {
   strato = document.createElement('div')
@@ -63,6 +73,7 @@ function aggiorna() {
   const w = viewer.canvas.clientWidth, h = viewer.canvas.clientHeight
   let nPoi = 0, nVie = 0
   const testi = new Map<string, [number, number][]>()
+  toccabili = []
   for (const { v, d } of vicini) {
     if (v.tipo === 'poi' ? nPoi >= MAX_POI : v.tipo === 'via' ? nVie >= MAX_VIE : false) continue
     const p = C.SceneTransforms.worldToWindowCoordinates(viewer.scene, v.pos, scratch)
@@ -82,6 +93,7 @@ function aggiorna() {
       if (v.tipo === 'poi' && !v.scelto && occupati.some(o => r[0] < o[2] && r[2] > o[0] && r[1] < o[3] && r[3] > o[1])) continue
       occupati.push(r); if (v.tipo === 'poi') nPoi++
     }
+    if (v.clic) toccabili.push({ v, x: p.x, y: p.y })
     const el = elemento(v)
     // il nome del punto si vede solo da vicino (o se è quello scelto)
     if (v.tipo === 'poi') { el.classList.toggle('con-nome', !!v.scelto || d < 450); el.classList.toggle('lontano', !v.scelto && d > 1200) }
