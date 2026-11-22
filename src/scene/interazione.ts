@@ -1,4 +1,5 @@
 import * as C from 'cesium'
+import { toccaVoce } from './sovrapposti'
 import { viewer, pos, googleAcceso, quotaGoogle } from './viewer'
 import { GEOIDE, quota } from './terreno'
 import { useS, type Misura } from '../store'
@@ -62,6 +63,8 @@ export function avviaInterazione(onCursore: (p: Punto | null) => void, fine: () 
     const s = S()
     const t = s.strumento
     if (t.k === 'cammina') return
+    // prima i simboli sopra la mappa (punti di interesse, eventi, tappe)
+    if (toccaVoce(e.position.x, e.position.y)) return
     if (s.scegliCasa) {
       const q = puntoA(e.position, false)
       if (q) useS.setState({ casa: { p: q.p, nome: 'Casa' }, scegliCasa: false, casaAperta: false })

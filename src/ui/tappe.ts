@@ -31,9 +31,4 @@ export function portamiA(dest: Tappa) {
     () => una(casa(), t(casa() ? 'GPS spento o non permesso: parto da Casa' : 'GPS spento o non permesso: scegli la partenza sulla mappa')),
   )
 }
-/** Aggiunge una tappa in fondo al percorso (e lo apre se non c'era). */
-export function aggiungiTappa(x: Tappa) {
-  const s = useS.getState()
-  s.set({ strumento: { k: 'percorso' }, tappe: [...(s.strumento.k === 'percorso' ? s.tappe : []), x], aggiungiDaMappa: false, selPoi: null, selGoogle: null, selEvento: null, pannello: null })
-}
 export const lettera = (i: number) => String.fromCharCode(65 + i)

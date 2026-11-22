@@ -19,6 +19,7 @@
     <meta name="apple-mobile-web-app-title" content="Positano 3D" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://tile.googleapis.com" crossorigin />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icona-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -42,7 +43,8 @@
       #avvio { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
         padding: 24px; background: #0e4f7d; color: #fff; font: 500 16px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center;
         transition: opacity .7s ease, visibility .7s; }
-      #avvio.via { opacity: 0; visibility: hidden; }
+      /* mentre si dissolve non deve intercettare le dita: sotto la mappa è già viva (prima il primo pizzico andava a vuoto) */
+      #avvio.via { opacity: 0; visibility: hidden; pointer-events: none; }
       .av-paese { width: min(72vw, 300px); height: auto; overflow: visible; }
       .av-monte { fill: #f2d9b4; transform-origin: 50% 100%; animation: av-sale 1.2s cubic-bezier(.2,.8,.2,1) both; }
       .av-m1 { opacity: .55; } .av-m2 { animation-delay: .15s; }

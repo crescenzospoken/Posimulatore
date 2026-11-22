@@ -69,6 +69,3 @@ export function squadra(pts: LL[], i: number): LL[] {
     return xy.map((q, k) => (k === i ? add(c, mul(d, r / l)) : q))
   })
 }
-/** Arrotonda le coordinate locali al passo dato (m). */
-export const alPasso = (pts: LL[], passo: number): LL[] =>
-  passo > 0 ? conLocali(pts, xy => xy.map(q => [Math.round(q[0] / passo) * passo, Math.round(q[1] / passo) * passo] as XY)) : pts

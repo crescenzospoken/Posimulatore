@@ -82,24 +82,10 @@ export function polysOverlap(a: XY[], b: XY[]): boolean {
   if (!segsDontCross(a, b)) return true
   return inside(a[0], b) || inside(b[0], a)
 }
-export function lineLength(pts: XY[]) {
-  let s = 0
-  for (let i = 1; i < pts.length; i++) s += dist(pts[i - 1], pts[i])
-  return s
-}
 /** Rettangolo orientato: origine o, asse u (versore), lunghezza l lungo u, profondità d lungo perp(u). */
 export function rect(o: XY, u: XY, l: number, d: number): XY[] {
   const v = perp(u)
   return [o, add(o, mul(u, l)), add(add(o, mul(u, l)), mul(v, d)), add(o, mul(v, d))]
-}
-/** Direzione principale del poligono: il lato più lungo. */
-export function mainAxis(poly: XY[]): { u: XY; i: number } {
-  let best = 0, bi = 0
-  for (let i = 0; i < poly.length; i++) {
-    const l = dist(poly[i], poly[(i + 1) % poly.length])
-    if (l > best) { best = l; bi = i }
-  }
-  return { u: norm(sub(poly[(bi + 1) % poly.length], poly[bi])), i: bi }
 }
 export const fmtM = (m: number) => (Math.abs(m) < 10 ? m.toFixed(2) : m.toFixed(1)).replace('.', ',') + ' m'
 export const fmtM2 = (m: number) => Math.round(m).toLocaleString('it-IT') + ' m²'

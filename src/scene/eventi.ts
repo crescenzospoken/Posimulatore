@@ -3,14 +3,12 @@ import { pos } from './viewer'
 import { quota } from './oggetti'
 import { impostaVoci } from './sovrapposti'
 import { useS } from '../store'
-import type { LL } from '../engine/geo'
 
 export type Evento = { id: string; titolo: string; titolo_en?: string | null; descr?: string | null; descr_en?: string | null; lon: number; lat: number; inizio: string; fine: string; link?: string | null }
 let tutti: Evento[] = []
 export const elencoEventi = () => tutti
 export const eventoDa = (id: string) => tutti.find(e => e.id === id)
 export const inCorso = (e: Evento, ora = Date.now()) => Date.parse(e.inizio) <= ora && ora < Date.parse(e.fine)
-export const posEvento = (e: Evento): LL => [e.lon, e.lat]
 
 export async function caricaEventi() {
   try { const r = await fetch('/api/eventi'); if (r.ok && (r.headers.get('content-type') ?? '').includes('json')) tutti = await r.json() } catch { /* sviluppo senza Worker */ }

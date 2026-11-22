@@ -18,7 +18,12 @@ function cesiumStatico(): Plugin {
 export default defineConfig({
   plugins: [cesiumStatico()],
   publicDir: 'public',
-  build: { chunkSizeWarningLimit: 6000, sourcemap: false, copyPublicDir: true },
+  build: {
+    chunkSizeWarningLimit: 6000, sourcemap: false, copyPublicDir: true,
+    // Cesium (4 MB) in un file a parte: il suo nome cambia solo quando cambia Cesium, quindi chi torna dopo una
+    // pubblicazione riscarica solo il nostro codice (poche centinaia di kB)
+    rollupOptions: { output: { manualChunks: id => (id.includes('node_modules/cesium') || id.includes('node_modules/@cesium') ? 'cesium' : id.includes('node_modules/react') || id.includes('node_modules/scheduler') ? 'react' : undefined) } },
+  },
   server: {
     proxy: {
       '/wms/pcn': {

@@ -131,8 +131,8 @@ export default function App() {
         else if (!a) { if (v) vai(v, 0); else vistaTotale(0) }
         setPronto(true)
         ;(window as unknown as { __pronto: boolean }).__pronto = true
-        // la schermata d'avvio si toglie quando Google ha la prima vista (viewer.ts); se tarda o è spento, al massimo dopo 8 s
-        if (!useS.getState().livelli.google) avvio()?.fine(); else setTimeout(() => avvio()?.fine(), 8000)
+        // la schermata d'avvio si toglie quando Google ha la prima vista (viewer.ts); se tarda o è spento, al massimo dopo 4 s
+        if (!useS.getState().livelli.google) avvio()?.fine(); else setTimeout(() => avvio()?.fine(), 4000)
       } catch (e) {
         console.error(e)
         setErrore(e instanceof Error ? e.message : String(e))
@@ -164,11 +164,14 @@ export default function App() {
       s.setLivelli({ google: p.google, orto: p.orto }); s.set({ selVia: null, viaBozza: null, viaSel: [] })
     }
   }, [pronto, s.strumento.k])
+  const inPercorso = st0(s.strumento.k)
+  // con un percorso aperto (partenza e arrivo) si vedono solo lui e le alternative: le altre vie si spengono
+  const soloPercorso = inPercorso && s.tappe.length >= 2
   useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita); attenua3D(s.livelli.attenua ?? 0) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade && !soloPercorso, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita); attenua3D(s.livelli.attenua ?? 0) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod, soloPercorso])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   // percorso a piedi
-  const inPercorso = st0(s.strumento.k)
+
   const tp = s.tappe, a = tp.length > 1 ? tp[tp.length - 1] : null
   const chiaveTappe = tp.map(x => x.p.join()).join('|')
   const calcRef = useRef<ReturnType<typeof cammino>>(null)
@@ -177,7 +180,7 @@ export default function App() {
   const opzioni = useMemo(() => (pronto && inPercorso && tp.length >= 2 ? alternative(reteVie(), tp[0].p, tp[1].p, ...tp.slice(2).map(x => x.p)) : []), [pronto, inPercorso, chiaveTappe])
   useEffect(() => setScelta(0), [opzioni])
   const calc = opzioni[Math.min(scelta, opzioni.length - 1)] ?? null
-  useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? tp : []) }, [pronto, inPercorso, calc, chiaveTappe, tp.map(x => x.nome).join(), s.livelli.google, s.googleGiro, s.lingua])
+  useEffect(() => { if (pronto) disegnaPercorso(inPercorso ? calc : null, inPercorso ? tp : [], inPercorso ? opzioni : []) }, [pronto, inPercorso, calc, chiaveTappe, tp.map(x => x.nome).join(), s.livelli.google, s.googleGiro, s.lingua])
   useEffect(() => { calcRef.current = calc; if (calc) inquadraPercorso(calc) }, [calc])
   useEffect(() => {
     if (!pronto) return
@@ -230,7 +233,7 @@ export default function App() {
   return (
     <div className={'app' + (s.ospite ? ' ospite' : '') + (mod ? ' in-modifica' : ' pubblico')}>
       <div ref={el} className="scena" />
-      {errore && <div className="caricamento errore">Il 3D non parte su questo dispositivo: {errore}</div>}
+      {errore && <div className="caricamento errore" role="alert">{t('La mappa 3D non parte su questo dispositivo. Prova ad aggiornare il browser o a riaprire la pagina.')}<br /><small>{errore}</small></div>}
 
       <header className={'cima' + (cercaAperta ? ' cerca-aperta' : '')}>
         {st.k === 'percorso' ? <BarraTappe esci={() => s.set({ strumento: { k: 'naviga' }, aggiungiDaMappa: false })} /> : (
@@ -309,7 +312,7 @@ export default function App() {
 
       {st.k === 'cammina' && <Pad />}
       {s.vista360 && s.googleKey && <StreetView vista={s.vista360} chiudi={() => s.set({ vista360: null })} />}
-      {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} esci={() => s.set({ strumento: { k: 'naviga' }, aggiungiDaMappa: false })} />}
+      {st.k === 'percorso' && <SchedaPercorso calc={calc} opzioni={opzioni} scelta={scelta} scegli={setScelta} />}
 
       {s.selPoi && s.pannello !== 'poi' && st.k !== 'percorso' && <SchedaPoi />}
       {s.selGoogle && !s.selPoi && !s.pannello && st.k !== 'percorso' && <SchedaGoogle />}

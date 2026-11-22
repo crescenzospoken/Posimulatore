@@ -15,3 +15,5 @@
   Cache-Control: public, max-age=3600
 /data/*.gz
   Content-Type: application/octet-stream
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable

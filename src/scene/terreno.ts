@@ -16,7 +16,6 @@ export function quota(lon: number, lat: number): number {
   if (ctx && dentro(ctx, lon, lat)) return bil(ctx, lon, lat)
   return 0
 }
-export const dettaglioBox = () => det && { w: det.w, e: det.e, s: det.s, n: det.n }
 
 export async function caricaTerreno(base = '/data/') {
   const meta = await (await fetch(base + 'terreno.json')).json()
