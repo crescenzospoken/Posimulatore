@@ -15,6 +15,7 @@ export type Strumento =
   | { k: 'poi' }
   | { k: 'vie' }
   | { k: 'eventi' }
+  | { k: 'allinea' }
 export type Preferito = { id?: string; p: [number, number]; nome: string }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
@@ -61,7 +62,7 @@ type Stato = {
   /** passo delle modifiche in metri (0 = libero) */
   passo: number
   info: { p: LL; z: number } | null
-  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | 'evento' | null
+  pannello: 'oggetto' | 'livelli' | 'progetto' | 'catalogo' | 'aiuto' | 'percorso' | 'accesso' | 'utenti' | 'poi' | 'via' | 'evento' | 'allinea' | null
   /** evento scelto (scheda o modifica); nuovoEvento = posizione toccata per crearne uno */
   selEvento: string | null
   /** Street View aperto: su un punto, lungo il percorso o in Cammina */

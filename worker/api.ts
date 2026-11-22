@@ -196,6 +196,23 @@ export async function api(req: Request, url: URL, env: Env): Promise<Response> {
     }
   }
 
+  // allineamento visivo delle vie al 3D: tutti leggono, gli editor aggiungono e tolgono punti di controllo
+  if (via[0] === 'allinea') {
+    if (m === 'GET') return json((await env.DB.prepare('SELECT id, lon, lat, e, n FROM allinea').all()).results, 200, { 'Cache-Control': 'public, max-age=30' })
+    if (!puoModificare) return errore('Serve un account abilitato alla modifica', 403)
+    const id = via[1]
+    if (!id || !/^[a-z0-9]{6,24}$/.test(id)) return errore('Punto non valido')
+    if (m === 'DELETE') { await env.DB.prepare('DELETE FROM allinea WHERE id = ?').bind(id).run(); return json({ ok: true }) }
+    if (m === 'PUT') {
+      const b = await corpo<{ lon?: number; lat?: number; e?: number; n?: number }>(req)
+      const lon = Number(b?.lon), lat = Number(b?.lat), e = Number(b?.e), n = Number(b?.n)
+      if (!(Math.abs(lon - 14.48) < 0.1 && Math.abs(lat - 40.62) < 0.08) || !(Math.abs(e) <= 25) || !(Math.abs(n) <= 25)) return errore('Valori non validi')
+      await env.DB.prepare('INSERT INTO allinea (id, lon, lat, e, n, autore, aggiornato) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET lon = excluded.lon, lat = excluded.lat, e = excluded.e, n = excluded.n, autore = excluded.autore, aggiornato = excluded.aggiornato')
+        .bind(id, Math.round(lon * 1e7) / 1e7, Math.round(lat * 1e7) / 1e7, Math.round(e * 10) / 10, Math.round(n * 10) / 10, io!.email, new Date().toISOString()).run()
+      return json({ ok: true })
+    }
+  }
+
   // impostazioni per tutti (colori di base delle vie): tutti leggono, l'amministratore scrive
   if (via[0] === 'impostazioni') {
     if (m === 'GET') {
