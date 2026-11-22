@@ -11,6 +11,7 @@ import { anteprimaSpostamento } from './contesto'
 let attivo = false
 let fatto: ((p: { lon: number; lat: number; e: number; n: number }) => void) | undefined
 let giu: ((e: PointerEvent) => void) | undefined
+let smetti: (() => void) | undefined
 
 /** Porta la vista a piombo sul punto al centro (stessa direzione): solo così i pixel diventano metri senza errori. */
 export function aPiombo(altezza = 300) {
@@ -49,28 +50,36 @@ const metri = (px: number, py: number, s: ReturnType<typeof scala>): [number, nu
 export function trascinaLinee(on: boolean, alRilascio?: typeof fatto) {
   const tela = viewer.canvas, ctrl = viewer.scene.screenSpaceCameraController
   if (giu) { tela.removeEventListener('pointerdown', giu, true); giu = undefined }
+  smetti?.()
   attivo = on; fatto = alRilascio
   ctrl.enableInputs = !on
   tela.style.cursor = on ? 'move' : ''
   if (!on) return
   aPiombo(Math.min(450, Math.max(180, viewer.camera.positionCartographic.height - ((quotaGoogle(...centro()) ?? 0) + GEOIDE))))
   giu = (e: PointerEvent) => {
-    if (!attivo || !e.isPrimary) return
+    // un solo trascinamento alla volta, solo dito o tasto sinistro: prima un rilascio perso (dito uscito dallo
+    // schermo, secondo dito) lasciava in ascolto il trascinamento vecchio e al rilascio dopo si salvavano più punti
+    if (!attivo || !e.isPrimary || e.button > 0) return
     e.preventDefault()
-    const s = scala(), r = tela.getBoundingClientRect()
+    smetti?.()
+    const s = scala(), r = tela.getBoundingClientRect(), dito = e.pointerId
     // punto del terreno sotto il dito: dal centro dello schermo, in metri
     const [oe, on_] = metri(e.clientX - r.left - r.width / 2, e.clientY - r.top - r.height / 2, s)
     const lon = s.lon + oe / 84560, lat = s.lat + on_ / 111030
     const x0 = e.clientX, y0 = e.clientY
     let de = 0, dn = 0
-    const muovi = (ev: PointerEvent) => { [de, dn] = metri(ev.clientX - x0, ev.clientY - y0, s); anteprimaSpostamento(de, dn, lon, lat) }
-    const su = () => {
-      window.removeEventListener('pointermove', muovi); window.removeEventListener('pointerup', su); window.removeEventListener('pointercancel', su)
+    const muovi = (ev: PointerEvent) => { if (ev.pointerId !== dito) return; [de, dn] = metri(ev.clientX - x0, ev.clientY - y0, s); anteprimaSpostamento(de, dn, lon, lat) }
+    const stacca = () => { window.removeEventListener('pointermove', muovi); window.removeEventListener('pointerup', su); window.removeEventListener('pointercancel', annulla); smetti = undefined }
+    const annulla = (ev?: PointerEvent) => { if (ev && ev.pointerId !== dito) return; stacca(); anteprimaSpostamento(0, 0, lon, lat) }
+    const su = (ev: PointerEvent) => {
+      if (ev.pointerId !== dito) return
+      stacca()
       if (Math.hypot(de, dn) < 0.2) { anteprimaSpostamento(0, 0, lon, lat); return }
       const [e0, n0] = scarto(lon, lat)
       fatto?.({ lon, lat, e: Math.round((e0 + de) * 10) / 10, n: Math.round((n0 + dn) * 10) / 10 })
     }
-    window.addEventListener('pointermove', muovi); window.addEventListener('pointerup', su); window.addEventListener('pointercancel', su)
+    smetti = () => annulla()
+    window.addEventListener('pointermove', muovi); window.addEventListener('pointerup', su); window.addEventListener('pointercancel', annulla)
   }
   tela.addEventListener('pointerdown', giu, true)
 }

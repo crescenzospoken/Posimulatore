@@ -1,10 +1,10 @@
 // Pannello dello strumento «Allinea» (editor): le vie si trascinano tutte insieme, a piombo sul 3D di Google, finché
 // combaciano; ogni trascinamento salva un punto di controllo che vale per quella zona e si raccorda con le altre.
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useS } from '../store'
 import { Icona } from './Icona'
 import { chiama } from './Pubblico'
-import { puntiManuali, ricaricaManuali, type Manuale } from '../scene/allinea'
+import { puntiManuali, ricaricaManuali, manualeVicino, type Manuale } from '../scene/allinea'
 import { ridisegnaVie, anteprimaSpostamento } from '../scene/contesto'
 import { trascinaLinee, aPiombo } from '../scene/allineaStrumento'
 import { impostaVoci } from '../scene/sovrapposti'
@@ -17,10 +17,15 @@ export function Allinea() {
   const [punti, setPunti] = useState<Manuale[]>(puntiManuali())
   const [sel, setSel] = useState<string | null>(null)
   const aggiorna = async () => { await ricaricaManuali(); ridisegnaVie(); setPunti([...puntiManuali()]) }
+  const occupato = useRef(false)
   const salva = async (p: { lon: number; lat: number; e: number; n: number }) => {
-    const id = Math.random().toString(36).slice(2, 12)
+    if (occupato.current) return
+    occupato.current = true
+    // un secondo trascinamento nello stesso posto (entro 20 m) aggiorna il punto che c'è già
+    const id = manualeVicino(p.lon, p.lat)?.id ?? Math.random().toString(36).slice(2, 12)
     try { await chiama('allinea/' + id, 'PUT', p); await aggiorna(); setSel(id); s.dici(`Zona allineata: ${Math.hypot(p.e, p.n).toFixed(1)} m`) }
     catch (e) { anteprimaSpostamento(0, 0, p.lon, p.lat); s.dici((e as Error).message) }
+    finally { occupato.current = false }
   }
   const togli = async (id: string) => { try { await chiama('allinea/' + id, 'DELETE'); setSel(null); await aggiorna() } catch (e) { s.dici((e as Error).message) } }
   useEffect(() => { trascinaLinee(sposta, salva); return () => trascinaLinee(false) }, [sposta])
@@ -36,7 +41,7 @@ export function Allinea() {
       <ol className="passi">
         <li>Porta la zona al centro e premi «Vista a piombo».</li>
         <li>Accendi «Sposta le linee» e trascina: si muovono tutte insieme. Lascia quando combaciano.</li>
-        <li>Ripeti dove serve: ogni trascinamento vale per quella zona (circa 100 m) e si raccorda con le altre.</li>
+        <li>Dove lasci, la linea resta esattamente lì; attorno l'effetto sfuma in 150 m. Dove una via è storta, metti più punti vicini (anche ogni 20-30 m): la linea si piega passando da tutti.</li>
       </ol>
       <div className="riga-bottoni">
         <button onClick={() => aPiombo()}><Icona n="zoom_out_map" />Vista a piombo</button>
