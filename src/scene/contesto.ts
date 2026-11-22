@@ -1,4 +1,5 @@
 import * as C from 'cesium'
+import { allinea, caricaAllineamento } from './allinea'
 import { pos, viewer } from './viewer'
 import { impostaVoci, type Voce } from './sovrapposti'
 import type { LL } from '../engine/geo'
@@ -72,7 +73,7 @@ const sVertice = (p: LL) => superficie.get(p[0] + ',' + p[1])
 const NOMI = new Set(['village', 'hamlet', 'suburb', 'locality', 'beach', 'peak', 'island', 'islet'])
 
 export async function caricaContesto() {
-  const [st, lu, cf, qv] = await Promise.all(['strade', 'luoghi', 'confine', 'quote-vie'].map(async n => (await fetch(`/data/${n}.json`)).json()))
+  const [st, lu, cf, qv] = await Promise.all([...['strade', 'luoghi', 'confine', 'quote-vie'].map(async n => (await fetch(`/data/${n}.json`)).json()), caricaAllineamento()])
   originali = new Map((st as Strada[]).map(x => [x.id, x])); luoghi = lu
   await ricaricaCorrezioni(false)
   const confine: LL[][] = cf
@@ -141,7 +142,9 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
 /** Punti di una via a passo di 4 m, alla quota della strada (+1,5 m perché il 3D non la copra a tratti).
  * Con Google 3D: quote LiDAR della strada ai vertici (quoteVia) e retta fra un vertice e l'altro. Senza: il nostro terreno, che è quello visibile.
  * Prima le linee erano proiettate sul terreno a 10 m: dove la strada è scavata nella roccia (la Sponda) finivano sui tetti. */
-export function puntiVia(c: LL[], z: number[], google: boolean, alza = 1.5): C.Cartesian3[] {
+export function puntiVia(c0: LL[], z: number[], google: boolean, alza = 1.5): C.Cartesian3[] {
+  // sopra Google le linee si spostano di qualche metro per combaciare con quello che si vede (solo disegno, vedi allinea.ts)
+  const c = google ? c0.map(allinea) : c0
   const out: number[] = []
   for (let i = 0; i < c.length; i++) {
     if (i > 0) {
