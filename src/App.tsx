@@ -1,11 +1,12 @@
 import { t } from './i18n'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Cartesian3 } from 'cesium'
+import { STILE_VIE, type StileVie } from './store'
 import { useS, type Utente } from './store'
 import { impostaQualita, impostaNitidezza, quandoGoogle, quandoGoogleKo, googleAcceso, creaViewer, vistaTotale, attenua3D, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
-import { caricaContesto, mostraContesto, reteVie } from './scene/contesto'
-import { pos } from './scene/viewer'
+import { caricaContesto, mostraContesto, reteVie, aggiornaQuoteGoogle } from './scene/contesto'
+import { pos, quotaGoogle } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso, BarraTappe } from './ui/Percorso'
@@ -76,7 +77,7 @@ export default function App() {
         impostaOrto(useS.getState().livelli.orto)
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
         chiama<Utente | null>('io').then(u => { useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })); if (u) caricaMiei() }, () => {})
-        chiama<{ coloriVie?: Record<string, string> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {} }), () => {})
+        chiama<{ coloriVie?: Record<string, string>; stileVie?: Partial<StileVie> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {}, stileBase: i.stileVie ?? {} }), () => {})
         await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
         avvio()?.fase('foto')
         disegnaCupole(viewer)
@@ -85,6 +86,7 @@ export default function App() {
         // Si ricalcola solo quando la vista si è spostata davvero (oltre 80 m) e al massimo ogni 3 secondi.
         let ultimaPos: Cartesian3 | null = null, ultimaVolta = 0
         quandoGoogle(() => { clearTimeout(tG); tG = setTimeout(() => {
+          aggiornaQuoteGoogle(quotaGoogle)
           const ora = viewer.camera.positionWC, t = performance.now()
           if (ultimaPos && Cartesian3.distance(ora, ultimaPos) < 80) return
           if (t - ultimaVolta < 3000) return
@@ -168,7 +170,7 @@ export default function App() {
   // con un percorso aperto (partenza e arrivo) si vedono solo lui e le alternative: le altre vie si spengono
   const soloPercorso = inPercorso && s.tappe.length >= 2
   useEffect(() => { if (pronto) disegnaEdifici(mod && s.livelli.edifici && !s.livelli.google, op.edifici, s.selEdificio, (s.sel && calcoli.get(s.sel)?.interferenze) || [], s.livelli.stile !== 'facciate') }, [pronto, op, s.sel, s.selEdificio, s.livelli.edifici, s.livelli.google, s.livelli.stile])
-  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade && !soloPercorso, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita); attenua3D(s.livelli.attenua ?? 0) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod, soloPercorso])
+  useEffect(() => { if (pronto) { impostaOrto(s.livelli.orto); mostraContesto(s.livelli.strade && !soloPercorso, s.livelli.nomi, s.livelli.confine && !s.ospite, s.livelli.google, { ...s.coloriBase, ...s.livelli.coloriVie }, { ...STILE_VIE, ...s.stileBase, ...s.livelli.stileVie }); mostraCupole(mod && !s.livelli.google && s.livelli.edifici); impostaSole(s.livelli); impostaNitidezza(s.livelli.nitido); impostaQualita(s.livelli.qualita); attenua3D(s.livelli.attenua ?? 0) } }, [pronto, s.livelli, s.ospite, s.coloriBase, mod, soloPercorso, s.stileBase, s.livelli.stileVie])
   useEffect(() => { if (pronto) disegnaMisure(s.misure) }, [pronto, s.misure])
   // percorso a piedi
 

@@ -6,7 +6,7 @@ import { verificaGoogle } from './google'
 type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 const GIORNI = 30
 const CATEGORIE = new Set(['bagni', 'fermate', 'biglietti', 'traghetti', 'taxi', 'parcheggi', 'bar', 'ristoranti', 'farmacie', 'salute', 'bancomat', 'acqua', 'info', 'alimentari', 'spiagge', 'panorami', 'chiese', 'sicurezza', 'alloggi', 'negozi', 'attivita', 'altro'])
-const IMPOSTAZIONI = new Set(['coloriVie'])
+const IMPOSTAZIONI = new Set(['coloriVie', 'stileVie'])
 
 const json = (d: unknown, status = 200, h: Record<string, string> = {}) => Response.json(d, { status, headers: { 'Cache-Control': 'no-store', ...h } })
 const errore = (t: string, status = 400) => json({ errore: t }, status)

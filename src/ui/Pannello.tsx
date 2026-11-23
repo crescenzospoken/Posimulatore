@@ -1,6 +1,6 @@
 import { t as tr } from '../i18n'
 import { useRef, useState } from 'react'
-import { useS } from '../store'
+import { useS, STILE_VIE } from '../store'
 import type { Obj, Progetto } from '../engine/model'
 import { CATALOGO } from '../engine/catalogo'
 import { calcoli, USI } from '../scene/oggetti'
@@ -256,11 +256,17 @@ function Livelli() {
           {GRUPPI_VIE.map(g => (
             <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{tr(g.nome)}</label>
           ))}
-          {Object.keys(l.coloriVie ?? {}).length > 0 && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {} })}>{tr('Torna ai colori di base')}</button>}
+          {(() => { const st = { ...STILE_VIE, ...s.stileBase, ...l.stileVie }, metti = (k: keyof typeof st, v: number) => s.setLivelli({ stileVie: { ...l.stileVie, [k]: v } }); return <>
+            <label className="largo">{tr('Spessore')}: {Math.round(st.spessore * 100)}%<input type="range" min={0.4} max={2.5} step={0.1} value={st.spessore} onChange={e => metti('spessore', Number(e.target.value))} /></label>
+            <label className="largo">{tr('Opacità')}: {Math.round(st.alfa * 100)}%<input type="range" min={0.15} max={1} step={0.05} value={st.alfa} onChange={e => metti('alfa', Number(e.target.value))} /></label>
+            {l.google && <label className="largo">{tr('Dove il 3D le copre')}: {Math.round(st.filigrana * 100)}%<input type="range" min={0} max={1} step={0.05} value={st.filigrana} onChange={e => metti('filigrana', Number(e.target.value))} /></label>}
+          </> })()}
+          {(Object.keys(l.coloriVie ?? {}).length > 0 || Object.keys(l.stileVie ?? {}).length > 0) && <button className="quiet" onClick={() => s.setLivelli({ coloriVie: {}, stileVie: {} })}>{tr('Torna ai colori di base')}</button>}
           {s.utente?.ruolo === 'admin' && <button onClick={async () => {
             const v = Object.fromEntries(GRUPPI_VIE.map(g => [g.k, l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col]))
-            try { await chiama('impostazioni/coloriVie', 'PUT', { v }); s.set({ coloriBase: v }); s.setLivelli({ coloriVie: {} }); s.dici('Colori di base salvati per tutti') } catch (e) { s.dici((e as Error).message) }
-          }} data-tip="Diventano i colori che vede chiunque apra il sito">Usa questi colori per tutti</button>}
+            const stv = { ...STILE_VIE, ...s.stileBase, ...l.stileVie }
+            try { await chiama('impostazioni/coloriVie', 'PUT', { v }); await chiama('impostazioni/stileVie', 'PUT', { v: stv }); s.set({ coloriBase: v, stileBase: stv }); s.setLivelli({ coloriVie: {}, stileVie: {} }); s.dici('Colori, spessore e opacità salvati per tutti') } catch (e) { s.dici((e as Error).message) }
+          }} data-tip="Diventano i colori che vede chiunque apra il sito">Usa questo aspetto per tutti</button>}
         </div>
       )}
       {casella('nomi', 'Nomi dei luoghi')}

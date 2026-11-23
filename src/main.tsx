@@ -7,6 +7,7 @@ createRoot(document.getElementById('root')!).render(<App />)
 if (new URLSearchParams(location.search).has('prova')) {
   import('./store').then(m => ((window as unknown as Record<string, unknown>).__S = m.useS))
   import('./scene/viewer').then(m => ((window as unknown as Record<string, unknown>).__V = m))
+  import('./scene/contesto').then(m => ((window as unknown as Record<string, unknown>).__K = m))
 }
 
 // Safari ignora user-scalable=no: si fermano a mano i gesti di ingrandimento della pagina (la mappa li gestisce da sé)
