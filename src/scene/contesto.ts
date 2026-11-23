@@ -123,10 +123,13 @@ export function anteprimaVia(id: string, c: LL[] | null, dz = 0) {
   rete = undefined
   const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g)
 }
+let attesaSpessore: ReturnType<typeof setTimeout> | undefined
 export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boolean, google: boolean, colori: Record<string, string> = {}, st: { spessore: number; alfa: number; filigrana: number; dipinte?: boolean } = stile) {
   dn.show = nomi && !google; dc.show = confine
   // lo spessore sta nella geometria: se cambia le vie si ridisegnano; le opacità sono solo colori
-  if (st.spessore !== stile.spessore || (st.dipinte && (st.alfa !== stile.alfa || JSON.stringify(colori) !== JSON.stringify(coloriAttuali)))) fatteCon = null
+  // lo spessore si ridisegna quando il cursore si ferma (250 ms), non a ogni passo: ogni ridisegno rifà tutte le vie
+  if (st.spessore !== stile.spessore) { clearTimeout(attesaSpessore); attesaSpessore = setTimeout(() => { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }, 250) }
+  if ((st.dipinte && (st.alfa !== stile.alfa || JSON.stringify(colori) !== JSON.stringify(coloriAttuali)))) fatteCon = null
   stile = { ...st, dipinte: !!st.dipinte }
   coloriAttuali = colori
   if (conStrade) disegnaVie(google)
@@ -195,6 +198,8 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
   if (!google) return t.map(p => { const z = quotaTerreno(p[0], p[1]); return { lo: p[0], la: p[1], b: z, d: 0, a: alza, v: false, g: z } })
   const n = t.length
   const grezzo: (number | null)[] = t.map(p => { if (!sposta) return null; const g = quoteG.get(chiaveG(p)); const o = g === undefined ? null : g - p[2]; return o !== null && o >= -6 && o <= 8 ? o : null })
+  // via mai letta: niente da lisciare (prima qui si cercava la lettura più vicina punto per punto: 6 s per ridisegnare)
+  if (!grezzo.some(o => o !== null)) return t.map(p => ({ lo: p[0], la: p[1], b: p[2], d: 0, a: alza, v: false, g: p[2] }))
   const mediana = grezzo.map((_, i) => {
     const v: number[] = []
     for (let k = Math.max(0, i - 4); k <= Math.min(n - 1, i + 4); k++) if (grezzo[k] !== null) v.push(grezzo[k] as number)
@@ -202,7 +207,10 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
     v.sort((x, y) => x - y); return v[Math.floor(v.length / 2)]
   })
   // dove non c'è lettura valida si prende quella del punto valido più vicino lungo la via
-  const pieno = mediana.map((o, i) => { if (o !== null) return o; for (let k = 1; k < n; k++) { const x = mediana[i - k] ?? mediana[i + k]; if (x !== null && x !== undefined) return x } return 0 })
+  // a due passate (avanti e indietro), lineare: il valore del punto letto più vicino
+  const pieno: number[] = new Array(n), dist: number[] = new Array(n)
+  for (let i = 0, ult = -1; i < n; i++) { if (mediana[i] !== null) ult = i; pieno[i] = ult < 0 ? 0 : mediana[ult] as number; dist[i] = ult < 0 ? Infinity : i - ult }
+  for (let i = n - 1, ult = -1; i >= 0; i--) { if (mediana[i] !== null) ult = i; if (ult >= 0 && ult - i < dist[i]) pieno[i] = mediana[ult] as number }
   const d = pieno.map((_, i) => (pieno[Math.max(0, i - 1)] + pieno[i] + pieno[Math.min(n - 1, i + 1)]) / 3)
   const vic0 = d.map((x, i) => (grezzo[i] === null ? null : Math.abs((grezzo[i] as number) - x) <= 2))
   // fra un punto letto e l'altro vale il punto letto più vicino (entro 2 passi)
