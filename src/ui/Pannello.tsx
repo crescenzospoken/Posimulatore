@@ -256,6 +256,10 @@ function Livelli() {
           {GRUPPI_VIE.map(g => (
             <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{tr(g.nome)}</label>
           ))}
+          <div className="segmenti largo" role="radiogroup" aria-label={tr('Come si disegnano le vie')}>
+            <button role="radio" aria-checked={!l.vieDipinte} className={!l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: false })} data-tip={tr('Linee nette alla quota della strada: pulite, ma possono staccarsi dal 3D')}>{tr('Linee')}</button>
+            <button role="radio" aria-checked={!!l.vieDipinte} className={l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: true })} data-tip={tr('Dipinte sulla superficie del 3D: sempre attaccate, ma salgono su tetti e muri')}>{tr('Dipinte sul 3D')}</button>
+          </div>
           {(() => { const st = { ...STILE_VIE, ...s.stileBase, ...l.stileVie }, metti = (k: keyof typeof st, v: number) => s.setLivelli({ stileVie: { ...l.stileVie, [k]: v } }); return <>
             <label className="largo">{tr('Spessore')}: {Math.round(st.spessore * 100)}%<input type="range" min={0.4} max={2.5} step={0.1} value={st.spessore} onChange={e => metti('spessore', Number(e.target.value))} /></label>
             <label className="largo">{tr('Opacità')}: {Math.round(st.alfa * 100)}%<input type="range" min={0.15} max={1} step={0.05} value={st.alfa} onChange={e => metti('alfa', Number(e.target.value))} /></label>

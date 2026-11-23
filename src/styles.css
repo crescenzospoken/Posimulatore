@@ -490,3 +490,5 @@ button.danger-testo { color: var(--pericolo); align-self: flex-start; }
 .passi { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
 
 .colori-vie label.largo { grid-column: 1 / -1; flex-direction: column !important; align-items: stretch !important; gap: 2px; font-size: 13px; }
+
+.colori-vie .segmenti.largo { grid-column: 1 / -1; }
