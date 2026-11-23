@@ -11,6 +11,7 @@ let strato: HTMLDivElement | undefined, riquadro: HTMLDivElement | undefined
 let punti: LL[] = []
 let scelti = new Set<number>()
 let multipla = false
+let morbido = 30
 let suCambio: ((c: LL[], fine: boolean) => void) | undefined
 let suScelta: ((s: number[]) => void) | undefined
 const scratch = new C.Cartesian2()
@@ -61,6 +62,19 @@ function inizia(e: PointerEvent, i: number) {
   const tocco = { x: e.clientX, y: e.clientY }, eraScelto = scelti.has(i)
   if (!eraScelto) { if (!multipla) scelti.clear(); scelti.add(i); avvisa(); aggiorna() }
   const muovono = [...scelti]
+  // trascinamento morbido: un punto solo si porta dietro i vicini lungo la via, sempre meno fino a `morbido` metri
+  // (peso a coseno): così una curva resta un arco invece di fare uno spigolo
+  const peso: number[] = punti.map((_, k) => (muovono.includes(k) ? 1 : 0))
+  if (muovono.length === 1 && morbido > 0) {
+    for (const verso of [1, -1]) {
+      let d = 0
+      for (let k = i + verso; k >= 0 && k < punti.length; k += verso) {
+        d += Math.hypot((punti[k][0] - punti[k - verso][0]) * 84560, (punti[k][1] - punti[k - verso][1]) * 111030)
+        if (d >= morbido) break
+        peso[k] = 0.5 * (1 + Math.cos((Math.PI * d) / morbido))
+      }
+    }
+  }
   const ctrl = viewer.scene.screenSpaceCameraController
   ctrl.enableInputs = false
   const partenza = terrenoSotto(e.clientX, e.clientY) ?? punti[i]
@@ -72,7 +86,7 @@ function inizia(e: PointerEvent, i: number) {
     const q = terrenoSotto(ev.clientX, ev.clientY)
     if (!q) return
     const dx = q[0] - partenza[0], dy = q[1] - partenza[1]
-    punti = prima.map((p, k) => (muovono.includes(k) ? [p[0] + dx, p[1] + dy] : p))
+    punti = prima.map((p, k) => (peso[k] ? [p[0] + dx * peso[k], p[1] + dy * peso[k]] : p))
     aggiorna(); viewer.scene.requestRender()
     suCambio?.(punti, false)
   }
@@ -104,6 +118,8 @@ export function chiudiCorrezione() {
   viewer.scene.requestRender()
 }
 export const sceltaMultipla = (on: boolean) => { multipla = on }
+/** Raggio in metri del trascinamento morbido (0 = si muove solo il punto preso). */
+export const trascinoMorbido = (m: number) => { morbido = m }
 
 /** Riquadro: il prossimo trascinamento sulla mappa disegna un rettangolo e sceglie i punti dentro (aggiunti a quelli già scelti). */
 export function avviaRiquadro(fatto: () => void) {
