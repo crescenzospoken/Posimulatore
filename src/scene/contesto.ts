@@ -37,6 +37,16 @@ const MATERIALE_VIA = `czm_material czm_getMaterial(czm_materialInput materialIn
   m.alpha = color.a * a;
   return m;
 }`
+// Larghezza delle linee secondo la distanza dalla camera, come una strada vera: lo spessore scelto vale a 300 m,
+// più vicino si allarga (fino a 1,6 volte), più lontano si stringe (fino a 0,45). È lo shader standard di Cesium per le
+// polilinee con la larghezza moltiplicata: niente geometria da rifare quando si fa zoom.
+let vsVia: string | undefined
+const VS_VIA = () => (vsVia ??= (() => {
+  const vs = new C.PolylineMaterialAppearance().vertexShaderSource
+  const w = 'float width = abs(expandAndWidth.y) + 0.5;', n = 'vec4 next = czm_computeNextPosition();'
+  if (!vs.includes(w) || !vs.includes(n)) return vs // shader di Cesium cambiato: si resta a larghezza fissa
+  return vs.replace(w, '').replace(n, n + ' float width = abs(expandAndWidth.y) * clamp(300.0 / max(length((czm_modelViewRelativeToEye * p).xyz), 1.0), 0.45, 1.6) + 0.5;')
+})())
 const materialeVia = (c: C.Color) => new C.Material({ translucent: true, fabric: { type: 'ViaMorbida', uniforms: { color: c }, source: MATERIALE_VIA } })
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
 let vie: C.PrimitiveCollection | undefined
@@ -187,7 +197,7 @@ function tracciato(c0: LL[], z0: number[], sposta: boolean): P3[] {
 }
 /** Un punto disegnato: posizione, quota di base `b`, correzione dal 3D `d` (z = b + d), quanto alzare la linea `a`,
  * `v` = il 3D letto lì sta alla quota della via (si può dipingere), `g` = quota letta grezza (o z se non c'è). */
-type Campione = { lo: number; la: number; b: number; d: number; a: number; v: boolean; g: number }
+type Campione = { lo: number; la: number; b: number; d: number; a: number; v: boolean; g: number; u?: boolean }
 /** Quote di una via disegnata sopra Google. Dove il 3D è stato letto da vicino (ogni 12 m lungo la via), la differenza fra
  * Google e la base si applica LISCIATA (mediana delle letture entro 16 m, poi media su 3 punti) e solo se è piccola (da -6 a +8 m): un punto
  * letto fuori dal ciglio (scogliera 20 m più sotto) o su un tetto non fa saltare la linea a zig-zag. Dove è letta la linea
@@ -199,7 +209,7 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
   const n = t.length
   const grezzo: (number | null)[] = t.map(p => { if (!sposta) return null; const g = quoteG.get(chiaveG(p)); const o = g === undefined ? null : g - p[2]; return o !== null && o >= -6 && o <= 8 ? o : null })
   // via mai letta: niente da lisciare (prima qui si cercava la lettura più vicina punto per punto: 6 s per ridisegnare)
-  if (!grezzo.some(o => o !== null)) return t.map(p => ({ lo: p[0], la: p[1], b: p[2], d: 0, a: alza, v: false, g: p[2] }))
+  if (!grezzo.some(o => o !== null)) return t.map(p => ({ lo: p[0], la: p[1], b: p[2], d: 0, a: alza, v: !!sposta, u: true, g: p[2] }))
   const mediana = grezzo.map((_, i) => {
     const v: number[] = []
     for (let k = Math.max(0, i - 4); k <= Math.min(n - 1, i + 4); k++) if (grezzo[k] !== null) v.push(grezzo[k] as number)
@@ -212,15 +222,18 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
   for (let i = 0, ult = -1; i < n; i++) { if (mediana[i] !== null) ult = i; pieno[i] = ult < 0 ? 0 : mediana[ult] as number; dist[i] = ult < 0 ? Infinity : i - ult }
   for (let i = n - 1, ult = -1; i >= 0; i--) { if (mediana[i] !== null) ult = i; if (ult >= 0 && ult - i < dist[i]) pieno[i] = mediana[ult] as number }
   const d = pieno.map((_, i) => (pieno[Math.max(0, i - 1)] + pieno[i] + pieno[Math.min(n - 1, i + 1)]) / 3)
-  const vic0 = d.map((x, i) => (grezzo[i] === null ? null : Math.abs((grezzo[i] as number) - x) <= 2))
+  const vic0 = d.map((x, i) => (grezzo[i] === null ? null : Math.abs((grezzo[i] as number) - x) <= 3))
   // fra un punto letto e l'altro vale il punto letto più vicino (entro 2 passi)
-  const vicino = vic0.map((v, i) => v ?? vic0[i - 1] ?? vic0[i + 1] ?? vic0[i - 2] ?? vic0[i + 2] ?? false)
+  // fra un punto letto e l'altro vale il punto letto più vicino (entro 2 passi); dove non c'è nessuna lettura vicina
+  // si dipinge lo stesso con uno strato più alto (incerto), così le dipinte si vedono subito, prima delle letture
+  const vic = vic0.map((v, i) => v ?? vic0[i - 1] ?? vic0[i + 1] ?? vic0[i - 2] ?? vic0[i + 2] ?? null)
+  const vicino = vic.map(v => v ?? true), incerto = vic.map(v => v === null)
   const al = mediana.map(o => (o !== null ? Math.min(alza, ALZA_LETTO) : alza))
   return t.map((p, i) => {
     // il passaggio fra «letto» e no, e fra dipinto e no, si ammorbidisce su qualche punto
     let sa = 0, sv = 0, m = 0
     for (let k = Math.max(0, i - 3); k <= Math.min(n - 1, i + 3); k++) { sa += al[k]; sv += vicino[k] ? 1 : 0; m++ }
-    return { lo: p[0], la: p[1], b: p[2], d: d[i], a: sa / m, v: sv / m >= 0.5, g: p[2] + (grezzo[i] ?? d[i]) }
+    return { lo: p[0], la: p[1], b: p[2], d: d[i], a: sa / m, v: sv / m >= 0.5, g: p[2] + (grezzo[i] ?? d[i]), u: incerto[i] }
   })
 }
 /** Incroci: le vie che si toccano in un punto prendono lì la stessa quota e la stessa altezza della linea (la media),
@@ -281,14 +294,14 @@ function strati(cs: Campione[], k: string): { strati: C.CorridorGeometry[]; sosp
     else {
       let a = 0
       while (a < tratto.length - 1) {
-        const lim = (c: Campione) => [Math.min(z(c), c.g), Math.max(z(c), c.g)]
+        const lim = (c: Campione) => (c.u ? [z(c) - 1.5, z(c) + 2] : [Math.min(z(c), c.g), Math.max(z(c), c.g)])
         let b = a + 1, lo = Math.min(lim(tratto[a])[0], lim(tratto[b])[0]), hi = Math.max(lim(tratto[a])[1], lim(tratto[b])[1]), lung = metri([tratto[a].lo, tratto[a].la], [tratto[b].lo, tratto[b].la])
         while (b + 1 < tratto.length && lung < 60) {
           const [l2, h2] = lim(tratto[b + 1])
-          if (Math.max(hi, h2) - Math.min(lo, l2) > 2.5) break
+          if (Math.max(hi, h2) - Math.min(lo, l2) > (tratto[b + 1].u ? 6 : 2.5)) break
           lung += metri([tratto[b].lo, tratto[b].la], [tratto[b + 1].lo, tratto[b + 1].la]); b++; lo = Math.min(lo, l2); hi = Math.max(hi, h2)
         }
-        out.push(new C.CorridorGeometry({ positions: C.Cartesian3.fromDegreesArray(tratto.slice(a, b + 1).flatMap(q => [q.lo, q.la])), width: (LARGHEZZA[k] ?? 3) * LARGO_DIPINTE * stile.spessore, height: lo - 0.8 + GEOIDE, extrudedHeight: hi + 1.2 + GEOIDE, cornerType: C.CornerType.ROUNDED, vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT }))
+        out.push(new C.CorridorGeometry({ positions: C.Cartesian3.fromDegreesArray(tratto.slice(a, b + 1).flatMap(q => [q.lo, q.la])), width: (LARGHEZZA[k] ?? 3) * LARGO_DIPINTE * stile.spessore, height: lo - 1.2 + GEOIDE, extrudedHeight: hi + 1.6 + GEOIDE, cornerType: C.CornerType.ROUNDED, vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT }))
         a = b
       }
     }
@@ -306,7 +319,18 @@ const primPerGruppo = new Map<string, C.Primitive>()
 // le linee alla superficie che si vede. Si legge da vicino (tessere dettagliate), pochi punti per volta.
 const quoteG = new Map<string, number>()
 const chiaveG = (p: readonly number[]) => p[0].toFixed(6) + ',' + p[1].toFixed(6)
-let inLettura = false, ultimoRidisegno = 0
+let inLettura = false, ultimoRidisegno = 0, inSospeso = false, tRid: ReturnType<typeof setTimeout> | undefined
+/** Ridisegno dopo nuove letture: al massimo ogni 4 s (12 s con le dipinte), e mai mentre il disegno di prima si sta
+ * ancora preparando. Sul telefono le strade dipinte ci mettono qualche secondo: rifacendo tutto a ogni lettura non
+ * arrivavano mai e si vedevano solo le linee. */
+function forseRidisegna() {
+  clearTimeout(tRid)
+  if (!inSospeso) return
+  const manca = ultimoRidisegno + (stile.dipinte ? 12000 : 4000) - performance.now()
+  if (manca > 0) { tRid = setTimeout(forseRidisegna, manca); return }
+  if (vie) for (let i = 0; i < vie.length; i++) if (!(vie.get(i) as { ready: boolean }).ready) { tRid = setTimeout(forseRidisegna, 1000); return }
+  inSospeso = false; ultimoRidisegno = performance.now(); ridisegnaVie()
+}
 /** Dopo che Google ha finito di caricare la vista: legge la quota del 3D sotto i punti delle vie entro 450 m dal centro
  * dello schermo (solo con la camera sotto i 900 m dal suolo) e, se ne ha trovate di nuove, ridisegna le vie. */
 export const quoteGoogleLette = () => quoteG.size
@@ -334,7 +358,7 @@ export function aggiornaQuoteGoogle(leggi: (lon: number, lat: number) => number 
     while (i < daFare.length && performance.now() - t < 7) { const p = daFare[i++], g = leggi(p[0], p[1]); if (g !== undefined) { quoteG.set(chiaveG(p), g); nuove++ } }
     if (i < daFare.length) { setTimeout(passo, 30); return }
     inLettura = false
-    if (nuove >= 20 && performance.now() - ultimoRidisegno > 4000) { ultimoRidisegno = performance.now(); ridisegnaVie() }
+    if (nuove >= 20) { inSospeso = true; forseRidisegna() }
   }
   setTimeout(passo, 0)
 }
@@ -411,7 +435,7 @@ function disegnaVie(google: boolean) {
       let mf = matF.get(g.k)
       if (!mf) { mf = materialeVia(c.withAlpha(stile.filigrana)); matF.set(g.k, mf) }
       // senza prova di profondità: si vede attraverso il 3D, ma tenue e solo entro FILIGRANA_MAX dalla camera
-      vie.add(new C.Primitive({ geometryInstances: instF, asynchronous: true, appearance: new C.PolylineMaterialAppearance({ material: mf, translucent: true, renderState: { depthTest: { enabled: false }, depthMask: false, blending: C.BlendingState.ALPHA_BLEND } }) }))
+      vie.add(new C.Primitive({ geometryInstances: instF, asynchronous: true, appearance: new C.PolylineMaterialAppearance({ material: mf, translucent: true, vertexShaderSource: VS_VIA(), renderState: { depthTest: { enabled: false }, depthMask: false, blending: C.BlendingState.ALPHA_BLEND } }) }))
     }
     const instS = perGruppoS.get(g.k)
     if (instS?.length) {
@@ -421,7 +445,7 @@ function disegnaVie(google: boolean) {
     }
     primPerGruppo.set(g.k, vie.add(new C.Primitive({
       geometryInstances: inst, asynchronous: true,
-      appearance: new C.PolylineMaterialAppearance({ material: m, translucent: true }),
+      appearance: new C.PolylineMaterialAppearance({ material: m, translucent: true, vertexShaderSource: VS_VIA() }),
     })))
   }
   if (nomiOn) impostaVoci('via', vociVie)
