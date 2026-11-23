@@ -488,3 +488,5 @@ button.danger-testo { color: var(--pericolo); align-self: flex-start; }
 @media (max-width: 760px) { .app:has(.scheda-percorso.ridotta) .fab { bottom: calc(168px + env(safe-area-inset-bottom)); } .app:has(.scheda-percorso:not(.ridotta)) .fab { display: none; } .app:has(.scheda-percorso) ~ .legali, #root:has(.scheda-percorso) + .legali, #root:has(.scheda-poi) + .legali, #root:has(.pannello) + .legali { display: none; } }
 
 .passi { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+.colori-vie label.largo { grid-column: 1 / -1; flex-direction: column !important; align-items: stretch !important; gap: 2px; font-size: 13px; }

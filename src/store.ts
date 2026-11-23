@@ -16,6 +16,8 @@ export type Strumento =
   | { k: 'vie' }
   | { k: 'eventi' }
   | { k: 'allinea' }
+export type StileVie = { spessore: number; alfa: number; filigrana: number }
+export const STILE_VIE: StileVie = { spessore: 1, alfa: 0.95, filigrana: 0.38 }
 export type Preferito = { id?: string; p: [number, number]; nome: string }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
@@ -37,6 +39,8 @@ export type Livelli = {
   attenua: number
   /** colori delle vie per gruppo (statale, strade, scale...): vuoto = colori di base */
   coloriVie: Record<string, string>
+  /** spessore (1 = di base), opacità delle vie e opacità della filigrana sotto il 3D: vuoto = valori di base */
+  stileVie?: Partial<StileVie>
   /** versione delle impostazioni di base, per cambiarle una volta a chi le aveva già salvate */
   rev?: number
   ora: number // ore decimali, ora locale
@@ -88,6 +92,8 @@ type Stato = {
   spostaPoi: boolean
   /** colori di base delle vie per tutti, scelti dall'amministratore */
   coloriBase: Record<string, string>
+  /** stile delle vie salvato dall'amministratore per tutti */
+  stileBase: Partial<StileVie>
   /** percorso a piedi da A a B; scegli = quale dei due prende il prossimo clic sulla mappa */
   /** tappe del percorso, in ordine (2 o più = percorso); aggiungiDaMappa = il prossimo tocco sulla mappa aggiunge una tappa */
   tappe: Tappa[]
@@ -201,6 +207,7 @@ export const useS = create<Stato>((set, get) => ({
   poiPos: null,
   spostaPoi: false,
   coloriBase: {},
+  stileBase: {},
   passato: [],
   futuro: [],
   avviso: null,

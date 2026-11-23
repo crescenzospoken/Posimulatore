@@ -170,6 +170,7 @@ const EN: Record<string, string> = {
   'Privacy': 'Privacy', "Termini d'uso": 'Terms of use', 'Elimina il mio account': 'Delete my account', 'Account eliminato': 'Account deleted', 'Sì, elimina tutto': 'Yes, delete everything', 'No': 'No',
   'Apri i dettagli': 'Show details',
   'Chiudi il percorso': 'Close the route', 'La mappa 3D non parte su questo dispositivo. Prova ad aggiornare il browser o a riaprire la pagina.': 'The 3D map cannot start on this device. Try updating your browser or reloading the page.',
+  'Spessore': 'Thickness', 'Opacità': 'Opacity', 'Dove il 3D le copre': 'Where the 3D hides them',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */
