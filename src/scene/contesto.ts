@@ -142,9 +142,15 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
 /** Punti di una via a passo di 4 m, alla quota della strada (+1,5 m perché il 3D non la copra a tratti).
  * Con Google 3D: quote LiDAR della strada ai vertici (quoteVia) e retta fra un vertice e l'altro. Senza: il nostro terreno, che è quello visibile.
  * Prima le linee erano proiettate sul terreno a 10 m: dove la strada è scavata nella roccia (la Sponda) finivano sui tetti. */
-export function puntiVia(c0: LL[], z: number[], google: boolean, alza = 1.5): C.Cartesian3[] {
+export function puntiVia(c0: LL[], z0: number[], google: boolean, alza = 1.5, sposta = google): C.Cartesian3[] {
   // sopra Google le linee si spostano di qualche metro per combaciare con quello che si vede (solo disegno, vedi allinea.ts)
-  const c = google ? c0.map(allinea) : c0
+  const c = sposta ? c0.map(allinea) : c0
+  // spostando in pianta su un pendio cambia anche la quota: la si corregge con la differenza del terreno fra il punto
+  // nuovo e quello vecchio (altrimenti le linee spostate di 15-20 m finivano sotto il 3D)
+  const z = sposta ? z0.map((q, i) => {
+    const d = Math.hypot((c[i][0] - c0[i][0]) * 84560, (c[i][1] - c0[i][1]) * 111030)
+    return d < 1.5 ? q : q + Math.max(-25, Math.min(25, quotaTerreno(c[i][0], c[i][1]) - quotaTerreno(c0[i][0], c0[i][1])))
+  }) : z0
   const out: number[] = []
   for (let i = 0; i < c.length; i++) {
     if (i > 0) {
@@ -185,7 +191,8 @@ function disegnaVie(google: boolean) {
     const g = gruppoDi(s.k)
     const z = quoteDi(s)
     const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    const punti = puntiVia(s.c, z, true, 3.5)
+    // lo spostamento vale solo sopra Google: sul satellite (strumento «Vie») le linee restano sui punti che si trascinano
+    const punti = puntiVia(s.c, z, true, 3.5, google)
     l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: punti, width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
     // la stessa via «in filigrana»: da vicino si intravede anche dove il 3D di Google la copre (tetti, muri, mesh imprecisa)
     if (google) { const f = perGruppoF.get(g.k) ?? []; perGruppoF.set(g.k, f); f.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, FILIGRANA_MAX) }, geometry: new C.PolylineGeometry({ positions: punti, width: g.w + 1.5, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) })) }

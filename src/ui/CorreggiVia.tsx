@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useS } from '../store'
 import { anteprimaVia, correzioneVia, elencoVie, ricaricaCorrezioni, viaOriginale, GRUPPI_VIE } from '../scene/contesto'
-import { apriCorrezione, chiudiCorrezione, sceltaMultipla, avviaRiquadro, fineRiquadro } from '../scene/correggiVia'
+import { apriCorrezione, chiudiCorrezione, sceltaMultipla, avviaRiquadro, fineRiquadro, trascinoMorbido } from '../scene/correggiVia'
 import { chiama } from './Pubblico'
 import { inquadra } from '../scene/viewer'
 import { quota } from '../scene/terreno'
@@ -28,6 +28,8 @@ export function CorreggiVia() {
   const [multi, setMulti] = useState(false)
   const [riq, setRiq] = useState(false)
   useEffect(() => { sceltaMultipla(multi) }, [multi])
+  const [morbido, setMorbido] = useState(30)
+  useEffect(() => { trascinoMorbido(morbido) }, [morbido])
   useEffect(() => () => { sceltaMultipla(false); fineRiquadro() }, [])
   useEffect(() => () => chiudiCorrezione(), [])
   // scelta una via, la si inquadra dall'alto (la foto si legge meglio in pianta)
@@ -80,6 +82,11 @@ export function CorreggiVia() {
     <div className="campi">
       <p><b>{orig.n ?? TIPI[orig.k] ?? 'Via senza nome'}</b> <small>· {TIPI[orig.k] ?? orig.k}{gruppo ? '' : ''} · {b.c.length} punti{corr ? ' · corretta' : ''}</small></p>
       <p className="nota">Trascina i punti numerati sulla strada vera della foto. Con «Più punti» tocchi quelli da spostare insieme, o li prendi col riquadro.</p>
+      <label className="riga-morbido" data-tip="Trascinando un punto, i vicini lo seguono sempre meno fino a questa distanza: le curve restano archi">Trascina con sé i vicini
+        <select value={morbido} onChange={e => setMorbido(Number(e.target.value))}>
+          <option value={0}>No, solo il punto</option><option value={15}>fino a 15 m</option><option value={30}>fino a 30 m</option><option value={60}>fino a 60 m</option><option value={120}>fino a 120 m</option>
+        </select>
+      </label>
       <div className="riga-bottoni">
         <button className={multi ? 'acceso' : ''} aria-pressed={multi} onClick={() => { setMulti(!multi); if (multi) s.set({ viaSel: sel.slice(-1) }) }}><Icona n="add" />Più punti</button>
         <button className={riq ? 'acceso' : ''} aria-pressed={riq} onClick={() => { if (riq) { fineRiquadro(); setRiq(false) } else { setMulti(true); setRiq(true); avviaRiquadro(() => setRiq(false)) } }}>Riquadro</button>
