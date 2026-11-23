@@ -171,6 +171,7 @@ const EN: Record<string, string> = {
   'Apri i dettagli': 'Show details',
   'Chiudi il percorso': 'Close the route', 'La mappa 3D non parte su questo dispositivo. Prova ad aggiornare il browser o a riaprire la pagina.': 'The 3D map cannot start on this device. Try updating your browser or reloading the page.',
   'Spessore': 'Thickness', 'Opacità': 'Opacity', 'Dove il 3D le copre': 'Where the 3D hides them',
+  'Come si disegnano le vie': 'How streets are drawn', 'Linee': 'Lines', 'Dipinte sul 3D': 'Painted on 3D', 'Linee nette alla quota della strada: pulite, ma possono staccarsi dal 3D': 'Crisp lines at street height: clean, but may float off the 3D', 'Dipinte sulla superficie del 3D: sempre attaccate, ma salgono su tetti e muri': 'Painted on the 3D surface: always attached, but climb roofs and walls',
 }
 
 /** Traduce un testo italiano; se manca la traduzione resta in italiano. */

@@ -41,6 +41,8 @@ export type Livelli = {
   coloriVie: Record<string, string>
   /** spessore (1 = di base), opacità delle vie e opacità della filigrana sotto il 3D: vuoto = valori di base */
   stileVie?: Partial<StileVie>
+  /** vie «dipinte» sulla superficie del 3D (seguono tetti e muri) invece che linee sospese alla quota della strada */
+  vieDipinte?: boolean
   /** versione delle impostazioni di base, per cambiarle una volta a chi le aveva già salvate */
   rev?: number
   ora: number // ore decimali, ora locale
