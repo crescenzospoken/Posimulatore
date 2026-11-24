@@ -6,7 +6,7 @@ import { useS, type Utente } from './store'
 import { impostaQualita, impostaNitidezza, quandoGoogle, quandoGoogleKo, googleAcceso, creaViewer, vistaTotale, attenua3D, impostaGoogle, impostaOrto, impostaSole, vai, vistaCorrente, foto, VAI, viewer } from './scene/viewer'
 import { caricaEdifici, disegnaEdifici, disegnaCupole, mostraCupole } from './scene/edifici'
 import { caricaContesto, mostraContesto, reteVie, aggiornaQuoteGoogle } from './scene/contesto'
-import { pos, quotaGoogle } from './scene/viewer'
+import { pos, quotaVista } from './scene/viewer'
 import { disegnaPercorso, inquadraPercorso } from './scene/percorso'
 import { alternative, cammino, tappaDaLink } from './engine/percorso'
 import { SchedaPercorso, BarraTappe } from './ui/Percorso'
@@ -77,7 +77,7 @@ export default function App() {
         impostaOrto(useS.getState().livelli.orto)
         // chi sono, colori di base per tutti: dal server (senza server si va avanti da visitatore)
         chiama<Utente | null>('io').then(u => { useS.setState(st => ({ utente: u, inModifica: st.inModifica && puoModificare(u) })); if (u) caricaMiei() }, () => {})
-        chiama<{ coloriVie?: Record<string, string>; stileVie?: Partial<StileVie> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {}, stileBase: i.stileVie ?? {} }), () => {})
+        chiama<{ coloriVie?: Record<string, string>; stileVie2?: Partial<StileVie> }>('impostazioni').then(i => useS.setState({ coloriBase: i.coloriVie ?? {}, stileBase: i.stileVie2 ?? {} }), () => {})
         await Promise.all([caricaContesto(), avviaOggetti(), caricaPoi(), caricaEventi()])
         avvio()?.fase('foto')
         disegnaCupole(viewer)
@@ -86,7 +86,7 @@ export default function App() {
         // Si ricalcola solo quando la vista si è spostata davvero (oltre 80 m) e al massimo ogni 3 secondi.
         let ultimaPos: Cartesian3 | null = null, ultimaVolta = 0
         quandoGoogle(() => { clearTimeout(tG); tG = setTimeout(() => {
-          aggiornaQuoteGoogle(quotaGoogle)
+          aggiornaQuoteGoogle(quotaVista)
           const ora = viewer.camera.positionWC, t = performance.now()
           if (ultimaPos && Cartesian3.distance(ora, ultimaPos) < 80) return
           if (t - ultimaVolta < 3000) return

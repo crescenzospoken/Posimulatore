@@ -257,8 +257,8 @@ function Livelli() {
             <label key={g.k} className="colore"><input type="color" value={l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col} onChange={e => s.setLivelli({ coloriVie: { ...l.coloriVie, [g.k]: e.target.value } })} />{tr(g.nome)}</label>
           ))}
           <div className="segmenti largo" role="radiogroup" aria-label={tr('Come si disegnano le vie')}>
-            <button role="radio" aria-checked={!l.vieDipinte} className={!l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: false })} data-tip={tr('Linee nette alla quota della strada: pulite, ma possono staccarsi dal 3D')}>{tr('Linee')}</button>
-            <button role="radio" aria-checked={!!l.vieDipinte} className={l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: true })} data-tip={tr('Dipinte sulla superficie del 3D: sempre attaccate, ma salgono su tetti e muri')}>{tr('Dipinte sul 3D')}</button>
+            <button role="radio" aria-checked={!l.vieDipinte} className={!l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: false })} data-tip={tr('Linee sottili a filo della strada: la rete si legge sempre, anche dove le case la coprono')}>{tr('Linee')}</button>
+            <button role="radio" aria-checked={!!l.vieDipinte} className={l.vieDipinte ? 'acceso' : ''} onClick={() => s.setLivelli({ vieDipinte: true })} data-tip={tr('Colore steso sull\'asfalto del 3D, largo in metri veri: case, muri e alberi lo coprono')}>{tr('Dipinte sul 3D')}</button>
           </div>
           {(() => { const st = { ...STILE_VIE, ...s.stileBase, ...l.stileVie }, metti = (k: keyof typeof st, v: number) => s.setLivelli({ stileVie: { ...l.stileVie, [k]: v } }); return <>
             <label className="largo">{tr('Spessore')}: {Math.round(st.spessore * 100)}%<input type="range" min={0.4} max={2.5} step={0.1} value={st.spessore} onChange={e => metti('spessore', Number(e.target.value))} /></label>
@@ -269,7 +269,7 @@ function Livelli() {
           {s.utente?.ruolo === 'admin' && <button onClick={async () => {
             const v = Object.fromEntries(GRUPPI_VIE.map(g => [g.k, l.coloriVie?.[g.k] ?? s.coloriBase[g.k] ?? g.col]))
             const stv = { ...STILE_VIE, ...s.stileBase, ...l.stileVie }
-            try { await chiama('impostazioni/coloriVie', 'PUT', { v }); await chiama('impostazioni/stileVie', 'PUT', { v: stv }); s.set({ coloriBase: v, stileBase: stv }); s.setLivelli({ coloriVie: {}, stileVie: {} }); s.dici('Colori, spessore e opacità salvati per tutti') } catch (e) { s.dici((e as Error).message) }
+            try { await chiama('impostazioni/coloriVie', 'PUT', { v }); await chiama('impostazioni/stileVie2', 'PUT', { v: stv }); s.set({ coloriBase: v, stileBase: stv }); s.setLivelli({ coloriVie: {}, stileVie: {} }); s.dici('Colori, spessore e opacità salvati per tutti') } catch (e) { s.dici((e as Error).message) }
           }} data-tip="Diventano i colori che vede chiunque apra il sito">Usa questo aspetto per tutti</button>}
         </div>
       )}

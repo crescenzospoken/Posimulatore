@@ -7,6 +7,16 @@ import type { Vista } from '../engine/model'
 
 ;(window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = '/cesium/'
 export let viewer: C.Viewer
+// `tileset.getHeight` ricopia dalla GPU tutti i vertici della tessera a ogni lettura (misurato il 24/11: fino a 9 s per
+// una lettura sul telefono, 88 s in tutto per una vista). Qui i vertici letti restano in memoria finché vive la tessera
+// (WeakMap: si liberano con lei): le letture successive sulla stessa tessera costano ~9 volte meno. Mai salvati.
+try {
+  const R = (C as unknown as { ModelReader?: Record<string, (x: object) => unknown> }).ModelReader
+  if (R) for (const k of ['readAttributeAsTypedArray', 'readIndicesAsTypedArray']) {
+    const orig = R[k], memo = new WeakMap<object, unknown>()
+    if (typeof orig === 'function') R[k] = (x: object) => { let v = memo.get(x); if (v === undefined) { v = orig(x); memo.set(x, v) } return v }
+  }
+} catch { /* Cesium cambiato: si resta alla lettura lenta */ }
 export const VAI: { nome: string; lon: number; lat: number; h: number; heading: number; pitch: number }[] = [
   { nome: 'Tutta Positano', lon: 14.4858, lat: 40.6192, h: 900, heading: 6, pitch: -42 },
   { nome: 'Bivio di Chiesa Nuova', lon: 14.48335, lat: 40.62935, h: 222, heading: 262, pitch: -38 },
@@ -180,19 +190,73 @@ export function impostaQualita(q: Qualita) {
 }
 let onGoogle: (() => void) | undefined, onGoogleKo: (() => void) | undefined
 let googlePronto = false
-const attenuatore = new C.CustomShader({
-  uniforms: { u_attenua: { type: C.UniformType.FLOAT, value: 0 } },
+// Shader del 3D di Google: «Attenua il 3D» e le vie «Dipinte» (dipinte.ts). Le tele delle vie sono texture nostre,
+// passate allo shader da `textureDipinte` (0-2 = colore dal fine al grosso, 3 = quote).
+export const textureDipinte: unknown[] = []
+const vuota = () => new C.TextureUniform({ typedArray: new Uint8Array(4), width: 1, height: 1, repeat: false })
+export const shader3D = new C.CustomShader({
+  uniforms: {
+    u_attenua: { type: C.UniformType.FLOAT, value: 0 }, u_dip: { type: C.UniformType.FLOAT, value: 0 }, u_alfa: { type: C.UniformType.FLOAT, value: 1 }, u_pend: { type: C.UniformType.FLOAT, value: 0.36 }, u_debug: { type: C.UniformType.FLOAT, value: 0 },
+    u_m: { type: C.UniformType.MAT4, value: C.Matrix4.clone(C.Matrix4.IDENTITY) }, u_su: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
+    u_r0: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) }, u_r1: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
+    u_r2: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) }, u_rq: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
+    u_t0: { type: C.UniformType.SAMPLER_2D, value: vuota() }, u_t1: { type: C.UniformType.SAMPLER_2D, value: vuota() },
+    u_t2: { type: C.UniformType.SAMPLER_2D, value: vuota() }, u_q: { type: C.UniformType.SAMPLER_2D, value: vuota() },
+  },
   lightingModel: C.LightingModel.UNLIT,
   fragmentShaderText: `
+    bool dentro(vec2 a) { return a.x > 0.003 && a.y > 0.003 && a.x < 0.997 && a.y < 0.997; }
     void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
       vec3 c = material.diffuse;
       float g = dot(c, vec3(0.299, 0.587, 0.114));
       vec3 chiaro = mix(vec3(g), vec3(1.0), 0.55);
-      material.diffuse = mix(c, chiaro, u_attenua);
+      c = mix(c, chiaro, u_attenua);
+      vec3 pe = fsInput.attributes.positionEC;
+      vec3 dx = dFdx(pe), dy = dFdy(pe);
+      if (u_dip > 0.5) {
+        vec3 l = (u_m * vec4(pe, 1.0)).xyz;
+        vec4 t = vec4(0.0);
+        vec2 a = (l.xy - u_r0.xy) / u_r0.z;
+        if (dentro(a)) t = texture(u_t0, a);
+        else {
+          a = (l.xy - u_r1.xy) / u_r1.z;
+          if (dentro(a)) t = texture(u_t1, a);
+          else { a = (l.xy - u_r2.xy) / u_r2.z; if (dentro(a)) t = texture(u_t2, a); }
+        }
+        if (t.a > 0.004) {
+          // solo superfici quasi piane (niente muri), alla quota della via (niente tetti e chiome)
+          float k = 1.0, kq = 1.0, kn = 1.0;
+          vec2 b = (l.xy - u_rq.xy) / u_rq.z;
+          if (dentro(b)) {
+            vec4 q = texture(u_q, b);
+            if (q.a > 0.25) {
+              float hz = (q.r * 65280.0 + q.g * 255.0) / 50.0 - 100.0, tol = q.b * 25.5;
+              // quota non ancora letta dal 3D (lontano): tolleranza larga, che cresce con la distanza
+              if (q.b > 0.99) tol = 2.2 + 0.012 * length(pe);
+              float dz = l.z - hz;
+              // sopra la strada si è più severi (tetti, chiome, auto alte), sotto un po' meno (cunette, mesh imprecisa)
+              kq = 1.0 - smoothstep(tol, tol + 0.7, dz > 0.0 ? dz * 1.25 : -dz);
+            }
+          }
+          kn = smoothstep(u_pend - 0.15, u_pend, abs(dot(normalize(cross(dx, dy)), u_su)));
+          k = kq * kn * u_alfa;
+          vec3 col = czm_srgbToLinear(t.rgb / max(t.a, 0.001));
+          // la vernice lascia passare chiari e scuri della foto (strisce, ombre): sembra stesa sull'asfalto, non incollata sopra
+          float luce = dot(c, vec3(0.299, 0.587, 0.114));
+          c = mix(c, col * (0.62 + 0.75 * luce), t.a * k);
+          if (u_debug > 0.5) c = mix(c, vec3(1.0 - kq, kn * kq, 1.0 - kn), t.a);
+        }
+      }
+      material.diffuse = c;
     }`,
 })
+// le texture le creiamo e aggiorniamo noi (da canvas, senza rileggerle in memoria): lo shader le prende da qui
+{
+  const mappa = (shader3D as unknown as { uniformMap: Record<string, () => unknown> }).uniformMap
+  ;['u_t0', 'u_t1', 'u_t2', 'u_q'].forEach((n, i) => { mappa[n] = () => textureDipinte[i] ?? (viewer.scene as unknown as { context: { defaultTexture: unknown } }).context.defaultTexture })
+}
 /** 0 = foto vere, 1 = quasi bianco e grigio come un plastico. */
-export function attenua3D(x: number) { attenuatore.setUniform('u_attenua', Math.max(0, Math.min(1, x))); viewer?.scene.requestRender() }
+export function attenua3D(x: number) { shader3D.setUniform('u_attenua', Math.max(0, Math.min(1, x))); viewer?.scene.requestRender() }
 let fonteGoogle: 'google' | 'ion' | '' = ''
 /** Da dove arriva il 3D: Google diretto o Cesium ion (per le prove). */
 export const fonte3D = () => fonteGoogle
@@ -232,7 +296,7 @@ export async function impostaGoogle(on: boolean, token: string, chiave = ''): Pr
       // Google ha già le sue ombre nelle foto: riceve solo quelle dei nostri oggetti
       google.shadows = C.ShadowMode.RECEIVE_ONLY
       // «Attenua il 3D»: schiarisce e desatura le foto di Google, così vie e punti si leggono meglio (il 3D resta solido)
-      google.customShader = attenuatore
+      google.customShader = shader3D
       google.allTilesLoaded.addEventListener(() => onGoogle?.())
       // il satellite resta sotto finché Google non ha la prima vista: prima, se Google tardava o falliva, restava tutto blu
       // la schermata d'avvio segue le tessere che mancano e si toglie alla prima vista completa
@@ -264,6 +328,32 @@ export function quotaGoogle(lon: number, lat: number): number | undefined {
   let h: number | undefined
   try { h = google.getHeight(C.Cartographic.fromDegrees(lon, lat), viewer.scene) } catch { return undefined }
   return h === undefined || !isFinite(h) ? undefined : h - GEOIDE
+}
+
+const _w = new C.Cartesian2(), _p = new C.Cartesian3(), _k = new C.Cartographic()
+/** Quota (m s.l.m.) del 3D di Google in un punto, letta dal fotogramma già disegnato (profondità del pixel dove il punto
+ * cade sullo schermo) invece che dalla mesh: `getHeight` alla prima lettura di ogni tessera ricopia i vertici dalla GPU e
+ * blocca la pagina (misurato il 24/11: da 0,15 a 8 s l'una), questa costa centesimi di millisecondo. `z` è la quota
+ * presunta: se a quella quota il raggio incontra la superficie altrove si riprova con la quota trovata (due volte).
+ * `undefined` se il punto è fuori schermo o coperto (un edificio davanti): lì la quota precisa non serve, non si vede. */
+export function quotaVista(lon: number, lat: number, z: number): number | undefined {
+  if (!google || !google.show) return undefined
+  const sc = viewer.scene, W = sc.canvas.clientWidth, H = sc.canvas.clientHeight
+  try {
+    for (let i = 0; i < 3; i++) {
+      const w = C.SceneTransforms.worldToWindowCoordinates(sc, pos(lon, lat, z), _w)
+      if (!w || w.x < 1 || w.y < 1 || w.x > W - 2 || w.y > H - 2) return undefined
+      const p = sc.pickPosition(w, _p)
+      if (!p) return undefined
+      const k = C.Cartographic.fromCartesian(p, undefined, _k)
+      if (!k) return undefined
+      const h = k.height - GEOIDE
+      if (Math.hypot((C.Math.toDegrees(k.longitude) - lon) * 84560, (C.Math.toDegrees(k.latitude) - lat) * 111030) < 1) return h
+      if (Math.abs(h - z) < 0.25) return undefined
+      z = h
+    }
+  } catch { /* profondità non disponibile */ }
+  return undefined
 }
 
 // ---------- nitidezza e colore ----------

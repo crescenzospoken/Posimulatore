@@ -5,6 +5,7 @@ import { impostaVoci, type Voce } from './sovrapposti'
 import type { LL } from '../engine/geo'
 import { GEOIDE, quota as quotaTerreno } from './terreno'
 import { creaRete, quoteVia, type Rete } from '../engine/percorso'
+import { vieDipinte, quoteDipinte, locale, type ViaDip } from './dipinte'
 
 export type Strada = { id: string; k: string; w: number; c: LL[]; n?: string; o?: 1; ponte?: 1; galleria?: 1; dz?: number; controllata?: boolean }
 /** Correzione a mano di una via (D1, /api/vie): punti spostati sul satellite, quota in più sulle arcate. */
@@ -45,7 +46,14 @@ const VS_VIA = () => (vsVia ??= (() => {
   const vs = new C.PolylineMaterialAppearance().vertexShaderSource
   const w = 'float width = abs(expandAndWidth.y) + 0.5;', n = 'vec4 next = czm_computeNextPosition();'
   if (!vs.includes(w) || !vs.includes(n)) return vs // shader di Cesium cambiato: si resta a larghezza fissa
-  return vs.replace(w, '').replace(n, n + ' float width = abs(expandAndWidth.y) * clamp(300.0 / max(length((czm_modelViewRelativeToEye * p).xyz), 1.0), 0.45, 1.6) + 0.5;')
+  // p, prev e next sono relativi all'occhio: accorciarli li porta verso chi guarda lungo il raggio di vista, cioè la linea
+  // resta dov'è sullo schermo ma passa la prova di profondità contro la superficie su cui poggia (mesh ruvida, quota
+  // imprecisa di qualche metro); un edificio davanti, ben più vicino, la copre lo stesso
+  return vs.replace(w, '').replace(n, n + ` float dcam = max(length(p.xyz), 1.0);
+    float width = max(abs(expandAndWidth.y) * clamp(300.0 / dcam, 0.6, 1.35), 2.0) * czm_pixelRatio + 0.5;
+    p.xyz *= 1.0 - min(0.3, (2.5 + 0.012 * dcam) / dcam);
+    float dprev = max(length(prev.xyz), 1.0); prev.xyz *= 1.0 - min(0.3, (2.5 + 0.012 * dprev) / dprev);
+    float dnext = max(length(next.xyz), 1.0); next.xyz *= 1.0 - min(0.3, (2.5 + 0.012 * dnext) / dnext);`)
 })())
 const materialeVia = (c: C.Color) => new C.Material({ translucent: true, fabric: { type: 'ViaMorbida', uniforms: { color: c }, source: MATERIALE_VIA } })
 const gruppoDi = (k: string) => GRUPPI_VIE.find(g => g.tipi.includes(k)) ?? GRUPPI_VIE[1]
@@ -77,7 +85,8 @@ function lidarVicino(p: LL): number | undefined {
   return best
 }
 /** Quote di una via per disegnarla: LiDAR (o terreno sui punti spostati) più l'eventuale quota delle arcate. */
-const quoteDi = (v: Strada) => { const z = quoteVia(v, zVertice, sVertice); return v.dz ? z.map(x => x + v.dz!) : z }
+let cacheQuote = new WeakMap<Strada, number[]>()
+const quoteDi = (v: Strada) => { let z = cacheQuote.get(v); if (!z) { z = quoteVia(v, zVertice, sVertice); if (v.dz) z = z.map(x => x + v.dz!); cacheQuote.set(v, z) } return z }
 const sVertice = (p: LL) => superficie.get(p[0] + ',' + p[1])
 // solo frazioni, località, spiagge e cime: bar, farmacie e fermate ora sono punti di interesse (si accavallavano)
 const NOMI = new Set(['village', 'hamlet', 'suburb', 'locality', 'beach', 'peak', 'island', 'islet'])
@@ -138,8 +147,7 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
   dn.show = nomi && !google; dc.show = confine
   // lo spessore sta nella geometria: se cambia le vie si ridisegnano; le opacità sono solo colori
   // lo spessore si ridisegna quando il cursore si ferma (250 ms), non a ogni passo: ogni ridisegno rifà tutte le vie
-  if (st.spessore !== stile.spessore) { clearTimeout(attesaSpessore); attesaSpessore = setTimeout(() => { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }, 250) }
-  if ((st.dipinte && (st.alfa !== stile.alfa || JSON.stringify(colori) !== JSON.stringify(coloriAttuali)))) fatteCon = null
+  if (st.spessore !== stile.spessore && fatteCon !== null) { clearTimeout(attesaSpessore); attesaSpessore = setTimeout(() => { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }, 250) }
   stile = { ...st, dipinte: !!st.dipinte }
   coloriAttuali = colori
   if (conStrade) disegnaVie(google)
@@ -150,9 +158,11 @@ export function mostraContesto(conStrade: boolean, nomi: boolean, confine: boole
     const m = mat.get(g.k)
     if (m) m.uniforms.color = c.withAlpha(stile.alfa)
     const mf = matF.get(g.k)
-    if (mf) mf.uniforms.color = c.withAlpha(stile.filigrana)
+    if (mf) mf.uniforms.color = c.withAlpha(Math.min(FILIGRANA_ALFA, stile.filigrana))
   }
   coloriAttuali = colori
+  if (stile.dipinte && google && conStrade) vieDipinte(true, null, coloriGruppi(), stile.spessore, stile.alfa)
+  else if (!conStrade) vieDipinte(false, null, coloriGruppi(), stile.spessore, stile.alfa)
   viewer.scene.requestRender()
 }
 
@@ -166,22 +176,28 @@ export function arrotonda(p: P3[], rMax = 7): P3[] {
   for (let i = 1; i < p.length - 1; i++) {
     const a = p[i - 1], b = p[i], c = p[i + 1], la = metri(a, b), lc = metri(b, c)
     const r = Math.min(rMax, la * 0.45, lc * 0.45)
-    if (r < 0.6) { out.push(b); continue }
+    // quasi dritto (meno di 15°): nessun arco, il punto resta com'è
+    const cos = ((b[0] - a[0]) * (c[0] - b[0]) * 84560 * 84560 + (b[1] - a[1]) * (c[1] - b[1]) * 111030 * 111030) / (la * lc || 1)
+    if (r < 0.6 || cos > 0.966) { out.push(b); continue }
     const ta = r / la, tc = r / lc
     const p0: P3 = [b[0] + (a[0] - b[0]) * ta, b[1] + (a[1] - b[1]) * ta, b[2] + (a[2] - b[2]) * ta]
     const p2: P3 = [b[0] + (c[0] - b[0]) * tc, b[1] + (c[1] - b[1]) * tc, b[2] + (c[2] - b[2]) * tc]
-    for (let k = 0; k <= 6; k++) { const t = k / 6, u = 1 - t; out.push([0, 1, 2].map(j => u * u * p0[j] + 2 * u * t * b[j] + t * t * p2[j]) as P3) }
+    for (let k = 0; k <= 4; k++) { const t = k / 4, u = 1 - t; out.push([0, 1, 2].map(j => u * u * p0[j] + 2 * u * t * b[j] + t * t * p2[j]) as P3) }
   }
   out.push(p[p.length - 1])
   return out
 }
-const PASSO = 4
+const PASSO = 8
 /** Il 3D si legge un punto ogni tre del tracciato (circa 12 m) e alle estremità: leggere ogni 4 m costava troppo. */
-const daLeggere = (i: number, n: number) => i % 3 === 0 || i === n - 1
+const daLeggere = (i: number, n: number) => i % 2 === 0 || i === n - 1
 /** Tracciato di una via da disegnare: [lon, lat, quota di base] ogni 4 m, spigoli arrotondati. Sopra Google spostato per
  * combaciare col 3D (allinea.ts); ai punti spostati di oltre 1,5 m la quota segue la pendenza del nostro terreno.
  * Gli stessi punti si usano per leggere la quota di Google (aggiornaQuoteGoogle) e per disegnare: le chiavi coincidono. */
+// il tracciato di una via non cambia finché non cambiano la via o l'allineamento: si calcola una volta sola
+let cacheT = [new WeakMap<number[], P3[]>(), new WeakMap<number[], P3[]>()]
 function tracciato(c0: LL[], z0: number[], sposta: boolean): P3[] {
+  const fatto = cacheT[sposta ? 1 : 0].get(z0)
+  if (fatto) return fatto
   const c = sposta ? c0.map(allinea) : c0
   const base = c.map((p, i): P3 => {
     const d = Math.hypot((p[0] - c0[i][0]) * 84560, (p[1] - c0[i][1]) * 111030)
@@ -193,16 +209,17 @@ function tracciato(c0: LL[], z0: number[], sposta: boolean): P3[] {
     for (let j = 1; j < n; j++) { const t = j / n; out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]) }
     out.push(b)
   }
+  cacheT[sposta ? 1 : 0].set(z0, out)
   return out
 }
 /** Un punto disegnato: posizione, quota di base `b`, correzione dal 3D `d` (z = b + d), quanto alzare la linea `a`,
  * `v` = il 3D letto lì sta alla quota della via (si può dipingere), `g` = quota letta grezza (o z se non c'è). */
-type Campione = { lo: number; la: number; b: number; d: number; a: number; v: boolean; g: number; u?: boolean }
+type Campione = { lo: number; la: number; b: number; d: number; a: number; v: boolean; g: number; u?: boolean; l?: boolean }
 /** Quote di una via disegnata sopra Google. Dove il 3D è stato letto da vicino (ogni 12 m lungo la via), la differenza fra
  * Google e la base si applica LISCIATA (mediana delle letture entro 16 m, poi media su 3 punti) e solo se è piccola (da -6 a +8 m): un punto
  * letto fuori dal ciglio (scogliera 20 m più sotto) o su un tetto non fa saltare la linea a zig-zag. Dove è letta la linea
  * sta ALZA_LETTO sopra, altrove `alza` (la quota LiDAR può stare qualche metro sotto la superficie di Google). */
-const ALZA_LETTO = 0.7
+const ALZA_LETTO = 0.3
 function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, sposta: boolean): Campione[] {
   const t = tracciato(c0, z0, sposta)
   if (!google) return t.map(p => { const z = quotaTerreno(p[0], p[1]); return { lo: p[0], la: p[1], b: z, d: 0, a: alza, v: false, g: z } })
@@ -212,7 +229,7 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
   if (!grezzo.some(o => o !== null)) return t.map(p => ({ lo: p[0], la: p[1], b: p[2], d: 0, a: alza, v: !!sposta, u: true, g: p[2] }))
   const mediana = grezzo.map((_, i) => {
     const v: number[] = []
-    for (let k = Math.max(0, i - 4); k <= Math.min(n - 1, i + 4); k++) if (grezzo[k] !== null) v.push(grezzo[k] as number)
+    for (let k = Math.max(0, i - 2); k <= Math.min(n - 1, i + 2); k++) if (grezzo[k] !== null) v.push(grezzo[k] as number)
     if (!v.length) return null
     v.sort((x, y) => x - y); return v[Math.floor(v.length / 2)]
   })
@@ -232,8 +249,8 @@ function campioniVia(c0: LL[], z0: number[], google: boolean, alza: number, spos
   return t.map((p, i) => {
     // il passaggio fra «letto» e no, e fra dipinto e no, si ammorbidisce su qualche punto
     let sa = 0, sv = 0, m = 0
-    for (let k = Math.max(0, i - 3); k <= Math.min(n - 1, i + 3); k++) { sa += al[k]; sv += vicino[k] ? 1 : 0; m++ }
-    return { lo: p[0], la: p[1], b: p[2], d: d[i], a: sa / m, v: sv / m >= 0.5, g: p[2] + (grezzo[i] ?? d[i]), u: incerto[i] }
+    for (let k = Math.max(0, i - 2); k <= Math.min(n - 1, i + 2); k++) { sa += al[k]; sv += vicino[k] ? 1 : 0; m++ }
+    return { lo: p[0], la: p[1], b: p[2], d: d[i], a: sa / m, v: sv / m >= 0.5, g: p[2] + (grezzo[i] ?? d[i]), u: incerto[i], l: mediana[i] !== null }
   })
 }
 /** Incroci: le vie che si toccano in un punto prendono lì la stessa quota e la stessa altezza della linea (la media),
@@ -265,7 +282,7 @@ function posizioniLinea(cs: Campione[], nodi?: Nodi): C.Cartesian3[] {
     const e = da0 ? 0 : cs.length - 1, q = cs[da0 ? 1 : cs.length - 2]
     if ((nodi.get(chiaveC(cs[e]))?.n ?? 0) < 2) continue
     const l = metri([q.lo, q.la], [cs[e].lo, cs[e].la]); if (l < 0.2) continue
-    const f = 1.5 / l, p = v[e], ext = [p[0] + (p[0] - q.lo) * f, p[1] + (p[1] - q.la) * f, p[2]]
+    const f = 1.5 / l, c = cs[e], ext = [c.lo + (c.lo - q.lo) * f, c.la + (c.la - q.la) * f, c.b + c.d + c.a]
     if (da0) v.unshift(ext); else v.push(ext)
   }
   return C.Cartesian3.fromDegreesArrayHeights(v.flatMap(p => [p[0], p[1], p[2] + GEOIDE]))
@@ -273,42 +290,10 @@ function posizioniLinea(cs: Campione[], nodi?: Nodi): C.Cartesian3[] {
 export function puntiVia(c0: LL[], z0: number[], google: boolean, alza = 1.5, sposta = google): C.Cartesian3[] {
   return posizioniLinea(campioniVia(c0, z0, google, alza, sposta))
 }
-/** Modo «Dipinte»: invece di una colonna che colora tutto quello che c'è in verticale sotto la via (muri e facciate
- * compresi), uno strato spesso pochi metri attorno alla quota della strada: si colora solo la superficie del 3D che sta
- * lì, cioè la strada. Lo strato comprende anche la quota letta grezza, così non passa sopra la strada senza toccarla.
- * I pezzi si spezzano dove la via sale troppo (scale), così lo strato resta sottile. */
-// solo le carrabili si dipingono: vicoli e scale passano fra muri e tetti, dipinti macchiavano le case
-const LARGHEZZA: Record<string, number> = { statale: 5, strade: 3.6 }
-// spessore al 100%: linee (pixel) un po' più grosse e strade dipinte (metri) più strette di prima, così si somigliano
-const LARGO_LINEE = 1.5, LARGO_DIPINTE = 0.65
-function strati(cs: Campione[], k: string): { strati: C.CorridorGeometry[]; sospese: C.Cartesian3[][] } {
-  const out: C.CorridorGeometry[] = [], sospese: C.Cartesian3[][] = []
-  const z = (c: Campione) => c.b + c.d
-  let i = 0
-  while (i < cs.length - 1) {
-    const dip = cs[i].v
-    let j = i + 1
-    while (j < cs.length - 1 && cs[j].v === dip) j++
-    const tratto = cs.slice(i, j + 1)
-    if (!dip) sospese.push(posizioniLinea(tratto))
-    else {
-      let a = 0
-      while (a < tratto.length - 1) {
-        const lim = (c: Campione) => (c.u ? [z(c) - 1.5, z(c) + 2] : [Math.min(z(c), c.g), Math.max(z(c), c.g)])
-        let b = a + 1, lo = Math.min(lim(tratto[a])[0], lim(tratto[b])[0]), hi = Math.max(lim(tratto[a])[1], lim(tratto[b])[1]), lung = metri([tratto[a].lo, tratto[a].la], [tratto[b].lo, tratto[b].la])
-        while (b + 1 < tratto.length && lung < 60) {
-          const [l2, h2] = lim(tratto[b + 1])
-          if (Math.max(hi, h2) - Math.min(lo, l2) > (tratto[b + 1].u ? 6 : 2.5)) break
-          lung += metri([tratto[b].lo, tratto[b].la], [tratto[b + 1].lo, tratto[b + 1].la]); b++; lo = Math.min(lo, l2); hi = Math.max(hi, h2)
-        }
-        out.push(new C.CorridorGeometry({ positions: C.Cartesian3.fromDegreesArray(tratto.slice(a, b + 1).flatMap(q => [q.lo, q.la])), width: (LARGHEZZA[k] ?? 3) * LARGO_DIPINTE * stile.spessore, height: lo - 1.2 + GEOIDE, extrudedHeight: hi + 1.6 + GEOIDE, cornerType: C.CornerType.ROUNDED, vertexFormat: C.PerInstanceColorAppearance.VERTEX_FORMAT }))
-        a = b
-      }
-    }
-    i = j
-  }
-  return { strati: out, sospese }
-}
+// larghezza delle linee in pixel (al 100%, a 300 m): una per classe, come su una carta stradale
+const PIXEL: Record<string, number> = { statale: 6.5, strade: 5, servizio: 3.5, pedonali: 3.5, scale: 3.5, sentieri: 3 }
+const TOL_BASE = 25.5, TOL_LETTO = 1.3
+const coloriGruppi = () => Object.fromEntries(GRUPPI_VIE.map(g => [g.k, coloriAttuali[g.k] ?? g.col]))
 let fatteCon: boolean | null = null
 const primPerGruppo = new Map<string, C.Primitive>()
 /** Da lontano le vie piccole si impastano: scale e vicoli compaiono sotto 800 m di quota della camera, le strade sotto 2,5 km. */
@@ -319,6 +304,8 @@ const primPerGruppo = new Map<string, C.Primitive>()
 // le linee alla superficie che si vede. Si legge da vicino (tessere dettagliate), pochi punti per volta.
 const quoteG = new Map<string, number>()
 const chiaveG = (p: readonly number[]) => p[0].toFixed(6) + ',' + p[1].toFixed(6)
+const nonLette = new Set<string>()
+let vistaLetta: { p: C.Cartesian3; d: C.Cartesian3 } | undefined
 let inLettura = false, ultimoRidisegno = 0, inSospeso = false, tRid: ReturnType<typeof setTimeout> | undefined
 /** Ridisegno dopo nuove letture: al massimo ogni 4 s (12 s con le dipinte), e mai mentre il disegno di prima si sta
  * ancora preparando. Sul telefono le strade dipinte ci mettono qualche secondo: rifacendo tutto a ogni lettura non
@@ -326,27 +313,34 @@ let inLettura = false, ultimoRidisegno = 0, inSospeso = false, tRid: ReturnType<
 function forseRidisegna() {
   clearTimeout(tRid)
   if (!inSospeso) return
-  const manca = ultimoRidisegno + (stile.dipinte ? 12000 : 4000) - performance.now()
+  const vernice = stile.dipinte && fatteCon === true
+  const manca = ultimoRidisegno + (vernice ? 1200 : 4000) - performance.now()
   if (manca > 0) { tRid = setTimeout(forseRidisegna, manca); return }
   if (vie) for (let i = 0; i < vie.length; i++) if (!(vie.get(i) as { ready: boolean }).ready) { tRid = setTimeout(forseRidisegna, 1000); return }
-  inSospeso = false; ultimoRidisegno = performance.now(); ridisegnaVie()
+  inSospeso = false; ultimoRidisegno = performance.now()
+  // con la vernice le letture cambiano solo le quote del filtro: niente geometria da rifare
+  const tp = performance.now()
+  if (vernice) quoteDipinte(listaVernice(calcolaProfili(true).profili)); else ridisegnaVie(false)
+  if (location.search.includes('prova')) console.info('T: dopo letture', Math.round(performance.now() - tp))
 }
 /** Dopo che Google ha finito di caricare la vista: legge la quota del 3D sotto i punti delle vie entro 450 m dal centro
  * dello schermo (solo con la camera sotto i 900 m dal suolo) e, se ne ha trovate di nuove, ridisegna le vie. */
 export const quoteGoogleLette = () => quoteG.size
-export function aggiornaQuoteGoogle(leggi: (lon: number, lat: number) => number | undefined) {
+export function aggiornaQuoteGoogle(leggi: (lon: number, lat: number, z: number) => number | undefined) {
   if (inLettura || fatteCon !== true) return
   const cam = viewer.camera, k = cam.positionCartographic
   const su = C.Cartesian3.normalize(cam.positionWC, new C.Cartesian3()), giu = -C.Cartesian3.dot(cam.directionWC, su)
   const lon0 = C.Math.toDegrees(k.longitude), lat0 = C.Math.toDegrees(k.latitude)
-  const suolo = (leggi(lon0, lat0) ?? quotaTerreno(lon0, lat0)) + GEOIDE, alto = k.height - suolo
+  const suolo = quotaTerreno(lon0, lat0) + GEOIDE, alto = k.height - suolo
   if (alto > 900 || giu < 0.2) return
   const cg = C.Cartographic.fromCartesian(C.Cartesian3.add(cam.positionWC, C.Cartesian3.multiplyByScalar(cam.directionWC, Math.min(2500, alto / giu), new C.Cartesian3()), new C.Cartesian3()))
   const cx = C.Math.toDegrees(cg.longitude), cy = C.Math.toDegrees(cg.latitude)
-  const daFare: LL[] = []
+  // i punti coperti o fuori schermo non si ritentano finché la vista non è cambiata davvero (oltre 120 m o 25°)
+  if (!vistaLetta || C.Cartesian3.distance(vistaLetta.p, cam.positionWC) > 120 || C.Cartesian3.dot(vistaLetta.d, cam.directionWC) < 0.9) { nonLette.clear(); vistaLetta = { p: C.Cartesian3.clone(cam.positionWC), d: C.Cartesian3.clone(cam.directionWC) } }
+  const daFare: number[][] = []
   for (const s of strade) {
-    if (!s.c.some(p => Math.abs(p[0] - cx) < 0.006 && Math.abs(p[1] - cy) < 0.0045)) continue
-    tracciato(s.c, quoteDi(s), true).forEach((p, i, t) => { if (daLeggere(i, t.length) && Math.hypot((p[0] - cx) * 84560, (p[1] - cy) * 111030) < 450 && !quoteG.has(chiaveG(p))) daFare.push([p[0], p[1]]) })
+    if (!s.c.some(p => Math.abs(p[0] - cx) < 0.009 && Math.abs(p[1] - cy) < 0.007)) continue
+    tracciato(s.c, quoteDi(s), true).forEach((p, i, t) => { if (daLeggere(i, t.length) && Math.hypot((p[0] - cx) * 84560, (p[1] - cy) * 111030) < 700 && !quoteG.has(chiaveG(p)) && !nonLette.has(chiaveG(p))) daFare.push([p[0], p[1], p[2]]) })
   }
   if (daFare.length < 20) return
   // prima i punti al centro dello schermo: ogni lettura costa (sul telefono lento anche 1-2 ms)
@@ -355,14 +349,15 @@ export function aggiornaQuoteGoogle(leggi: (lon: number, lat: number) => number 
   let i = 0, nuove = 0
   const passo = () => {
     const t = performance.now()
-    while (i < daFare.length && performance.now() - t < 7) { const p = daFare[i++], g = leggi(p[0], p[1]); if (g !== undefined) { quoteG.set(chiaveG(p), g); nuove++ } }
-    if (i < daFare.length) { setTimeout(passo, 30); return }
+    while (i < daFare.length && (i % 64 !== 0 || performance.now() - t < 60)) { const p = daFare[i++], g = leggi(p[0], p[1], p[2]); if (g !== undefined) { quoteG.set(chiaveG(p), g); nuove++ } else nonLette.add(chiaveG(p)) }
+    if (location.search.includes('prova') && performance.now() - t > 60) console.info('T: letture', Math.round(performance.now() - t))
     inLettura = false
+    if (location.search.includes('prova')) console.info('T: lette', nuove, 'su', daFare.length)
     if (nuove >= 20) { inSospeso = true; forseRidisegna() }
   }
   setTimeout(passo, 0)
 }
-const FILIGRANA_MAX = 1300, DIPINTE_FINO = 1400
+const FILIGRANA_MAX = 600, FILIGRANA_ALFA = 0.5
 let stile = { spessore: 1, alfa: 0.95, filigrana: 0.38, dipinte: false }
 let fatteDipinte = false
 const matF = new Map<string, C.Material>()
@@ -370,6 +365,24 @@ const DISTANZA_MAX: Record<string, number> = { statale: 1e7, strade: 9000, servi
 /** Vie come linee nette alla quota vera (LiDAR, o corretta a mano), 1,2 m sopra la strada; dove il 3D le copre si vedono
  * in trasparenza invece di sparire. Le linee «dipinte» sulla mesh di Google sembravano gelato sciolto dove non combaciavano.
  * Una primitiva per gruppo di colore, così il colore si cambia al volo. */
+type Profili = Map<string, { z: number[]; cs: Campione[] }>
+/** Quote di tutte le vie e incroci messi d'accordo. */
+function calcolaProfili(google: boolean): { nodi: Nodi; profili: Profili } {
+  const nodi: Nodi = new Map(), profili: Profili = new Map()
+  for (const s of strade) { if (s.c.length < 2) continue; const z = quoteDi(s), cs = campioniVia(s.c, z, true, 1, google); profili.set(s.id, { z, cs }); segnaNodi(nodi, cs) }
+  for (const { cs } of profili.values()) raccordaNodi(nodi, cs)
+  return { nodi, profili }
+}
+function listaVernice(profili: Profili): ViaDip[] {
+  const lista: ViaDip[] = [], q: number[] = []
+  for (const s of strade) {
+    const pr = profili.get(s.id); if (!pr) continue
+    const p = new Float32Array(pr.cs.length * 4)
+    pr.cs.forEach((c, i) => { locale(c.lo, c.la, c.b + c.d, q); p[i * 4] = q[0]; p[i * 4 + 1] = q[1]; p[i * 4 + 2] = q[2]; p[i * 4 + 3] = c.l ? TOL_LETTO : TOL_BASE })
+    lista.push({ k: gruppoDi(s.k).k, p })
+  }
+  return lista
+}
 function disegnaVie(google: boolean) {
   if (fatteCon === google && fatteDipinte === stile.dipinte) return
   const t0 = performance.now()
@@ -378,44 +391,42 @@ function disegnaVie(google: boolean) {
   // le vie di prima restano a schermo finché le nuove non sono pronte (al massimo 4 s): niente lampeggio a ogni ridisegno
   const vecchie = vie
   vie = viewer.scene.primitives.add(new C.PrimitiveCollection())
-  if (vecchie) {
+  {
+    // con requestRenderMode le primitive nuove finiscono di prepararsi solo se si chiedono fotogrammi: si chiedono
+    // finché non sono pronte (al massimo 8 s); le vecchie restano fino ad allora
     const nuove = vie, t = performance.now()
+    let tolte = !vecchie
     const togli = viewer.scene.postRender.addEventListener(() => {
-      vecchie.show = nuove.show
-      let pronte = nuove.length > 0
+      if (vecchie && !tolte) vecchie.show = nuove.show
+      let pronte = true
       for (let i = 0; i < nuove.length; i++) if (!(nuove.get(i) as { ready: boolean }).ready) pronte = false
-      if (pronte || performance.now() - t > 4000 || nuove !== vie) { togli(); viewer.scene.primitives.remove(vecchie); viewer.scene.requestRender() } else viewer.scene.requestRender()
+      const basta = pronte || nuove !== vie
+      if (vecchie && !tolte && (basta || performance.now() - t > 4000)) { tolte = true; viewer.scene.primitives.remove(vecchie) }
+      if (basta || performance.now() - t > 8000) togli()
+      viewer.scene.requestRender()
     })
   }
   primPerGruppo.clear()
   vociVie = []
-  const perGruppo = new Map<string, C.GeometryInstance[]>(), perGruppoF = new Map<string, C.GeometryInstance[]>(), perGruppoS = new Map<string, C.GeometryInstance[]>()
+  const perGruppo = new Map<string, C.GeometryInstance[]>(), perGruppoF = new Map<string, C.GeometryInstance[]>()
   // prima tutte le quote, poi gli incroci messi d'accordo, poi il disegno
-  const nodi: Nodi = new Map(), profili = new Map<string, { z: number[]; cs: Campione[] }>()
-  for (const s of strade) { if (s.c.length < 2) continue; const z = quoteDi(s), cs = campioniVia(s.c, z, true, 3.5, google); profili.set(s.id, { z, cs }); segnaNodi(nodi, cs) }
-  for (const { cs } of profili.values()) raccordaNodi(nodi, cs)
+  const { nodi, profili } = calcolaProfili(google)
+  // «Dipinte» sopra Google: niente geometria, le vie le stende lo shader del 3D (dipinte.ts)
+  const vernice = dipinte && google
+  if (vernice) {
+    vieDipinte(true, listaVernice(profili), coloriGruppi(), stile.spessore, stile.alfa)
+  } else vieDipinte(false, null, coloriGruppi(), stile.spessore, stile.alfa)
   strade.forEach(s => {
     const pr = profili.get(s.id)
     if (!pr) return
     const g = gruppoDi(s.k)
     const { z, cs } = pr
-    const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
-    // lo spostamento vale solo sopra Google: sul satellite (strumento «Vie») le linee restano sui punti che si trascinano
-    // sentieri esclusi: corrono all'aperto (niente muri da sporcare) e sono 117 km, da soli 8500 strati da preparare
-    if (dipinte && g.k in LARGHEZZA && Math.hypot((s.c[0][0] - 14.4855) * 84560, (s.c[0][1] - 40.6285) * 111030) < 3500) {
-      // da vicino lo strato dipinto sulla strada, da lontano (dove lo strato sarebbe più sottile di un pixel) la linea sospesa
-      const sc = perGruppoS.get(g.k) ?? []; perGruppoS.set(g.k, sc)
-      const st = strati(cs, g.k)
-      for (const geo of st.strati) sc.push(new C.GeometryInstance({ geometry: geo }))
-      for (const pos of st.sospese) if (pos.length > 1) l.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DIPINTE_FINO) }, geometry: new C.PolylineGeometry({ positions: pos, width: (g.w + 1.5) * LARGO_LINEE * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
-      // dove non si dipinge la linea resta, e come nel modo «Linee» si intravede in filigrana dove il 3D la copre
-      if (google) { const f = perGruppoF.get(g.k) ?? []; perGruppoF.set(g.k, f); for (const pos of st.sospese) if (pos.length > 1) f.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, FILIGRANA_MAX) }, geometry: new C.PolylineGeometry({ positions: pos, width: (g.w + 1.5) * LARGO_LINEE * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) })) }
-      l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(DIPINTE_FINO, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: posizioniLinea(cs, nodi), width: (g.w + 1.5) * LARGO_LINEE * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
-    } else {
+    if (!vernice) {
+      const l = perGruppo.get(g.k) ?? []; perGruppo.set(g.k, l)
       const punti = posizioniLinea(cs, nodi)
-      l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: punti, width: (g.w + 1.5) * LARGO_LINEE * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
+      l.push(new C.GeometryInstance({ id: 'st:' + s.id, attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, DISTANZA_MAX[g.k] ?? 4500) }, geometry: new C.PolylineGeometry({ positions: punti, width: (PIXEL[g.k] ?? 3) * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) }))
       // la stessa via «in filigrana»: da vicino si intravede anche dove il 3D di Google la copre (tetti, muri, mesh imprecisa)
-      if (google && !dipinte) { const f = perGruppoF.get(g.k) ?? []; perGruppoF.set(g.k, f); f.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, FILIGRANA_MAX) }, geometry: new C.PolylineGeometry({ positions: punti, width: (g.w + 1.5) * LARGO_LINEE * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) })) }
+      if (google && g.k !== 'sentieri') { const f = perGruppoF.get(g.k) ?? []; perGruppoF.set(g.k, f); f.push(new C.GeometryInstance({ attributes: { distanceDisplayCondition: new C.DistanceDisplayConditionGeometryInstanceAttribute(0, FILIGRANA_MAX) }, geometry: new C.PolylineGeometry({ positions: punti, width: (PIXEL[g.k] ?? 3) * stile.spessore, vertexFormat: C.PolylineMaterialAppearance.VERTEX_FORMAT, arcType: C.ArcType.NONE }) })) }
     }
     // nome della via a metà, come su Google Maps: si legge solo da vicino
     if (s.n) {
@@ -433,15 +444,9 @@ function disegnaVie(google: boolean) {
     const instF = perGruppoF.get(g.k)
     if (instF?.length) {
       let mf = matF.get(g.k)
-      if (!mf) { mf = materialeVia(c.withAlpha(stile.filigrana)); matF.set(g.k, mf) }
+      if (!mf) { mf = materialeVia(c.withAlpha(Math.min(FILIGRANA_ALFA, stile.filigrana))); matF.set(g.k, mf) }
       // senza prova di profondità: si vede attraverso il 3D, ma tenue e solo entro FILIGRANA_MAX dalla camera
       vie.add(new C.Primitive({ geometryInstances: instF, asynchronous: true, appearance: new C.PolylineMaterialAppearance({ material: mf, translucent: true, vertexShaderSource: VS_VIA(), renderState: { depthTest: { enabled: false }, depthMask: false, blending: C.BlendingState.ALPHA_BLEND } }) }))
-    }
-    const instS = perGruppoS.get(g.k)
-    if (instS?.length) {
-      const colore = C.ColorGeometryInstanceAttribute.fromColor(c.withAlpha(stile.alfa))
-      for (const x of instS) x.attributes = { color: colore }
-      vie.add(new C.ClassificationPrimitive({ geometryInstances: instS, asynchronous: true, appearance: new C.PerInstanceColorAppearance({ flat: true, translucent: stile.alfa < 1 }), classificationType: google ? C.ClassificationType.CESIUM_3D_TILE : C.ClassificationType.TERRAIN }))
     }
     primPerGruppo.set(g.k, vie.add(new C.Primitive({
       geometryInstances: inst, asynchronous: true,
@@ -454,7 +459,7 @@ function disegnaVie(google: boolean) {
 /** Per le prove: le primitive delle vie (tipo, pronta, istanze). */
 export const statoVie = () => { const o: string[] = []; if (vie) for (let i = 0; i < vie.length; i++) { const x = vie.get(i) as { ready?: boolean; classificationType?: unknown; _numberOfInstances?: number; geometryInstances?: unknown[] }; o.push(`${x.classificationType !== undefined ? 'strati' : 'linee'}:${x.ready ? 'pronta' : 'no'}:${x.geometryInstances?.length ?? '?'}`) } return o.join(' ') }
 /** Ridisegna le vie da capo (dopo un cambio dell'allineamento). */
-export function ridisegnaVie() { const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }
+export function ridisegnaVie(tutto = true) { if (tutto) { cacheT = [new WeakMap(), new WeakMap()]; cacheQuote = new WeakMap() } const g = fatteCon; fatteCon = null; if (g !== null) disegnaVie(g) }
 /** Anteprima mentre si trascina con lo strumento «Allinea»: tutte le linee spostate di (e, n) metri attorno a un punto. */
 export function anteprimaSpostamento(e: number, n: number, lon: number, lat: number) {
   if (!vie) return
