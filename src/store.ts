@@ -17,7 +17,8 @@ export type Strumento =
   | { k: 'eventi' }
   | { k: 'allinea' }
 export type StileVie = { spessore: number; alfa: number; filigrana: number }
-export const STILE_VIE: StileVie = { spessore: 1, alfa: 0.95, filigrana: 0.38 }
+// dal 24/11 le vie si disegnano in un altro modo: lo stile salvato prima (impostazioni `stileVie`) non vale più, si riparte da qui (`stileVie2`)
+export const STILE_VIE: StileVie = { spessore: 1, alfa: 0.9, filigrana: 0.22 }
 export type Preferito = { id?: string; p: [number, number]; nome: string }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }
@@ -144,7 +145,7 @@ type Salvato = { progetti: Progetto[]; pid: string; livelli?: Livelli; ionToken?
 function leggi(): Salvato | null {
   try { const s = localStorage.getItem(KEY); return s ? JSON.parse(s) : null } catch { return null }
 }
-const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, attenua: 0, rev: 3, ora: 12.5, giorno: '2026-06-21' }
+const LIV0: Livelli = { orto: 'esri', edifici: false, stile: 'plastico', strade: true, nomi: true, confine: true, google: false, ombre: false, nitido: !telefono(), progetto: false, qualita: qualitaIniziale(), coloriVie: {}, attenua: 0, rev: 4, ora: 12.5, giorno: '2026-06-21' }
 const iniziale = leggi()
 // ?lang= nel link vince sulla scelta salvata; poi quella salvata, poi la lingua del telefono
 const linguaAttualeIniziale: Lingua = new URLSearchParams(location.search).get('lang') ? linguaIniziale() : iniziale?.lingua ?? linguaIniziale()
@@ -175,7 +176,7 @@ export const useS = create<Stato>((set, get) => ({
   misure: [],
   // chi aveva salvato i livelli prima della qualità aveva le ombre accese di base: si ripartono spente (pesano molto)
   // rev 2 (18/11): edifici OSM e oggetti di progetto spenti di base, sono i livelli che pesano di più
-  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), ...((iniziale?.livelli?.rev ?? 0) < 2 ? { edifici: false, progetto: false } : {}), ...((iniziale?.livelli?.rev ?? 0) < 3 ? { strade: true, coloriVie: {}, rev: 3 } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
+  livelli: { ...LIV0, ...(iniziale?.livelli ?? {}), ...(iniziale?.livelli && !('qualita' in iniziale.livelli) ? { ombre: false, nitido: LIV0.nitido } : {}), ...((iniziale?.livelli?.rev ?? 0) < 2 ? { edifici: false, progetto: false } : {}), ...((iniziale?.livelli?.rev ?? 0) < 3 ? { strade: true, coloriVie: {} } : {}), ...((iniziale?.livelli?.rev ?? 0) < 4 ? { stileVie: {}, rev: 4 } : {}), google: Boolean(iniziale?.ionToken) && (iniziale?.livelli?.googleScelto ?? true) },
   ionToken: iniziale?.ionToken ?? '',
   ionTokenSito: '',
   googleKey: '',
