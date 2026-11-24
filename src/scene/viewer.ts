@@ -196,7 +196,7 @@ export const textureDipinte: unknown[] = []
 const vuota = () => new C.TextureUniform({ typedArray: new Uint8Array(4), width: 1, height: 1, repeat: false })
 export const shader3D = new C.CustomShader({
   uniforms: {
-    u_attenua: { type: C.UniformType.FLOAT, value: 0 }, u_dip: { type: C.UniformType.FLOAT, value: 0 }, u_alfa: { type: C.UniformType.FLOAT, value: 1 }, u_pend: { type: C.UniformType.FLOAT, value: 0.36 }, u_debug: { type: C.UniformType.FLOAT, value: 0 },
+    u_attenua: { type: C.UniformType.FLOAT, value: 0 }, u_dip: { type: C.UniformType.FLOAT, value: 0 }, u_alfa: { type: C.UniformType.FLOAT, value: 1 }, u_tol: { type: C.UniformType.FLOAT, value: 3 }, u_debug: { type: C.UniformType.FLOAT, value: 0 },
     u_m: { type: C.UniformType.MAT4, value: C.Matrix4.clone(C.Matrix4.IDENTITY) }, u_su: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
     u_r0: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) }, u_r1: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
     u_r2: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) }, u_rq: { type: C.UniformType.VEC3, value: new C.Cartesian3(0, 0, 1) },
@@ -212,7 +212,6 @@ export const shader3D = new C.CustomShader({
       vec3 chiaro = mix(vec3(g), vec3(1.0), 0.55);
       c = mix(c, chiaro, u_attenua);
       vec3 pe = fsInput.attributes.positionEC;
-      vec3 dx = dFdx(pe), dy = dFdy(pe);
       if (u_dip > 0.5) {
         vec3 l = (u_m * vec4(pe, 1.0)).xyz;
         vec4 t = vec4(0.0);
@@ -224,27 +223,30 @@ export const shader3D = new C.CustomShader({
           else { a = (l.xy - u_r2.xy) / u_r2.z; if (dentro(a)) t = texture(u_t2, a); }
         }
         if (t.a > 0.004) {
-          // solo superfici quasi piane (niente muri), alla quota della via (niente tetti e chiome)
-          float k = 1.0, kq = 1.0, kn = 1.0;
+          // Solo alla quota della via: tetti, chiome e terrazze sopra o sotto restano puliti. Dove la quota è stata letta
+          // dal 3D (tolleranza stretta) la pendenza non si guarda: la mesh di Google è a triangoli grossi e storti anche
+          // sull'asfalto e la vernice usciva a schegge. Dove non è letta (tolleranza larga) i muri si scartano per pendenza,
+          // altrimenti la vernice cola sulle facciate.
+          float kq = 1.0, kn = 1.0, dz = 0.0;
           vec2 b = (l.xy - u_rq.xy) / u_rq.z;
           if (dentro(b)) {
             vec4 q = texture(u_q, b);
             if (q.a > 0.25) {
               float hz = (q.r * 65280.0 + q.g * 255.0) / 50.0 - 100.0, tol = q.b * 25.5;
-              // quota non ancora letta dal 3D (lontano): tolleranza larga, che cresce con la distanza
-              if (q.b > 0.99) tol = 2.2 + 0.012 * length(pe);
-              float dz = l.z - hz;
-              // sopra la strada si è più severi (tetti, chiome, auto alte), sotto un po' meno (cunette, mesh imprecisa)
-              kq = 1.0 - smoothstep(tol, tol + 0.7, dz > 0.0 ? dz * 1.25 : -dz);
+              if (q.b > 0.99) tol = u_tol + 0.008 * length(pe);
+              dz = l.z - hz;
+              // il bordo sfuma su un metro e mezzo: niente tagli netti lungo i triangoli
+              kq = 1.0 - smoothstep(tol, tol + 1.5, abs(dz));
+              vec3 dx = dFdx(pe), dy = dFdy(pe);
+              kn = mix(1.0, smoothstep(0.21, 0.36, abs(dot(normalize(cross(dx, dy)), u_su))), clamp((tol - 2.0) / 2.0, 0.0, 1.0));
             }
           }
-          kn = smoothstep(u_pend - 0.15, u_pend, abs(dot(normalize(cross(dx, dy)), u_su)));
-          k = kq * kn * u_alfa;
+          float k = kq * kn * u_alfa;
           vec3 col = czm_srgbToLinear(t.rgb / max(t.a, 0.001));
           // la vernice lascia passare chiari e scuri della foto (strisce, ombre): sembra stesa sull'asfalto, non incollata sopra
           float luce = dot(c, vec3(0.299, 0.587, 0.114));
           c = mix(c, col * (0.62 + 0.75 * luce), t.a * k);
-          if (u_debug > 0.5) c = mix(c, vec3(1.0 - kq, kn * kq, 1.0 - kn), t.a);
+          if (u_debug > 0.5) c = mix(c, kn < 0.5 ? vec3(1.0, 0.0, 1.0) : vec3(dz > 0.0 ? 1.0 - kq : 0.0, kq, dz > 0.0 ? 0.0 : 1.0 - kq), t.a);
         }
       }
       material.diffuse = c;
@@ -336,21 +338,58 @@ const _w = new C.Cartesian2(), _p = new C.Cartesian3(), _k = new C.Cartographic(
  * blocca la pagina (misurato il 24/11: da 0,15 a 8 s l'una), questa costa centesimi di millisecondo. `z` è la quota
  * presunta: se a quella quota il raggio incontra la superficie altrove si riprova con la quota trovata (due volte).
  * `undefined` se il punto è fuori schermo o coperto (un edificio davanti): lì la quota precisa non serve, non si vede. */
+/** Esegue `f` con la profondità del fotogramma copiata in memoria una volta sola: `pickPosition` di Cesium rilegge un
+ * pixel dalla GPU a ogni chiamata (~1 ms l'una: 500 punti a schermo erano 2 s di blocchi). Qui si sostituisce, solo per la
+ * durata di `f`, la lettura di `PickDepth` (classe interna: Cesium è a versione fissa) con una che guarda nella copia. */
+export function conProfondita<T>(f: () => T): T {
+  const sc = viewer.scene as unknown as { context: { drawingBufferWidth: number; drawingBufferHeight: number; readPixels(o: object): Uint8Array }; view: { pickDepths: { framebuffer?: unknown; getDepth?: unknown }[] } }
+  const w = sc.context.drawingBufferWidth, h = sc.context.drawingBufferHeight, messi: { getDepth?: unknown }[] = []
+  try {
+    for (const pd of sc.view.pickDepths ?? []) {
+      if (!pd?.framebuffer) continue
+      const px = sc.context.readPixels({ x: 0, y: 0, width: w, height: h, framebuffer: pd.framebuffer })
+      pd.getDepth = (_c: unknown, x: number, y: number) => {
+        x = Math.floor(x); y = Math.floor(y)
+        if (x < 0 || y < 0 || x >= w || y >= h) return undefined
+        const i = (y * w + x) * 4
+        return px[i] / 255 + px[i + 1] / 65025 + px[i + 2] / 16581375 + px[i + 3] / 4228250625
+      }
+      messi.push(pd)
+    }
+  } catch { /* si ripiega sulla lettura pixel per pixel */ }
+  try { return f() } finally { for (const pd of messi) delete pd.getDepth }
+}
 export function quotaVista(lon: number, lat: number, z: number): number | undefined {
   if (!google || !google.show) return undefined
   const sc = viewer.scene, W = sc.canvas.clientWidth, H = sc.canvas.clientHeight
+  // g(z) = quota della superficie vista nel pixel dove cade (lon, lat, z), meno z: si cerca lo zero (la superficie
+  // proprio sopra il punto). Prima si ripeteva z = quota vista: sui pendii e accanto ai muri non arrivava mai.
+  let err = Infinity, h = 0
+  const g = (zz: number): number | undefined => {
+    const w = C.SceneTransforms.worldToWindowCoordinates(sc, pos(lon, lat, zz), _w)
+    if (!w || w.x < 1 || w.y < 1 || w.x > W - 2 || w.y > H - 2) return undefined
+    const p = sc.pickPosition(w, _p)
+    if (!p) return undefined
+    const k = C.Cartographic.fromCartesian(p, undefined, _k)
+    if (!k) return undefined
+    h = k.height - GEOIDE
+    err = Math.hypot((C.Math.toDegrees(k.longitude) - lon) * 84560, (C.Math.toDegrees(k.latitude) - lat) * 111030)
+    return h - zz
+  }
   try {
-    for (let i = 0; i < 3; i++) {
-      const w = C.SceneTransforms.worldToWindowCoordinates(sc, pos(lon, lat, z), _w)
-      if (!w || w.x < 1 || w.y < 1 || w.x > W - 2 || w.y > H - 2) return undefined
-      const p = sc.pickPosition(w, _p)
-      if (!p) return undefined
-      const k = C.Cartographic.fromCartesian(p, undefined, _k)
-      if (!k) return undefined
-      const h = k.height - GEOIDE
-      if (Math.hypot((C.Math.toDegrees(k.longitude) - lon) * 84560, (C.Math.toDegrees(k.latitude) - lat) * 111030) < 1) return h
-      if (Math.abs(h - z) < 0.25) return undefined
-      z = h
+    let z0 = z, g0 = g(z0)
+    if (g0 === undefined) return undefined
+    if (err < 1) return h
+    let z1 = z0 + Math.max(-12, Math.min(12, g0))
+    for (let i = 0; i < 5; i++) {
+      const g1 = g(z1)
+      if (g1 === undefined) return undefined
+      if (err < 1) return h
+      const den = g1 - g0
+      let z2 = Math.abs(den) > 1e-3 ? z1 - (g1 * (z1 - z0)) / den : z1 + g1
+      z2 = Math.max(z1 - 12, Math.min(z1 + 12, z2))
+      if (Math.abs(z2 - z) > 30 || Math.abs(z2 - z1) < 0.05) return undefined
+      z0 = z1; g0 = g1; z1 = z2
     }
   } catch { /* profondità non disponibile */ }
   return undefined

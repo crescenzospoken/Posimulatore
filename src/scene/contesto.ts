@@ -1,6 +1,6 @@
 import * as C from 'cesium'
 import { allinea, caricaAllineamento } from './allinea'
-import { pos, viewer } from './viewer'
+import { pos, viewer, telefono, conProfondita } from './viewer'
 import { impostaVoci, type Voce } from './sovrapposti'
 import type { LL } from '../engine/geo'
 import { GEOIDE, quota as quotaTerreno } from './terreno'
@@ -292,7 +292,7 @@ export function puntiVia(c0: LL[], z0: number[], google: boolean, alza = 1.5, sp
 }
 // larghezza delle linee in pixel (al 100%, a 300 m): una per classe, come su una carta stradale
 const PIXEL: Record<string, number> = { statale: 6.5, strade: 5, servizio: 3.5, pedonali: 3.5, scale: 3.5, sentieri: 3 }
-const TOL_BASE = 25.5, TOL_LETTO = 1.3
+const TOL_BASE = 25.5, TOL_LETTO = 2
 const coloriGruppi = () => Object.fromEntries(GRUPPI_VIE.map(g => [g.k, coloriAttuali[g.k] ?? g.col]))
 let fatteCon: boolean | null = null
 const primPerGruppo = new Map<string, C.Primitive>()
@@ -342,22 +342,42 @@ export function aggiornaQuoteGoogle(leggi: (lon: number, lat: number, z: number)
     if (!s.c.some(p => Math.abs(p[0] - cx) < 0.009 && Math.abs(p[1] - cy) < 0.007)) continue
     tracciato(s.c, quoteDi(s), true).forEach((p, i, t) => { if (daLeggere(i, t.length) && Math.hypot((p[0] - cx) * 84560, (p[1] - cy) * 111030) < 700 && !quoteG.has(chiaveG(p)) && !nonLette.has(chiaveG(p))) daFare.push([p[0], p[1], p[2]]) })
   }
+  // i punti fuori schermo si scartano subito con un conto (matrice di vista e proiezione), senza leggere niente
+  const vp = C.Matrix4.multiply(cam.frustum.projectionMatrix, cam.viewMatrix, new C.Matrix4()), q4 = new C.Cartesian4(), c3 = new C.Cartesian3()
+  const aSchermo = daFare.filter(p => {
+    C.Cartesian3.fromDegrees(p[0], p[1], p[2] + GEOIDE, undefined, c3)
+    C.Matrix4.multiplyByVector(vp, C.Cartesian4.fromElements(c3.x, c3.y, c3.z, 1, q4), q4)
+    if (q4.w > 0 && Math.abs(q4.x) < q4.w * 0.98 && Math.abs(q4.y) < q4.w * 0.98) return true
+    nonLette.add(chiaveG(p)); return false
+  })
+  const vicine = daFare.length
+  daFare.length = 0; daFare.push(...aSchermo)
   if (daFare.length < 20) return
-  // prima i punti al centro dello schermo: ogni lettura costa (sul telefono lento anche 1-2 ms)
+  // prima i punti al centro dello schermo
   daFare.sort((a, b) => Math.hypot((a[0] - cx) * 84560, (a[1] - cy) * 111030) - Math.hypot((b[0] - cx) * 84560, (b[1] - cy) * 111030))
   inLettura = true
+  const prova = location.search.includes('prova')
   let i = 0, nuove = 0
+  // Una passata sola: prima di leggere si aspetta la GPU una volta (decine di ms, di più mentre Google carica), poi ogni
+  // lettura costa poco. Se il tempo non basta si riprende più tardi.
   const passo = () => {
-    const t = performance.now()
-    while (i < daFare.length && (i % 64 !== 0 || performance.now() - t < 60)) { const p = daFare[i++], g = leggi(p[0], p[1], p[2]); if (g !== undefined) { quoteG.set(chiaveG(p), g); nuove++ } else nonLette.add(chiaveG(p)) }
-    if (location.search.includes('prova') && performance.now() - t > 60) console.info('T: letture', Math.round(performance.now() - t))
+    const t = performance.now(), tetto = telefono() ? 120 : 250
+    conProfondita(() => {
+      while (i < daFare.length && (i % 32 !== 0 || performance.now() - t < tetto)) {
+        const p = daFare[i++], k = chiaveG(p), g = leggi(p[0], p[1], p[2])
+        if (g !== undefined) { quoteG.set(k, g); nuove++ } else nonLette.add(k)
+      }
+    })
+    if (prova) console.info('T: letture', Math.round(performance.now() - t))
+    if (i < daFare.length && C.Cartesian3.distance(p0, cam.positionWC) < 30 && C.Cartesian3.dot(d0, cam.directionWC) > 0.985) { setTimeout(passo, 700); return }
     inLettura = false
-    if (location.search.includes('prova')) console.info('T: lette', nuove, 'su', daFare.length)
+    if (prova) console.info('T: lette', nuove, 'su', daFare.length, 'a schermo,', vicine, 'vicine')
     if (nuove >= 20) { inSospeso = true; forseRidisegna() }
   }
+  const p0 = C.Cartesian3.clone(cam.positionWC), d0 = C.Cartesian3.clone(cam.directionWC)
   setTimeout(passo, 0)
 }
-const FILIGRANA_MAX = 600, FILIGRANA_ALFA = 0.5
+const FILIGRANA_MAX = 900, FILIGRANA_ALFA = 0.5
 let stile = { spessore: 1, alfa: 0.95, filigrana: 0.38, dipinte: false }
 let fatteDipinte = false
 const matF = new Map<string, C.Material>()
