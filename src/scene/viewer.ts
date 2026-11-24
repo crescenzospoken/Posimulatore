@@ -180,17 +180,76 @@ export function impostaQualita(q: Qualita) {
 }
 let onGoogle: (() => void) | undefined, onGoogleKo: (() => void) | undefined
 let googlePronto = false
+const tex1 = () => new C.TextureUniform({ typedArray: new Uint8Array([255, 0, 0, 0]), width: 1, height: 1, repeat: false })
 const attenuatore = new C.CustomShader({
-  uniforms: { u_attenua: { type: C.UniformType.FLOAT, value: 0 } },
+  uniforms: {
+    u_attenua: { type: C.UniformType.FLOAT, value: 0 },
+    u_vie: { type: C.UniformType.FLOAT, value: 0 },
+    u_alfa: { type: C.UniformType.FLOAT, value: 0.9 },
+    u_eyeToLocal: { type: C.UniformType.MAT4, value: C.Matrix4.IDENTITY.clone() },
+    u_win: { type: C.UniformType.VEC4, value: new C.Cartesian4(0, 0, 1, 0) },
+    u_sdf: { type: C.UniformType.SAMPLER_2D, value: tex1() },
+    u_quota: { type: C.UniformType.SAMPLER_2D, value: tex1() },
+  },
   lightingModel: C.LightingModel.UNLIT,
   fragmentShaderText: `
+    vec3 coloreVia(int k) {
+      if (k == 1) return vec3(0.984, 0.753, 0.176);
+      if (k == 2) return vec3(1.0);
+      if (k == 3) return vec3(0.945, 0.953, 0.957);
+      if (k == 4) return vec3(0.824, 0.890, 0.988);
+      if (k == 5) return vec3(0.965, 0.682, 0.663);
+      return vec3(0.659, 0.855, 0.710);
+    }
+    float mezza(int k) { return k == 1 ? 3.0 : k == 2 ? 2.1 : k == 3 ? 1.5 : k == 6 ? 0.8 : 1.1; }
     void fragmentMain(FragmentInput fsInput, inout czm_modelMaterial material) {
       vec3 c = material.diffuse;
       float g = dot(c, vec3(0.299, 0.587, 0.114));
       vec3 chiaro = mix(vec3(g), vec3(1.0), 0.55);
       material.diffuse = mix(c, chiaro, u_attenua);
+      if (u_vie < 0.5) return;
+      vec3 L = (u_eyeToLocal * vec4(fsInput.attributes.positionEC, 1.0)).xyz;
+      vec2 uv = (L.xy - u_win.xy) / u_win.z;
+      if (uv.x <= 0.0 || uv.y <= 0.0 || uv.x >= 1.0 || uv.y >= 1.0) return;
+      float d = texture(u_sdf, uv).r * 12.0;
+      if (d > 11.0) return;
+      vec4 q = texture(u_quota, uv);
+      int k = int(q.b * 255.0 + 0.5);
+      if (k == 0) return;
+      float zr = (q.r * 65280.0 + q.g * 255.0) * 0.1;
+      float dz = L.z + dot(L.xy, L.xy) / 12742000.0 - zr;
+      vec3 dx = dFdx(L), dy = dFdy(L);
+      vec3 n = normalize(cross(dx, dy));
+      float piano = smoothstep(0.6, 0.8, abs(n.z));
+      float quota = 1.0 - smoothstep(3.0, 4.5, dz) - (1.0 - smoothstep(-4.0, -2.5, dz));
+      float mpp = max(length(dx.xy), length(dy.xy));
+      float w = min(max(mezza(k), 1.5 * mpp), 9.0);
+      float aa = max(mpp, 0.04);
+      float a = 1.0 - smoothstep(w - aa, w + aa, d);
+      vec3 col = coloreVia(k);
+      float bordo = smoothstep(w - 2.6 * aa, w - 1.2 * aa, d);
+      col = mix(col, col * 0.55, bordo * 0.7);
+      if (u_alfa > 1.5) { col = dz > 4.0 ? vec3(1.0, 0.0, 0.0) : dz < -4.0 ? vec3(0.0, 0.3, 1.0) : piano < 0.5 ? vec3(1.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0); material.diffuse = mix(material.diffuse, col, a * 0.85); return; }
+      material.diffuse = mix(material.diffuse, col, clamp(a * piano * quota, 0.0, 1.0) * u_alfa);
     }`,
 })
+export function vieDebug(x: number) { attenuatore.setUniform('u_alfa', x); viewer.scene.requestRender() }
+/** Prototipo: vie dipinte nello shader del 3D di Google (finestra locale ENU con origine `o`). */
+let enuInv: C.Matrix4 | undefined, togliPre: (() => void) | undefined
+export function vieNelloShader(on: boolean, dati?: { o: C.Cartesian3; x0: number; y0: number; lato: number; n: number; sdf: Uint8Array; quota: Uint8Array }) {
+  if (dati) {
+    enuInv = C.Matrix4.inverseTransformation(C.Transforms.eastNorthUpToFixedFrame(dati.o), new C.Matrix4())
+    attenuatore.setUniform('u_win', new C.Cartesian4(dati.x0, dati.y0, dati.lato, 0))
+    attenuatore.setUniform('u_sdf', new C.TextureUniform({ typedArray: dati.sdf, width: dati.n, height: dati.n, repeat: false }))
+    attenuatore.setUniform('u_quota', new C.TextureUniform({ typedArray: dati.quota, width: dati.n, height: dati.n, repeat: false, minificationFilter: C.TextureMinificationFilter.NEAREST, magnificationFilter: C.TextureMagnificationFilter.NEAREST }))
+  }
+  attenuatore.setUniform('u_vie', on ? 1 : 0)
+  if (on && !togliPre && viewer) {
+    const m = new C.Matrix4()
+    togliPre = viewer.scene.preRender.addEventListener(() => { if (enuInv) attenuatore.setUniform('u_eyeToLocal', C.Matrix4.multiply(enuInv, viewer.camera.inverseViewMatrix, m)) })
+  }
+  viewer?.scene.requestRender()
+}
 /** 0 = foto vere, 1 = quasi bianco e grigio come un plastico. */
 export function attenua3D(x: number) { attenuatore.setUniform('u_attenua', Math.max(0, Math.min(1, x))); viewer?.scene.requestRender() }
 let fonteGoogle: 'google' | 'ion' | '' = ''
