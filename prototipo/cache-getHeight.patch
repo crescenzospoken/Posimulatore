@@ -1,0 +1,20 @@
+diff --git a/src/scene/viewer.ts b/src/scene/viewer.ts
+index 38fa71f..df84107 100644
+--- a/src/scene/viewer.ts
++++ b/src/scene/viewer.ts
+@@ -3,6 +3,15 @@ import { avvio } from '../ui/avvio'
+ import 'cesium/Build/Cesium/Widgets/widgets.css'
+ import { GEOIDE, caricaTerreno, quota as quotaTerreno } from './terreno'
+ import type { Livelli } from '../store'
++
++// PROVA: cache dei vertici letti dalla GPU per getHeight (una lettura per tessera invece che per punto)
++if (location.search.includes('memo')) {
++  const R = (C as unknown as { ModelReader: Record<string, (x: object) => unknown> }).ModelReader
++  for (const k of ['readAttributeAsTypedArray', 'readIndicesAsTypedArray']) {
++    const orig = R[k], cache = new WeakMap<object, unknown>()
++    R[k] = (x: object) => { let v = cache.get(x); if (v === undefined) { v = orig(x); cache.set(x, v) } return v }
++  }
++}
+ import type { Vista } from '../engine/model'
+ 
+ ;(window as unknown as { CESIUM_BASE_URL: string }).CESIUM_BASE_URL = '/cesium/'
