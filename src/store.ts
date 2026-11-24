@@ -18,7 +18,7 @@ export type Strumento =
   | { k: 'allinea' }
 export type StileVie = { spessore: number; alfa: number; filigrana: number }
 // dal 24/11 le vie si disegnano in un altro modo: lo stile salvato prima (impostazioni `stileVie`) non vale più, si riparte da qui (`stileVie2`)
-export const STILE_VIE: StileVie = { spessore: 1, alfa: 0.9, filigrana: 0.22 }
+export const STILE_VIE: StileVie = { spessore: 1, alfa: 0.9, filigrana: 0.3 }
 export type Preferito = { id?: string; p: [number, number]; nome: string }
 export type Utente = { email: string; nome: string; ruolo: 'attesa' | 'editor' | 'admin' }
 export type Misura = { id: string; modo: 'distanza' | 'area' | 'altezza' | 'quota'; pts: { p: LL; z: number }[] }

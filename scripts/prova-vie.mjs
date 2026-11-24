@@ -15,6 +15,7 @@ export const VISTE = {
   bivioPiombo: [14.4829, 40.6294, 420, 0, -90],
   spondaPiombo: [14.4897, 40.6280, 380, 0, -90],
   statale: [14.4872, 40.6262, 230, 330, -30],
+  vicino: [14.4826, 40.62932, 172, 262, -45],
 }
 const viste = (A.viste ? String(A.viste).split(',') : Object.keys(VISTE))
 await mkdir(OUT, { recursive: true })
