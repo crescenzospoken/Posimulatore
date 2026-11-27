@@ -1,0 +1,28 @@
+# Controllo dei segreti (gitleaks): blocca chiavi, token e password finiti nel codice.
+# Costo: ~1 minuto a giro. Gira su main, una volta a settimana e a mano; mai a ogni push delle PR.
+# Falsi allarmi noti (valori pubblici per natura) in .gitleaksignore, con il motivo.
+name: Segreti
+on:
+  push:
+    branches: [main, master]
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+concurrency:
+  group: segreti-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: false
+          GITLEAKS_ENABLE_SUMMARY: true
